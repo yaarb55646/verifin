@@ -6062,6 +6062,12 @@ abstract class AppLocalizations {
   /// **'改用数字键盘'**
   String get quickTextEntryManual;
 
+  /// No description provided for @entrySubcategoryAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增'**
+  String get entrySubcategoryAdd;
+
   /// No description provided for @aiWarningCategoryUnmatched.
   ///
   /// In zh, this message translates to:

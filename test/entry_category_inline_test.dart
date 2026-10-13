@@ -57,7 +57,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('分类使用三列紧凑胶囊且子分类不常驻展开', (tester) async {
+  testWidgets('分类使用三列紧凑胶囊，子分类在下方面板常驻', (tester) async {
     final controller = await controllerWithSubcategories();
     await pumpPage(
       tester,
@@ -66,8 +66,10 @@ void main() {
     );
 
     expect(find.byKey(const Key('entry_category_grid')), findsOneWidget);
-    expect(find.text('午餐'), findsNothing);
-    expect(find.text('早餐'), findsNothing);
+    // 默认选中第一个顶级分类（餐饮），下方面板常驻它的子分类。
+    expect(find.byKey(const Key('entry_subcategory_panel')), findsOneWidget);
+    expect(find.text('早餐'), findsOneWidget);
+    expect(find.text('午餐'), findsOneWidget);
     expect(find.byKey(const Key('entry_category_more_dining')), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const Key('entry_category_dining'))).height,
@@ -86,7 +88,6 @@ void main() {
     await tester.tap(find.byKey(const Key('entry_category_more_dining')));
     await tester.pumpAndSettle();
     expect(find.byType(CategoryPickerSheet), findsOneWidget);
-    expect(find.text('早餐'), findsOneWidget);
     expect(find.text('工作午餐'), findsOneWidget);
 
     final workLunch = find.text('工作午餐');
@@ -96,6 +97,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CategoryPickerSheet), findsNothing);
+    // 选中三级分类后，顶级胶囊仍显示叶子名称（下方面板不展示三级）。
     expect(find.text('工作午餐'), findsOneWidget);
     expect(find.byKey(const Key('entry_category_more_dining')), findsOneWidget);
   });
@@ -117,7 +119,63 @@ void main() {
     await pumpPage(tester, controller, EntryDetailPage.draft(entry: entry));
 
     expect(find.byType(CategoryPickerSheet), findsNothing);
-    expect(find.text('午餐'), findsOneWidget);
+    // 顶部胶囊显示叶子名称「午餐」，下方面板里它作为子分类格子也被高亮。
+    expect(find.text('午餐'), findsNWidgets(2));
     expect(find.byKey(const Key('entry_category_more_dining')), findsOneWidget);
+  });
+
+  testWidgets('点子分类格子直接选中，无需再弹选择器', (tester) async {
+    final controller = await controllerWithSubcategories();
+    await pumpPage(
+      tester,
+      controller,
+      const EntryDetailPage(initialAmount: 30),
+    );
+
+    // 子分类格子的 key 带随机 id，用文字定位。
+    await tester.tap(find.text('早餐'));
+    await tester.pumpAndSettle();
+
+    // 不弹选择器，直接选中；顶级胶囊显示叶子名。
+    expect(find.byType(CategoryPickerSheet), findsNothing);
+    expect(find.text('早餐'), findsNWidgets(2));
+  });
+
+  testWidgets('切换父分类时子分类面板跟着换内容', (tester) async {
+    final controller = await controllerWithSubcategories();
+    final transportId = idOfLabel(controller, '交通');
+    controller.addCategory(
+      type: EntryType.expense,
+      label: '地铁',
+      iconCode: 'transport',
+      parentId: transportId,
+    );
+    await pumpPage(
+      tester,
+      controller,
+      const EntryDetailPage(initialAmount: 30),
+    );
+
+    // 初始：餐饮的子分类。
+    expect(find.text('早餐'), findsOneWidget);
+    expect(find.text('地铁'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('entry_category_transport')));
+    await tester.pumpAndSettle();
+
+    // 切到交通：面板换成交通的子分类。
+    expect(find.text('地铁'), findsOneWidget);
+    expect(find.text('早餐'), findsNothing);
+  });
+
+  testWidgets('面板末尾有「新增」入口', (tester) async {
+    final controller = await controllerWithSubcategories();
+    await pumpPage(
+      tester,
+      controller,
+      const EntryDetailPage(initialAmount: 30),
+    );
+
+    expect(find.byKey(const Key('entry_subcategory_add')), findsOneWidget);
   });
 }

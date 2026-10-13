@@ -3276,6 +3276,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get quickTextEntryManual => '改用数字键盘';
 
   @override
+  String get entrySubcategoryAdd => '新增';
+
+  @override
   String get aiWarningCategoryUnmatched => '分类未匹配，已用默认分类，请确认';
 
   @override

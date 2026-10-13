@@ -3362,6 +3362,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quickTextEntryManual => 'Use the number pad instead';
 
   @override
+  String get entrySubcategoryAdd => 'Add';
+
+  @override
   String get aiWarningCategoryUnmatched =>
       'Category not matched — a default was used, please confirm';
 

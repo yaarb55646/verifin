@@ -1180,6 +1180,7 @@
   "quickTextEntrySubmit": "Next",
   "quickTextEntryEmpty": "Enter something first",
   "quickTextEntryManual": "Use the number pad instead",
+  "entrySubcategoryAdd": "Add",
   "aiWarningCategoryUnmatched": "Category not matched — a default was used, please confirm",
   "aiWarningAccountUnmatched": "Account not matched — set to no account, please confirm",
   "aiWarningCurrencyUnmatched": "Currency not recognized — using the account or base currency, please confirm",

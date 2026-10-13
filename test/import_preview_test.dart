@@ -605,7 +605,13 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      // 预填了原备注。
+      // 预填了原备注。备注框在懒加载列表下部，先滚到它再断言（子分类面板
+      // 加高了页面，不滚动可能尚未构建）。
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('entry_note_field')),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('原备注'), findsOneWidget);
       await tester.enterText(find.byKey(const Key('entry_note_field')), '改后备注');
       await tester.ensureVisible(find.byKey(const Key('save_entry_button')));

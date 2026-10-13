@@ -12,6 +12,7 @@ import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/entry_currency_draft.dart';
+import '../app/entry_subcategory_panel.dart';
 import '../app/feedback.dart';
 import '../app/model_lookup.dart';
 import '../app/ledger_math.dart';
@@ -816,13 +817,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                         (candidate) => candidate.parentId == category.id,
                       ),
                       onSelected: (category) {
-                        final hasKids = categories.any(
-                          (candidate) => candidate.parentId == category.id,
-                        );
-                        if (selectedTopId == category.id && hasKids) {
-                          unawaited(_showCategoryBranch(category, categories));
-                          return;
-                        }
+                        // 点父分类胶囊：选中它，下方子分类面板随之换成它的子分类。
+                        // 不再用「再点一次已选中的父分类 → 弹子分类列表」那套二级弹窗
+                        // （子分类现在常驻在下方面板里，弹窗只是多余的一次点击）。
                         setState(() {
                           _categoryId = category.id;
                           _categoryTouched = true;
@@ -834,6 +831,23 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                           unawaited(_showCategoryBranch(category, categories)),
                       onOpenAll: () => unawaited(_showAllCategories()),
                       allLabel: AppLocalizations.of(context).allLabel,
+                    ),
+                    const SizedBox(height: 8),
+                    // 当前选中父分类的子分类面板（每行 5 个 + 「新增」）。
+                    EntrySubcategoryPanel(
+                      children: _subcategoriesOf(categories, selectedTopId),
+                      selectedId: _categoryId,
+                      accent: amountColor,
+                      onSelected: (child) {
+                        setState(() {
+                          _categoryId = child.id;
+                          _categoryTouched = true;
+                        });
+                        _applyCategoryAccountSuggestion(controller);
+                      },
+                      onCreate: () => unawaited(
+                        _createSubcategory(selectedTopId, categories),
+                      ),
                     ),
                     const SizedBox(height: 18),
                     if (hasAccounts && _type == EntryType.transfer) ...<Widget>[
@@ -1550,6 +1564,53 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
     if (!mounted || selected == null) return;
     setState(() {
       _categoryId = selected;
+      _categoryTouched = true;
+    });
+    _applyCategoryAccountSuggestion(VeriFinScope.of(context));
+  }
+
+  /// 子分类面板的内容：指定父分类的**直接**子分类（仅一层）。
+  /// 父分类 id 为空或找不到时返回空列表（面板仍会显示「新增」格子）。
+  List<Category> _subcategoriesOf(List<Category> categories, String parentId) {
+    if (parentId.isEmpty) return const <Category>[];
+    return childrenOf(categories, parentId);
+  }
+
+  /// 子分类面板的「新增」：弹输入框建一个子分类，建成后直接选中它。
+  Future<void> _createSubcategory(
+    String parentId,
+    List<Category> categories,
+  ) async {
+    final parent = categories
+        .where((category) => category.id == parentId)
+        .firstOrNull;
+    if (parent == null) return;
+    final label = await showTextInputDialog(
+      context: context,
+      title: AppLocalizations.of(context).addSubCategoryTitle(parent.label),
+      label: AppLocalizations.of(context).categoryNameLabel,
+    );
+    if (!mounted || label == null) return;
+    final controller = VeriFinScope.of(context);
+    // 与分类管理页一致：新建子分类落在当前类型下，图标给一个中性默认值，
+    // 用户可随后在分类管理里换图标。
+    controller.addCategory(
+      type: parent.type,
+      label: label,
+      iconCode: 'category',
+      parentId: parent.id,
+    );
+    if (!mounted) return;
+    // 新建后选中它：用户点「新增」的意图就是要用这个新分类。
+    final created = VeriFinScope.of(context).categories
+        .where(
+          (category) =>
+              category.parentId == parent.id && category.label == label.trim(),
+        )
+        .lastOrNull;
+    if (created == null) return;
+    setState(() {
+      _categoryId = created.id;
       _categoryTouched = true;
     });
     _applyCategoryAccountSuggestion(VeriFinScope.of(context));

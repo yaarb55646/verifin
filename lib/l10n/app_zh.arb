@@ -2128,6 +2128,7 @@
   "quickTextEntrySubmit": "下一步",
   "quickTextEntryEmpty": "请先输入内容",
   "quickTextEntryManual": "改用数字键盘",
+  "entrySubcategoryAdd": "新增",
   "aiWarningCategoryUnmatched": "分类未匹配，已用默认分类，请确认",
   "aiWarningAccountUnmatched": "账户未匹配，已置为无账户，请确认",
   "aiWarningCurrencyUnmatched": "币种未识别，已回退到账户币种或本位币，请确认",

@@ -1,0 +1,95 @@
+name: Build APK (mine)
+
+# 个人分支的按需构建：只在 GitHub Actions 页面手动点击时运行，push 不触发。
+#
+# 为什么单独一份而不复用上游的 flutter.yml：
+#   上游那份由 `v*.*.*` tag 触发，且发布说明要从 CHANGELOG.md 里抽取对应版本段落，
+#   缺失就直接失败退出——个人构建不需要这套发版仪式。
+#
+# 签名：android/app/build.gradle.kts 的 signingConfigs 指向仓库内的 verifin-release.jks，
+#   因此这里不需要任何 secrets，构建产物与官方包同签名，可直接覆盖安装、不清数据。
+on:
+  workflow_dispatch:
+    inputs:
+      run_checks:
+        description: '构建前运行 dart format / flutter analyze / flutter test'
+        type: boolean
+        default: true
+      label:
+        description: 'APK 文件名附加标签（可留空，如 quick-parse）'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build arm64 release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          # 必须与上游 CI 固定版本一致：analyzer 的 lint 集合随版本变化，
+          # 本地/上游绿不代表别的版本绿。
+          flutter-version: '3.47.2'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 上游 CI 的格式门禁：确保提交能被上游接受，也避免个人分支悄悄跑偏。
+      - name: Check formatting
+        if: ${{ inputs.run_checks }}
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        if: ${{ inputs.run_checks }}
+        run: flutter analyze
+
+      - name: Test
+        if: ${{ inputs.run_checks }}
+        run: flutter test
+
+      - name: Build release APK (github flavor, arm64)
+        # 与上游 GitHub 自分发包完全相同的构建参数，保证行为一致（含应用内自更新）。
+        run: flutter build apk --release --target-platform android-arm64 --flavor github
+
+      - name: Prepare artifact
+        shell: bash
+        # 标签经 env 传入而非直接插值：`${{ inputs.* }}` 内联进脚本是已知的
+        # 注入反模式（含引号/分号的内容会被 shell 执行）。
+        env:
+          LABEL: ${{ inputs.label }}
+        run: |
+          mkdir -p out
+          short_sha="${GITHUB_SHA::7}"
+          stamp="$(date -u +%Y%m%d)"
+          # 标签里若混入空格或斜杠会让文件名难用，统一替换掉。
+          safe_label="$(printf '%s' "$LABEL" | tr -cs 'A-Za-z0-9._-' '-')"
+          name="verifin-mine-${stamp}-${short_sha}"
+          if [ -n "$safe_label" ]; then
+            name="${name}-${safe_label}"
+          fi
+          cp build/app/outputs/flutter-apk/app-github-release.apk "out/${name}.apk"
+          echo "ARTIFACT_NAME=${name}" >> "$GITHUB_ENV"
+          ls -lh out
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: out/*.apk
+          # 个人构建只留最近几次，避免占满 fork 的存储配额。
+          retention-days: 30

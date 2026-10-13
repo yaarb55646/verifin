@@ -57,10 +57,11 @@ void main() {
     await tester.tap(find.byKey(const Key('quick_text_entry_submit')));
     await tester.pumpAndSettle();
 
+    // 金额 5 已带入（支出方向显示带负号）。先断言金额：noteText() 会滚动到
+    // 备注框，把金额区滚出视口，所以顺序不能反。
+    expect(find.textContaining('5'), findsWidgets);
     // 落到记账页：备注已填「早餐」。
     expect(await noteText(tester), '早餐');
-    // 金额 5 已带入（支出方向显示带负号）。
-    expect(find.textContaining('5'), findsWidgets);
   });
 
   testWidgets('输入「打车32」后备注不被历史识别覆盖', (tester) async {

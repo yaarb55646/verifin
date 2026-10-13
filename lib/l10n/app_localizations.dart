@@ -6026,6 +6026,42 @@ abstract class AppLocalizations {
   /// **'未能识别金额，请在描述中说明金额，例如「打车 32」'**
   String get aiEntryNoAmount;
 
+  /// No description provided for @quickTextEntryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'一句话记账'**
+  String get quickTextEntryTitle;
+
+  /// No description provided for @quickTextEntryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入例如「早餐 5 元」「打车 32」'**
+  String get quickTextEntryHint;
+
+  /// No description provided for @quickTextEntryDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'在本机识别金额与备注，不联网；拆不出金额时整段作为备注'**
+  String get quickTextEntryDesc;
+
+  /// No description provided for @quickTextEntrySubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步'**
+  String get quickTextEntrySubmit;
+
+  /// No description provided for @quickTextEntryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先输入内容'**
+  String get quickTextEntryEmpty;
+
+  /// No description provided for @quickTextEntryManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'改用数字键盘'**
+  String get quickTextEntryManual;
+
   /// No description provided for @aiWarningCategoryUnmatched.
   ///
   /// In zh, this message translates to:

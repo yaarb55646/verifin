@@ -23,7 +23,10 @@ void main() {
     // entry 路由会依次弹「一句话记账」输入层与数字键盘；两者都关闭后该路由才完成。
     final entry = AppWidgetBridge.handleRoute({'route': 'entry'});
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('quick_text_entry_number_pad')), findsOneWidget);
+    expect(
+      find.byKey(const Key('quick_text_entry_number_pad')),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const Key('quick_text_entry_number_pad')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('number_pad_ok')), findsOneWidget);

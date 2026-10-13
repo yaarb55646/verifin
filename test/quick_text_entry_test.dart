@@ -6,17 +6,34 @@ import 'package:verifin/main.dart';
 
 import 'support/test_harness.dart';
 
-/// 「一句话记账」入口的端到端行为：点快速记账 → 弹文字输入 → 解析金额与备注 →
-/// 进记账页。解析函数本身的边界由 `quick_entry_text_test.dart` 覆盖。
+/// 记账页是懒加载列表，备注框可能被挤到视口外而尚未构建。先滚动到备注框，
+/// 再读/写它（与 `category_suggest_widget_test.dart` 同一约定）。
+Future<void> _ensureNoteVisible(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.byKey(const Key('entry_note_field')),
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+}
+
+/// 打开首页的快速记账入口，返回文字输入框。
+Future<Finder> openQuickTextEntry(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('quick_entry_fab')));
+  await tester.pumpAndSettle();
+  return find.byKey(const Key('quick_text_entry_field'));
+}
+
+/// 读备注框当前文本（先确保它已构建）。
+Future<String?> noteText(WidgetTester tester) async {
+  await _ensureNoteVisible(tester);
+  return tester
+      .widget<TextField>(find.byKey(const Key('entry_note_field')))
+      .controller
+      ?.text;
+}
+
 void main() {
   useTestDatabases();
-
-  /// 打开首页的快速记账入口，返回文字输入框。
-  Future<Finder> openQuickTextEntry(WidgetTester tester) async {
-    await tester.tap(find.byKey(const Key('quick_entry_fab')));
-    await tester.pumpAndSettle();
-    return find.byKey(const Key('quick_text_entry_field'));
-  }
 
   testWidgets('点快速记账先弹文字输入框，而不是直接弹数字键盘', (tester) async {
     final store = LocalKeyValueStore();
@@ -40,19 +57,13 @@ void main() {
     await tester.tap(find.byKey(const Key('quick_text_entry_submit')));
     await tester.pumpAndSettle();
 
-    // 落到记账页：备注已填「早餐」，金额 5 显示在金额区。
-    expect(find.byKey(const Key('entry_note_field')), findsOneWidget);
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('entry_note_field')))
-          .controller
-          ?.text,
-      '早餐',
-    );
+    // 落到记账页：备注已填「早餐」。
+    expect(await noteText(tester), '早餐');
+    // 金额 5 已带入（支出方向显示带负号）。
     expect(find.textContaining('5'), findsWidgets);
   });
 
-  testWidgets('输入「早餐5元」后类型/分类可被历史识别（备注参与识别）', (tester) async {
+  testWidgets('输入「打车32」后备注不被历史识别覆盖', (tester) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
     await tester.pumpWidget(VeriFinApp(controller: controller));
@@ -63,14 +74,8 @@ void main() {
     await tester.tap(find.byKey(const Key('quick_text_entry_submit')));
     await tester.pumpAndSettle();
 
-    // 备注「打车」不被历史识别覆盖（视为用户已输入），仍保持原文。
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('entry_note_field')))
-          .controller
-          ?.text,
-      '打车',
-    );
+    // 备注「打车」被视为用户已输入，不被历史识别覆盖，仍保持原文。
+    expect(await noteText(tester), '打车');
     expect(tester.takeException(), isNull);
   });
 
@@ -85,13 +90,7 @@ void main() {
     await tester.tap(find.byKey(const Key('quick_text_entry_submit')));
     await tester.pumpAndSettle();
 
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('entry_note_field')))
-          .controller
-          ?.text,
-      '早餐',
-    );
+    expect(await noteText(tester), '早餐');
     // 金额为 0 → 保存按钮禁用（用户需先补金额）。
     final save = tester.widget<FilledButton>(
       find.byKey(const Key('save_entry_button')),

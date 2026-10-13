@@ -59,6 +59,7 @@ void main() {
     await tapBottomTab(tester, 0);
     await tester.tap(find.byKey(const Key('quick_entry_fab')));
     await tester.pumpAndSettle();
+    await openNumberPadFromQuickEntry(tester);
   }
 
   testWidgets('算式 500+800 展示结果并可确认为 1300', (tester) async {
@@ -153,6 +154,7 @@ void main() {
     await tapBottomTab(tester, 0);
     await tester.tap(find.byKey(const Key('quick_entry_fab')));
     await tester.pumpAndSettle();
+    await openNumberPadFromQuickEntry(tester);
 
     await tester.tap(find.byKey(const Key('number_key_0')));
     await tester.tap(find.byKey(const Key('number_key_.')));

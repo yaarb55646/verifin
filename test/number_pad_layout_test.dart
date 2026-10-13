@@ -72,6 +72,7 @@ void main() {
     await tapBottomTab(tester, 0);
     await tester.tap(find.byKey(const Key('quick_entry_fab')));
     await tester.pumpAndSettle();
+    await openNumberPadFromQuickEntry(tester);
     expect(
       tester.getTopLeft(find.byKey(const Key('number_key_1'))).dy,
       lessThan(tester.getTopLeft(find.byKey(const Key('number_key_7'))).dy),

@@ -56,14 +56,16 @@ class _QuickTextEntrySheetState extends State<QuickTextEntrySheet> {
   void _submit() {
     final raw = _controller.text.trim();
     if (raw.isEmpty) {
-      setState(() => _errorText = AppLocalizations.of(context).quickTextEntryEmpty);
+      setState(
+        () => _errorText = AppLocalizations.of(context).quickTextEntryEmpty,
+      );
       return;
     }
     final parsed = parseQuickEntryText(raw);
     // 拆不出金额也照样往下走：按约定整段文字作为备注，用户在记账页补金额。
-    Navigator.of(context).pop(
-      QuickTextEntryResult(amount: parsed.amount, note: parsed.note),
-    );
+    Navigator.of(
+      context,
+    ).pop(QuickTextEntryResult(amount: parsed.amount, note: parsed.note));
   }
 
   @override

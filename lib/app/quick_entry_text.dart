@@ -72,10 +72,9 @@ String _normalizeDigits(String raw) {
 QuickEntryParse parseQuickEntryText(String raw) {
   // 先归一全角数字，再吞掉数字间的千分位逗号（`1,200` → `1200`）。后续所有匹配都在
   // 这个规范串上进行——否则 `1,200元` 会被裸数字规则拆成 `200`。
-  final normalized = _thousandsSeparator.replaceAll(
-    _normalizeDigits(raw.trim()),
-    '',
-  );
+  final normalized = _normalizeDigits(
+    raw.trim(),
+  ).replaceAll(_thousandsSeparator, '');
   if (normalized.isEmpty) {
     return const QuickEntryParse(amount: null, note: '');
   }
@@ -134,7 +133,7 @@ QuickEntryParse parseQuickEntryText(String raw) {
 
 /// 去掉 [start, end) 这段文字，并清理留下的多余空白与孤零零的分隔标点。
 String _stripSpan(String text, int start, int end) {
-  final rest = (text.substring(0, start) + ' ' + text.substring(end));
+  final rest = '${text.substring(0, start)} ${text.substring(end)}';
   return rest
       .replaceAll(RegExp(r'\s+'), ' ')
       .replaceAll(RegExp(r'^[\s,，、。;；:：\-—+*×÷/]+'), '')

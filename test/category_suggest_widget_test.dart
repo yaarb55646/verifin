@@ -141,6 +141,7 @@ void main() {
     // 再次输入 88 → 类型应自动切到收入、分类利息、备注回填「利息」。
     await tester.tap(find.byKey(const Key('quick_entry_fab')));
     await tester.pumpAndSettle();
+    await openNumberPadFromQuickEntry(tester);
     await tester.tap(find.byKey(const Key('number_key_8')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('number_key_8')));
@@ -193,6 +194,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('quick_entry_fab')));
     await tester.pumpAndSettle();
+    await openNumberPadFromQuickEntry(tester);
     await tester.tap(find.byKey(const Key('number_key_8')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('number_key_8')));
@@ -257,6 +259,7 @@ void main() {
     // 输入与退款金额精确相同的 5 进入记账页。
     await tester.tap(find.byKey(const Key('quick_entry_fab')));
     await tester.pumpAndSettle();
+    await openNumberPadFromQuickEntry(tester);
     await tester.tap(find.byKey(const Key('number_key_5')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('number_pad_ok')));

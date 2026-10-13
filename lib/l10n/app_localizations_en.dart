@@ -3343,6 +3343,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t recognize an amount — include it, e.g. \"taxi 32\"';
 
   @override
+  String get quickTextEntryTitle => 'Quick text entry';
+
+  @override
+  String get quickTextEntryHint => 'e.g. \"breakfast 5\" or \"taxi 32\"';
+
+  @override
+  String get quickTextEntryDesc =>
+      'Amount and note are parsed on this device, no network. If no amount is found, the whole text becomes the note';
+
+  @override
+  String get quickTextEntrySubmit => 'Next';
+
+  @override
+  String get quickTextEntryEmpty => 'Enter something first';
+
+  @override
+  String get quickTextEntryManual => 'Use the number pad instead';
+
+  @override
   String get aiWarningCategoryUnmatched =>
       'Category not matched — a default was used, please confirm';
 

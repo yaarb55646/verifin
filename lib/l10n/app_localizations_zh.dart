@@ -3258,6 +3258,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiEntryNoAmount => '未能识别金额，请在描述中说明金额，例如「打车 32」';
 
   @override
+  String get quickTextEntryTitle => '一句话记账';
+
+  @override
+  String get quickTextEntryHint => '输入例如「早餐 5 元」「打车 32」';
+
+  @override
+  String get quickTextEntryDesc => '在本机识别金额与备注，不联网；拆不出金额时整段作为备注';
+
+  @override
+  String get quickTextEntrySubmit => '下一步';
+
+  @override
+  String get quickTextEntryEmpty => '请先输入内容';
+
+  @override
+  String get quickTextEntryManual => '改用数字键盘';
+
+  @override
   String get aiWarningCategoryUnmatched => '分类未匹配，已用默认分类，请确认';
 
   @override

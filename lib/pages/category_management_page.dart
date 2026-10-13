@@ -340,6 +340,18 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
         icon: Icons.edit_outlined,
         title: l10n.commonEdit,
         children: <VeriMenuEntry>[
+          if (!protected && category.type != EntryType.transfer)
+            VeriMenuItem(
+              id: 'category_keywords',
+              icon: Icons.label_outline,
+              title: l10n.categoryKeywordsTitle,
+              onPressed: () async {
+                await showCategoryKeywordsSheet(
+                  context: context,
+                  categoryId: category.id,
+                );
+              },
+            ),
           VeriMenuItem(
             id: 'category_rename',
             icon: Icons.drive_file_rename_outline,
@@ -665,6 +677,13 @@ class _CategoryManageRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
+                    if (category.keywords.isNotEmpty)
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        ).categoryKeywordCount(category.keywords.length),
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(

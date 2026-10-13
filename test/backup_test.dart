@@ -588,6 +588,7 @@ void main() {
     );
     // 多级分类：样例中「咖啡」是「餐饮」的子分类，导入后层级应保留。
     expect(controller.categoryById(coffee.parentId!).label, '餐饮');
+    expect(controller.categoryById(coffee.parentId!).keywords, ['包子', '面条']);
     // 两个账本（默认 + 旅行）各有一份分类副本。
     expect(
       controller

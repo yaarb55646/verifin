@@ -18,7 +18,7 @@ class AppDatabase {
   final Database db;
 
   static const String defaultDatabaseName = 'verifin.db';
-  static const int schemaVersion = 19;
+  static const int schemaVersion = 20;
 
   /// 打开（或创建）数据库。测试通过 [factory]/[path] 注入 ffi 与内存路径；
   /// 真实平台留空则由 [resolveDatabaseFactory]/[resolveDatabasePath] 决定。
@@ -76,6 +76,7 @@ class AppDatabase {
         17: _migrateToV17,
         18: _migrateToV18,
         19: _migrateToV19,
+        20: _migrateToV20,
       };
 
   /// 只读暴露迁移注册表，供迁移矩阵测试把库推进到任意中间版本。生产代码勿用。
@@ -97,6 +98,13 @@ class AppDatabase {
       }
       await migrate(db);
     }
+  }
+
+  /// v19 → v20：分类可维护一句话记账关键词，旧分类默认没有关键词。
+  static Future<void> _migrateToV20(Database db) async {
+    await db.execute(
+      "ALTER TABLE categories ADD COLUMN keywords TEXT NOT NULL DEFAULT '[]'",
+    );
   }
 
   /// v1 → v2：分类支持多级树形结构，新增可空的 parent_id 列（顶级为 NULL）。
@@ -977,7 +985,8 @@ class AppDatabase {
       icon_code TEXT NOT NULL,
       sort_order INTEGER NOT NULL,
       parent_id TEXT,
-      category_key TEXT
+      category_key TEXT,
+      keywords TEXT NOT NULL DEFAULT '[]'
     )
     ''',
     _categoriesBookIndex,

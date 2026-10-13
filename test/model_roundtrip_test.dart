@@ -102,6 +102,7 @@ void main() {
     type: EntryType.income,
     iconCode: 'emoji:🍜',
     parentId: 'cat-parent',
+    keywords: ['奖金', 'Bonus'],
   );
 
   const categoryRoot = Category(

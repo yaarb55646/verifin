@@ -608,6 +608,21 @@ mixin _ControllerState on ChangeNotifier {
           _categories[i] = _categories[i].copyWith(parentId: resolve(parentId));
         }
       }
+      // 自愈合并分类时保留被并入分类的叫法，避免恢复备份后丢规则。
+      for (var i = 0; i < _categories.length; i++) {
+        final category = _categories[i];
+        if (!dupIds.contains(category.id)) {
+          _categories[i] = category.copyWith(
+            keywords: normalizedCategoryKeywords([
+              ...category.keywords,
+              for (final duplicate in _categories)
+                if (dupIds.contains(duplicate.id) &&
+                    resolve(duplicate.id) == category.id)
+                  ...duplicate.keywords,
+            ]),
+          );
+        }
+      }
       _categories.removeWhere((c) => dupIds.contains(c.id));
       for (final dup in dupIds) {
         _categoryBudgets.removeWhere((key, _) => key.endsWith(':$dup'));

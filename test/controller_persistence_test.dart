@@ -62,6 +62,32 @@ void main() {
     expect(reloaded.entries.single.id, '1');
   });
 
+  test('分类关键词真实 SQLite 冷启动读回且可清空', () async {
+    final repo = await openRepo();
+    final controller = await createTestController(
+      LocalKeyValueStore(),
+      repository: repo,
+    );
+    expect(
+      await controller.saveCategoryKeywords('dining', ['包子', '豆浆']),
+      isTrue,
+    );
+    final reloaded = await createTestController(
+      LocalKeyValueStore(),
+      repository: repo,
+    );
+    expect(reloaded.categoryById('dining').keywords, ['包子', '豆浆']);
+    expect(await reloaded.saveCategoryKeywords('dining', []), isTrue);
+    expect(
+      (await repo.loadCategories())
+          .firstWhere((c) => c.id == 'dining')
+          .keywords,
+      isEmpty,
+    );
+    controller.dispose();
+    reloaded.dispose();
+  });
+
   test('退款关联条目（refund_of/settled_at）写入 SQLite 并被新控制器读回', () async {
     final repo = await openRepo();
     final controller = await createTestController(

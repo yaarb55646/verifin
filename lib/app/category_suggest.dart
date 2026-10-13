@@ -3,10 +3,11 @@ import 'dart:math' as math;
 import 'category_tree.dart';
 import 'models.dart';
 
-/// 一句话记账按当前账本的真实分类名称匹配，不依赖历史交易。
+/// 一句话记账按当前账本的真实分类名称及自定义关键词匹配，不依赖历史交易。
 ///
 /// 完整名称优先于包含匹配；包含匹配取最长名称。同名或同等长度的多个
 /// 候选不猜测，可用「餐饮/午餐」的祖先路径消歧。只识别支出和收入。
+/// 分类名称和路径优先于关键词；关键词包含匹配取最长词，相同长度冲突不猜测。
 Category? suggestCategoryFromText({
   required List<Category> categories,
   required String bookId,
@@ -33,7 +34,7 @@ Category? suggestCategoryFromText({
     if (text == label) {
       rank = 3;
     } else if (_containsCategoryName(text, label)) {
-      rank = 1;
+      rank = 2;
     }
     // 有序、相邻的祖先路径比单个名字更明确。每一级使用真实 label，
     // 允许从任一祖先开始，也支持空格、斜杠、箭头等常见路径分隔符。
@@ -67,7 +68,23 @@ Category? suggestCategoryFromText({
         }
       }
     }
-    if (rank > 0) matches.add((category: category, rank: rank, length: length));
+    // 分类名/路径始终优先；自定义叫法不依赖历史，包含匹配取最长词。
+    if (rank == 0) {
+      var keywordLength = 0;
+      for (final keyword in category.keywords) {
+        final word = normalizedCategoryLabel(keyword);
+        if (word.isNotEmpty && _containsCategoryName(text, word)) {
+          keywordLength = math.max(keywordLength, word.runes.length);
+        }
+      }
+      if (keywordLength > 0) {
+        rank = 1;
+        length = keywordLength;
+      }
+    }
+    if (rank != 0) {
+      matches.add((category: category, rank: rank, length: length));
+    }
   }
   if (matches.isEmpty) return null;
   matches.sort((a, b) {

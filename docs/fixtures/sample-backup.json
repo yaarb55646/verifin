@@ -581,7 +581,8 @@
         "id": "dining",
         "label": "餐饮",
         "type": "expense",
-        "iconCode": "dining"
+        "iconCode": "dining",
+        "keywords": ["包子", "面条"]
       },
       {
         "id": "transport",

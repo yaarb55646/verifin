@@ -4178,6 +4178,60 @@ abstract class AppLocalizations {
   /// **'在「{parent}」下新增子分类'**
   String addSubCategoryTitle(String parent);
 
+  /// No description provided for @categoryKeywordsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记账关键词'**
+  String get categoryKeywordsTitle;
+
+  /// No description provided for @categoryKeywordsHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入常用叫法并添加，例如包子、豆浆。文字记账会匹配到此分类；保存关键词不会保存当前账目。'**
+  String get categoryKeywordsHelp;
+
+  /// No description provided for @categoryKeywordLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键词'**
+  String get categoryKeywordLabel;
+
+  /// No description provided for @categoryKeywordHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：包子'**
+  String get categoryKeywordHint;
+
+  /// No description provided for @categoryKeywordAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加关键词'**
+  String get categoryKeywordAdd;
+
+  /// No description provided for @categoryKeywordLinkAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'将关键词关联到当前分类'**
+  String get categoryKeywordLinkAction;
+
+  /// No description provided for @categoryKeywordsSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键词未保存，请检查是否存在冲突后重试'**
+  String get categoryKeywordsSaveFailed;
+
+  /// No description provided for @categoryKeywordConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'“{keyword}”已关联到“{category}”'**
+  String categoryKeywordConflict(String keyword, String category);
+
+  /// No description provided for @categoryKeywordCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个关键词'**
+  String categoryKeywordCount(int count);
+
   /// No description provided for @categoryNameLabel.
   ///
   /// In zh, this message translates to:

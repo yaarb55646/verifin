@@ -81,7 +81,11 @@ Veri Fin 关键技术选型与理由。变更相关实现时同步更新本表�
 
 名称命中时只填类型与分类，不带入其它分类历史的标签或备注；未命中沿用既有历史识别。
 两条路径都尊重自动识别总开关及用户手动类型/分类选择，AI 与导入草稿不参与，数字键盘入口沿用原行为。
-解析与预选只改变编辑页草稿，确认保存才落账；不新增 SQLite/KV 字段或备份内容。
+解析与预选只改变编辑页草稿，确认保存才落账。
+
+自定义关键词通过分类管理「编辑 → 记账关键词」或一句话确认页备注下方入口维护，保存规则与保存账目分别确认；草稿/AI 入口不显示关联按钮。`Category.keywords` 属于分类和账本，SQLite v20 新增 `categories.keywords` JSON 数组列，旧分类默认 `[]`，备份仍为可选的 v4 分类字段（缺失时为空）；legacy 分类复制和重复分类自愈保留关键词。改名/移动保留、合并归入目标、删除随分类清除、新账本/初始化不播种关键词。
+
+识别优先级为分类名称/路径、自定义关键词、历史推测；关键词按最长词匹配，英文词边界和全半角/大小写归一沿用分类名规则。相同长度的多个分类候选不猜测；保存规则时阻止当前账本内同词跨分类绑定，支出/收入间也检查冲突，不影响其它账本。关键词只支持支出/收入，余额调整和转账不参与。保存走 Controller 全量分类集合，落库成功后才更新内存，失败保留编辑草稿并反馈。
 
 ## 看板分类占比与排行
 
@@ -95,7 +99,7 @@ Veri Fin 关键技术选型与理由。变更相关实现时同步更新本表�
 
 **导出/导入必须与此表保持一致**（`exportDataJson`/`importDataJson`）。改动任一偏好的归属时同步更新这里与 `README.md`。
 
-**进备份**（随 JSON v4 `exportDataJson` 的 `data` 导出、可跨设备还原）：全部账目数据（`ledgerBooks` 及本位币确认状态、`entries` 三层金额与转换来源、`accounts` 账户币种、`accountGroups` 名称/顺序（分组仅为文件夹，无自定义图标）、`categories`（含 `bookId` 与语义键 `key`）、`tags`（含 `bookId`）、`attachments`、`recurringRules` 及汇率策略、`exchangeRates`、`monthlyBudgets`/`categoryBudgets`/`dailyBudgets`）+ `profile` + `activeBookId` + 外观与显示偏好（`themePreference`、`themeColor`、`hapticsEnabled`、`assetCoverUrl`、`assetAccountViewMode`、`collapsedAssetSections`、`assetAccountOrders`/`assetSectionOrders`、`homePanels`/`reportDailyPanels`/`reportPanels`/`reportYearlyPanels`（看板按统计口径 Tab 各存一份面板清单）、`defaultAccountIds`、`budgetCycleStartDays`、`fabActionMode`、`currencyFractionStyle`、`moneyUnitStyle`、`hideUnitInSingleCurrency`、`autoSuggestEnabled`、`showRunningBalance`、`homeTrendConfig`）。**兼容读入**：v3 及更早的分类/标签是全局的、没有 `bookId`，导入时按 `legacy_book_scope.dart` 展开成每个账本各一份新 id 的副本；旧备份的 `reportPanels` 仍按「月统计」Tab 清单读入，旧备份只有 `amountForceTwoDecimals` 时按「标准小数位 / 精简尾零」重解释。v1/v2 或缺少币种字段的备份按 CNY 原值重解释并标为待确认。货币静态目录属于应用代码，不进备份。这些偏好与 theme/haptics 使用同一套“备份内容覆盖本机状态”的语义。
+**进备份**（随 JSON v4 `exportDataJson` 的 `data` 导出、可跨设备还原）：全部账目数据（`ledgerBooks` 及本位币确认状态、`entries` 三层金额与转换来源、`accounts` 账户币种、`accountGroups` 名称/顺序（分组仅为文件夹，无自定义图标）、`categories`（含 `bookId`、语义键 `key` 与自定义 `keywords`）、`tags`（含 `bookId`）、`attachments`、`recurringRules` 及汇率策略、`exchangeRates`、`monthlyBudgets`/`categoryBudgets`/`dailyBudgets`）+ `profile` + `activeBookId` + 外观与显示偏好（`themePreference`、`themeColor`、`hapticsEnabled`、`assetCoverUrl`、`assetAccountViewMode`、`collapsedAssetSections`、`assetAccountOrders`/`assetSectionOrders`、`homePanels`/`reportDailyPanels`/`reportPanels`/`reportYearlyPanels`（看板按统计口径 Tab 各存一份面板清单）、`defaultAccountIds`、`budgetCycleStartDays`、`fabActionMode`、`currencyFractionStyle`、`moneyUnitStyle`、`hideUnitInSingleCurrency`、`autoSuggestEnabled`、`showRunningBalance`、`homeTrendConfig`）。**兼容读入**：v3 及更早的分类/标签是全局的、没有 `bookId`，导入时按 `legacy_book_scope.dart` 展开成每个账本各一份新 id 的副本；旧备份的 `reportPanels` 仍按「月统计」Tab 清单读入，旧备份只有 `amountForceTwoDecimals` 时按「标准小数位 / 精简尾零」重解释。v1/v2 或缺少币种字段的备份按 CNY 原值重解释并标为待确认。货币静态目录属于应用代码，不进备份。这些偏好与 theme/haptics 使用同一套“备份内容覆盖本机状态”的语义。
 
 > **fixture 策略**：`docs/fixtures/sample-backup.json` 保留为**旧版（v2）样例**，专门覆盖「全局分类/标签 → 按账本展开」这条兼容路径；新版 v4 备份由 `test/backup_test.dart` 与 `test/category_book_scope_test.dart` 的导出→导入往返覆盖（导出物本身即 v4 样例）。
 

@@ -88,6 +88,7 @@ LegacyBookScopeExpansion expandLegacyScopedRecords({
           label: category.label,
           type: category.type,
           iconCode: category.iconCode,
+          keywords: category.keywords,
           // 旧 id 若是有约定的语义键（默认分类/余额调整/未分类），转成 key 保留语义。
           key: isKnownCategoryKey(category.id) ? category.id : null,
           parentId: category.parentId == null ? null : ids[category.parentId],

@@ -129,6 +129,7 @@ void _runContract(String name, Future<LedgerRepository> Function() openRepo) {
           label: '餐饮',
           type: EntryType.expense,
           iconCode: 'dining',
+          keywords: ['包子', '面条'],
         ),
         Category(
           bookId: defaultLedgerBookId,

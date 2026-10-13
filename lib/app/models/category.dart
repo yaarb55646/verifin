@@ -15,6 +15,7 @@ class Category {
     required this.iconCode,
     this.parentId,
     this.key,
+    this.keywords = const <String>[],
   });
 
   /// 纯标识，随机生成、不承载任何含义（[key] 才是语义）。
@@ -36,8 +37,14 @@ class Category {
   /// 见 lib/app/models/category_keys.dart。
   final String? key;
 
+  /// 一句话记账的自定义叫法，属于当前分类和账本，随分类备份。
+  final List<String> keywords;
+
   /// 是否为顶级分类。
   bool get isRoot => parentId == null;
+
+  static List<String> decodeKeywords(Object? raw) =>
+      _decodeCategoryKeywords(raw);
 
   /// 是否为系统分类（余额调整）。系统分类可改名、换图标，但不能移动、合并、删除。
   bool get isBalanceAdjust =>
@@ -61,6 +68,7 @@ class Category {
     EntryType? type,
     String? iconCode,
     String? key,
+    List<String>? keywords,
     // 使用哨兵区分「未传入」与「显式置空」，以便把子分类移动到顶级。
     Object? parentId = _copyWithSentinel,
   }) {
@@ -71,6 +79,9 @@ class Category {
       type: type ?? this.type,
       iconCode: iconCode ?? this.iconCode,
       key: key ?? this.key,
+      keywords: keywords == null
+          ? this.keywords
+          : List<String>.unmodifiable(keywords),
       parentId: identical(parentId, _copyWithSentinel)
           ? this.parentId
           : parentId as String?,
@@ -86,6 +97,7 @@ class Category {
       'iconCode': iconCode,
       if (key != null) 'key': key,
       if (parentId != null) 'parentId': parentId,
+      if (keywords.isNotEmpty) 'keywords': keywords,
     };
   }
 
@@ -100,9 +112,20 @@ class Category {
       iconCode: json['iconCode'] as String? ?? 'category',
       key: json['key'] as String?,
       parentId: normalizeParentId(json['parentId'] as String?),
+      keywords: decodeKeywords(json['keywords']),
     );
   }
 }
+
+/// 旧备份没有关键词；异构备份中的非字符串项不能成为识别规则。
+List<String> _decodeCategoryKeywords(Object? raw) => raw is List
+    ? List<String>.unmodifiable(
+        raw
+            .whereType<String>()
+            .map((word) => word.trim())
+            .where((word) => word.isNotEmpty),
+      )
+    : const <String>[];
 
 const Object _copyWithSentinel = Object();
 

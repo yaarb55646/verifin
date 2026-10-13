@@ -94,8 +94,10 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `showCategoryPickerSheet` | Sheet 函数 | `sheets.dart` | **多级分类选择弹窗**（展开/收起层级树，**按 支出/收入/转账 分区并各带类型标题**，图标按 `colorForType` 上色，区内保持列表顺序）；`allLabel` 非空加「全部」→ 返回 `categoryPickerAll`；`topLevelLabel` 加「移到顶级」→ 返回 `categoryPickerTopLevel`（「全部」「移到顶级」用中性主题色）。**选分类一律用它**，不要裸包 `showModalBottomSheet` |
 | `CategoryPickerSheet` | Widget | `entry_sheets.dart` | 上面 helper 的内部 widget（一般经 `showCategoryPickerSheet`）；`categoryPickerAll` / `categoryPickerTopLevel` 哨兵常量在此 |
 | `showCategoryIconPickerSheet` | Sheet 函数 | `sheets.dart` | 分类图标（内置网格 + emoji 快选 + 自由输入） |
+| `showCategoryKeywordsSheet` | Sheet 函数 | `sheets.dart` | `context:` / `categoryId` / 可选 `initialKeyword`；分类管理与一句话确认页共用的词标签编辑弹层，添加/删除仅改草稿，确认保存调用 `saveCategoryKeywords`，成功返回 `true`、取消 `null`；冲突与保存失败内联反馈 |
 | `categoryById` / `categoryByIdFrom` / `categoriesFor` | 纯函数 | `model_lookup.dart` | 取分类 / 按类型过滤 |
 | 分类树工具集 | 纯函数 | `category_tree.dart` | `categoryIndex` `rootCategories` `childrenOf` `hasChildren` `ancestorIds` `rootIdOf` `descendantIds` `isDescendantOf` `depthOf` `pathLabel` `flattenTree`（均带环检测）；`CategoryNode` 携带 depth |
+| 分类关键词 | 纯函数 | `category_tree.dart` | `normalizedCategoryKeywords`（trim/大小写/全半角去重并保留显示形式）、`categoryKeywordOwner`（账本内关键词归属/排除正在编辑的分类），分类名和关键词共用归一口径 |
 
 ## 族 5 — 金额输入 / 计算
 
@@ -191,7 +193,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | 首页指标 | `home_metrics.dart` | `computeHomeMetric` `homeMetricLabel` `homeMetricGroups` `formatHomeMetric` `homeMetricColor`；`HomeMetric` `HomeMetricContext` `HomeTrendConfig` |
 | 周期记账 | `recurring.dart` | `advanceRecurring` `dueDatesFor` |
 | 信用类账户 | `credit_card.dart` | `nextDueDate` `daysUntilDue` `nextStatementDate` `currentBillingCycle` `usedCredit` `availableCredit` `billingCycleExpense`；卡号 `cardLast4Of`（在 `models.dart`） |
-| 记账自动识别 | `category_suggest.dart` | `suggestCategoryFromText`（一句话记账按当前账本分类名称匹配，含任意层级与路径消歧）；`suggestEntry`（历史推断类型/分类/标签/备注）；`EntrySuggestion`；`lastUsedAccountIdForCategory`（该分类上次用过的账户，记账页在自动识别开启时用它预选账户） |
+| 记账自动识别 | `category_suggest.dart` | `suggestCategoryFromText`（一句话记账按当前账本分类名称/路径及自定义关键词匹配，关键词优先于历史）；`suggestEntry`（历史推断类型/分类/标签/备注）；`EntrySuggestion`；`lastUsedAccountIdForCategory`（该分类上次用过的账户，记账页在自动识别开启时用它预选账户） |
 | 多币种草稿缩放 | `entry_currency_draft.dart` | `scaleDependentCurrencyAmount`——手工/导入/旧数据或固定周期规则改原币金额时保持既有结算比例，并按目标币种规整 |
 | 账目数据校验 | `ledger_data_validation.dart` | `validateLedgerEntries` `LedgerDataValidationIssue`——交易聚合、账单导入和备份恢复共用的三层金额/退款/引用校验 |
 | 附件存储与备份管线 | `attachments/attachment_store.dart`、`backup/backup_archive.dart`、`backup/legacy_json_stream.dart`、`backup/backup_service.dart`、`backup/backup_storage_*.dart` | `AttachmentStore`——附件字节**唯一入口**（文件存储 + 导入暂存 + 孤儿回收 + 迁移期按需物化；生产 `FileAttachmentStore`、测试 `InMemoryAttachmentStore`），绘制层禁止自行拼附件路径或直接用 `File`；`packBackupArchiveToFile` / `unpackBackupArchiveFile`（流式 zip，附件 store 模式、逐条落盘）；`rewriteLegacyBackupJson`（旧版内嵌 base64 备份的前向事件流重写）。**恢复入口**：`BackupService.chooseBackupFile()`（自带 SAF 选择器，只回传 `PickedBackupFile{uri,name,size}`，不要用 `file_selector`——它会把整份文件读进内存）、`BackupService.stageBackupFile(uri)`（原生流式复制到缓存，返回 `StagedCacheFile{path,byteSize,owned}`，**只有 `owned` 才允许调用方删除**）。旧库 `data_url` 的读取与回收在仓储层：`loadAttachmentDataUrl`/`attachmentIdsWithLegacyData`/`clearAttachmentDataUrl`、`hasLegacyAttachmentColumn`、`dropLegacyAttachmentData`（迁移完成后去列 + VACUUM），`loadAttachments` **只读元数据列** | 

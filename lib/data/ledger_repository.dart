@@ -1148,6 +1148,7 @@ class SqliteLedgerRepository implements LedgerRepository {
         'sort_order': index,
         'parent_id': c.parentId,
         'category_key': c.key,
+        'keywords': jsonEncode(c.keywords),
       };
 
   static Category _categoryFromRow(Map<String, Object?> row) {
@@ -1158,6 +1159,7 @@ class SqliteLedgerRepository implements LedgerRepository {
       type: EntryType.fromStorage(row['type'] as String),
       iconCode: row['icon_code'] as String,
       key: row['category_key'] as String?,
+      keywords: Category.decodeKeywords(jsonDecode(row['keywords'] as String)),
       parentId: Category.normalizeParentId(row['parent_id'] as String?),
     );
   }

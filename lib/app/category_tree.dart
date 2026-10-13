@@ -89,6 +89,37 @@ String normalizedCategoryLabel(String label) {
   return buffer.toString().trim().toLowerCase();
 }
 
+/// 关键词去重沿用分类名称归一规则，保留用户输入的显示形式。
+List<String> normalizedCategoryKeywords(Iterable<String> words) {
+  final seen = <String>{};
+  return <String>[
+    for (final word in words)
+      if (word.trim().isNotEmpty && seen.add(normalizedCategoryLabel(word)))
+        word.trim(),
+  ];
+}
+
+/// 当前账本内关键词的已有归属；系统分类不参与文字识别。
+Category? categoryKeywordOwner({
+  required Iterable<Category> categories,
+  required String bookId,
+  required String keyword,
+  String? excludingId,
+}) {
+  final normalized = normalizedCategoryLabel(keyword);
+  if (normalized.isEmpty) return null;
+  for (final category in categories) {
+    if (category.bookId == bookId &&
+        category.id != excludingId &&
+        category.keywords.any(
+          (word) => normalizedCategoryLabel(word) == normalized,
+        )) {
+      return category;
+    }
+  }
+  return null;
+}
+
 /// 所有后代分类 id（任意层级，不含自身），前序遍历顺序。
 List<String> descendantIds(List<Category> all, String id) {
   final result = <String>[];

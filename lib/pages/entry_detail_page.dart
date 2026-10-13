@@ -60,7 +60,7 @@ class EntryDetailPage extends StatefulWidget {
 
   /// 预填备注（如「一句话记账」本地解析出的文字部分）。非空时视为用户已输入：
   /// 标记 `_noteTouched`，避免被历史识别回填覆盖；同时它仍会参与识别，用于推断
-  /// 类型/分类/标签；一句话入口会优先按当前账本的真实分类名称匹配。
+  /// 类型/分类/标签；一句话入口优先匹配当前账本的分类名称及自定义关键词。
   final String? initialNote;
 
   /// AI 解析出的草稿：非空时预填表单并显示复核提示，供用户确认/修改后落账。
@@ -544,7 +544,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       return;
     }
     final controller = VeriFinScope.of(context);
-    // 一句话中明确写出的分类名优先于历史金额习惯；用户已选分类后不再匹配。
+    // 分类名称和关键词优先于历史金额习惯；用户已选分类后不再匹配。
     final namedCategory = widget.initialNote != null && !_categoryTouched
         ? suggestCategoryFromText(
             categories: controller.categories,
@@ -968,6 +968,40 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    if (_draftFree &&
+                        widget.initialNote != null &&
+                        _noteController.text.trim().isNotEmpty &&
+                        categories.any(
+                          (category) =>
+                              category.id == _categoryId &&
+                              !category.isBalanceAdjust &&
+                              (category.type == EntryType.expense ||
+                                  category.type == EntryType.income),
+                        ))
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          key: const Key('entry_link_category_keyword'),
+                          onPressed: () async {
+                            _cancelPendingSuggestion();
+                            final categoryId = _categoryId;
+                            final saved = await showCategoryKeywordsSheet(
+                              context: context,
+                              categoryId: categoryId,
+                              initialKeyword: _noteController.text.trim(),
+                            );
+                            if (!mounted || saved != true) return;
+                            // 绑定成功后保持用户确认的分类；取消弹层不修改草稿。
+                            setState(() => _categoryTouched = true);
+                          },
+                          icon: const Icon(Icons.label_outline, size: 18),
+                          label: Text(
+                            AppLocalizations.of(
+                              context,
+                            ).categoryKeywordLinkAction,
+                          ),
+                        ),
+                      ),
                     Text(
                       AppLocalizations.of(context).entryMoreInfo,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(

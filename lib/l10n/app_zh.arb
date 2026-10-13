@@ -1602,6 +1602,17 @@
       }
     }
   },
+  "categoryKeywordsTitle": "记账关键词",
+  "categoryKeywordsHelp": "输入常用叫法并添加，例如包子、豆浆。文字记账会匹配到此分类；保存关键词不会保存当前账目。",
+  "categoryKeywordLabel": "关键词",
+  "categoryKeywordHint": "例如：包子",
+  "categoryKeywordAdd": "添加关键词",
+  "categoryKeywordLinkAction": "将关键词关联到当前分类",
+  "categoryKeywordsSaveFailed": "关键词未保存，请检查是否存在冲突后重试",
+  "categoryKeywordConflict": "“{keyword}”已关联到“{category}”",
+  "categoryKeywordCount": "{count} 个关键词",
+  "@categoryKeywordConflict": {"placeholders": {"keyword": {"type": "String"}, "category": {"type": "String"}}},
+  "@categoryKeywordCount": {"placeholders": {"count": {"type": "int"}}},
   "categoryNameLabel": "分类名称",
   "viewCategoryEntries": "查看交易",
   "changeIcon": "更换图标",

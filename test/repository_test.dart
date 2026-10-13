@@ -18,6 +18,14 @@ const String _legacyAccountsTable = '''
   )
 ''';
 
+/// v2 起真实存在的分类表。局部迁移夹具也需保留它，后续迁移会扩展分类。
+const String _legacyCategoriesTable = '''
+  CREATE TABLE categories (
+    id TEXT PRIMARY KEY, label TEXT NOT NULL, type TEXT NOT NULL,
+    icon_code TEXT NOT NULL, sort_order INTEGER NOT NULL, parent_id TEXT
+  )
+''';
+
 void main() {
   setUpAll(sqfliteFfiInit);
 
@@ -584,6 +592,7 @@ void main() {
         version: 7,
         onCreate: (db, _) async {
           await db.execute(_legacyAccountsTable);
+          await db.execute(_legacyCategoriesTable);
         },
       ),
     );
@@ -642,7 +651,8 @@ void main() {
         version: 6,
         onCreate: (db, _) async {
           await db.execute(_legacyAccountsTable);
-          // 一张占位表即可，迁移只新增 recurring_rules。
+          await db.execute(_legacyCategoriesTable);
+          // 本用例不写交易，保留分类/账户结构供后续迁移继续升级。
           await db.execute('CREATE TABLE placeholder (id TEXT PRIMARY KEY)');
         },
       ),
@@ -684,6 +694,7 @@ void main() {
         version: 4,
         onCreate: (db, _) async {
           await db.execute(_legacyAccountsTable);
+          await db.execute(_legacyCategoriesTable);
           await db.execute('''
             CREATE TABLE entries (
               id TEXT PRIMARY KEY, book_id TEXT NOT NULL, type TEXT NOT NULL,
@@ -743,6 +754,7 @@ void main() {
         version: 3,
         onCreate: (db, _) async {
           await db.execute(_legacyAccountsTable);
+          await db.execute(_legacyCategoriesTable);
           await db.execute('''
             CREATE TABLE entries (
               id TEXT PRIMARY KEY, book_id TEXT NOT NULL, type TEXT NOT NULL,
@@ -781,6 +793,7 @@ void main() {
         version: 2,
         onCreate: (db, _) async {
           await db.execute(_legacyAccountsTable);
+          await db.execute(_legacyCategoriesTable);
           await db.execute('''
             CREATE TABLE entries (
               id TEXT PRIMARY KEY, book_id TEXT NOT NULL, type TEXT NOT NULL,

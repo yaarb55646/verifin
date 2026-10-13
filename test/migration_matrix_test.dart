@@ -181,6 +181,7 @@ void main() {
       // v10 去重：两个「餐饮」合并为一个，引用它们的交易统一指向保留者。
       final categories = await repo.loadCategories();
       expect(categories, hasLength(2));
+      expect(categories.every((category) => category.keywords.isEmpty), isTrue);
       final dinnerCategory = entries.singleWhere((e) => e.id == 'e2');
       expect(dinnerCategory.categoryId, lunch.categoryId);
 
@@ -371,25 +372,31 @@ void main() {
 
   test('v15 账户历史图标 code 升级后写回当前 SVG code', () async {
     final path = '${tempDir.path}/v15_account_icons.db';
-    final app = await AppDatabase.open(factory: databaseFactoryFfi, path: path);
-    final repo = SqliteLedgerRepository(app);
-    await repo.saveAccounts(<Account>[
-      for (final legacy in const <String>['alipay', 'wechat', 'folder'])
-        Account(
-          id: 'legacy-$legacy',
-          bookId: 'default',
-          name: legacy,
-          type: AccountType.onlinePayment,
-          groupId: null,
-          initialBalance: 0,
-          iconCode: legacy,
-          note: '',
-          includeInAssets: true,
-          hidden: false,
-        ),
-    ]);
-    await app.db.execute('PRAGMA user_version = 15');
-    await app.close();
+    // 从冻结的 v1 结构升级出真实 v15，不能把当前 schema 伪标成旧版本。
+    final raw = await databaseFactoryFfi.openDatabase(path);
+    for (final statement in _schemaV1) {
+      await raw.execute(statement);
+    }
+    for (var version = 2; version <= 15; version++) {
+      await AppDatabase.migrations[version]!(raw);
+    }
+    for (final legacy in const <String>['alipay', 'wechat', 'folder']) {
+      await raw.insert('accounts', <String, Object?>{
+        'id': 'legacy-$legacy',
+        'book_id': 'default',
+        'name': legacy,
+        'type': 'onlinePayment',
+        'initial_balance': 0,
+        'icon_code': legacy,
+        'note': '',
+        'include_in_assets': 1,
+        'hidden': 0,
+        'card_last4': '',
+        'sort_order': 0,
+      });
+    }
+    await raw.execute('PRAGMA user_version = 15');
+    await raw.close();
 
     final upgraded = await AppDatabase.open(
       factory: databaseFactoryFfi,

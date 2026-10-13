@@ -3605,6 +3605,47 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
+  /// 显式保存关键词：写入全量分类，落库成功后才发布内存状态。
+  Future<bool> saveCategoryKeywords(
+    String categoryId,
+    List<String> words,
+  ) async {
+    final index = _categories.indexWhere(
+      (category) =>
+          category.id == categoryId && category.bookId == _activeBookId,
+    );
+    if (index < 0) return false;
+    final category = _categories[index];
+    if (category.isBalanceAdjust ||
+        (category.type != EntryType.expense &&
+            category.type != EntryType.income)) {
+      return false;
+    }
+    final keywords = normalizedCategoryKeywords(words);
+    if (keywords.any(
+      (word) =>
+          categoryKeywordOwner(
+            categories: _categories,
+            bookId: category.bookId,
+            keyword: word,
+            excludingId: categoryId,
+          ) !=
+          null,
+    )) {
+      return false;
+    }
+    final next = List<Category>.of(_categories);
+    next[index] = category.copyWith(keywords: keywords);
+    if (!await _runTrackedWrite(() => _repository.saveCategories(next))) {
+      return false;
+    }
+    _categories
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    return true;
+  }
+
   void updateCategoryIcon(String categoryId, String iconCode) {
     final index = _categories.indexWhere(
       (category) =>
@@ -3814,9 +3855,18 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
             ? rule.copyWith(categoryId: targetId)
             : rule,
     ];
-    final nextCategories = _categories
-        .where((category) => category.id != sourceId)
-        .toList();
+    final nextCategories = <Category>[
+      for (final category in _categories)
+        if (category.id != sourceId)
+          category.id == targetId
+              ? category.copyWith(
+                  keywords: normalizedCategoryKeywords([
+                    ...category.keywords,
+                    ...source.keywords,
+                  ]),
+                )
+              : category,
+    ];
     // 清理源分类的分类预算，避免残留孤儿键。
     final nextCategoryBudgets = Map<String, double>.of(_categoryBudgets)
       ..removeWhere((key, _) => key.endsWith(':$sourceId'));

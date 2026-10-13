@@ -5,6 +5,7 @@ import 'package:month_picker_dialog/month_picker_dialog.dart' as month_picker;
 
 import '../app/app_theme.dart';
 import '../app/common_widgets.dart';
+import '../app/category_tree.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/icon_catalog.dart';
@@ -84,6 +85,177 @@ class _VeriSheetDragHandle extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// 分类管理与一句话确认页共用的关键词编辑弹层，确认后才保存规则。
+Future<bool?> showCategoryKeywordsSheet({
+  required BuildContext context,
+  required String categoryId,
+  String initialKeyword = '',
+}) => showVeriModalSheet<bool>(
+  context: context,
+  showDragHandle: true,
+  isScrollControlled: true,
+  useSafeArea: true,
+  builder: (context) => _CategoryKeywordsSheet(
+    categoryId: categoryId,
+    initialKeyword: initialKeyword,
+  ),
+);
+
+class _CategoryKeywordsSheet extends StatefulWidget {
+  const _CategoryKeywordsSheet({
+    required this.categoryId,
+    required this.initialKeyword,
+  });
+  final String categoryId;
+  final String initialKeyword;
+
+  @override
+  State<_CategoryKeywordsSheet> createState() => _CategoryKeywordsSheetState();
+}
+
+class _CategoryKeywordsSheetState extends State<_CategoryKeywordsSheet> {
+  late final _input = TextEditingController(text: widget.initialKeyword);
+  List<String>? _words;
+  String? _bookId;
+  String? _error;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = VeriFinScope.of(context);
+    final l10n = AppLocalizations.of(context);
+    final category = controller.categories
+        .where((c) => c.id == widget.categoryId)
+        .firstOrNull;
+    _words ??= List<String>.of(category?.keywords ?? const []);
+    _bookId ??= controller.activeBook.id;
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            14,
+            14,
+            14,
+            16 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SectionTitle(title: l10n.categoryKeywordsTitle),
+              const SizedBox(height: 8),
+              Text(pathLabel(controller.categories, widget.categoryId)),
+              const SizedBox(height: 8),
+              Text(
+                l10n.categoryKeywordsHelp,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('category_keyword_field'),
+                controller: _input,
+                enabled: !_saving,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _add(),
+                onChanged: (_) => setState(() => _error = null),
+                decoration: InputDecoration(
+                  labelText: l10n.categoryKeywordLabel,
+                  hintText: l10n.categoryKeywordHint,
+                  errorText: _error,
+                  suffixIcon: IconButton(
+                    key: const Key('category_keyword_add'),
+                    tooltip: l10n.categoryKeywordAdd,
+                    onPressed: _saving ? null : _add,
+                    icon: const Icon(Icons.add),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final word in _words!)
+                    InputChip(
+                      label: Text(word),
+                      onDeleted: _saving
+                          ? null
+                          : () => setState(() => _words!.remove(word)),
+                      deleteButtonTooltipMessage: l10n.commonDelete,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  key: const Key('category_keywords_save'),
+                  onPressed: _saving || category == null ? null : _save,
+                  child: Text(l10n.commonSave),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _add() {
+    final word = _input.text.trim();
+    if (word.isEmpty) return true;
+    final controller = VeriFinScope.of(context);
+    final owner = categoryKeywordOwner(
+      categories: controller.categories,
+      bookId: _bookId!,
+      keyword: word,
+      excludingId: widget.categoryId,
+    );
+    if (owner != null) {
+      setState(
+        () => _error = AppLocalizations.of(context).categoryKeywordConflict(
+          word,
+          pathLabel(controller.categories, owner.id),
+        ),
+      );
+      return false;
+    }
+    setState(() {
+      _words = normalizedCategoryKeywords([..._words!, word]);
+      _error = null;
+      _input.clear();
+    });
+    return true;
+  }
+
+  Future<void> _save() async {
+    if (!_add()) return;
+    final controller = VeriFinScope.of(context);
+    if (controller.activeBook.id != _bookId) return;
+    final l10n = AppLocalizations.of(context);
+    setState(() => _saving = true);
+    final saved = await controller.saveCategoryKeywords(
+      widget.categoryId,
+      _words!,
+    );
+    if (!mounted) return;
+    if (saved) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _saving = false;
+        _error = l10n.categoryKeywordsSaveFailed;
+      });
+    }
   }
 }
 

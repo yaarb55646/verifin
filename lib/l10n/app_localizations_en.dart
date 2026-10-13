@@ -2316,6 +2316,39 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get categoryKeywordsTitle => 'Entry keywords';
+
+  @override
+  String get categoryKeywordsHelp =>
+      'Add familiar terms, such as buns or soy milk. Quick text entry will match this category. Saving keywords does not save the entry.';
+
+  @override
+  String get categoryKeywordLabel => 'Keyword';
+
+  @override
+  String get categoryKeywordHint => 'For example: buns';
+
+  @override
+  String get categoryKeywordAdd => 'Add keyword';
+
+  @override
+  String get categoryKeywordLinkAction => 'Link a keyword to this category';
+
+  @override
+  String get categoryKeywordsSaveFailed =>
+      'Keywords were not saved. Check for conflicts and try again.';
+
+  @override
+  String categoryKeywordConflict(String keyword, String category) {
+    return '“$keyword” is already linked to “$category”';
+  }
+
+  @override
+  String categoryKeywordCount(int count) {
+    return '$count keywords';
+  }
+
+  @override
   String get categoryNameLabel => 'Category name';
 
   @override

@@ -2265,6 +2265,38 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get categoryKeywordsTitle => '记账关键词';
+
+  @override
+  String get categoryKeywordsHelp =>
+      '输入常用叫法并添加，例如包子、豆浆。文字记账会匹配到此分类；保存关键词不会保存当前账目。';
+
+  @override
+  String get categoryKeywordLabel => '关键词';
+
+  @override
+  String get categoryKeywordHint => '例如：包子';
+
+  @override
+  String get categoryKeywordAdd => '添加关键词';
+
+  @override
+  String get categoryKeywordLinkAction => '将关键词关联到当前分类';
+
+  @override
+  String get categoryKeywordsSaveFailed => '关键词未保存，请检查是否存在冲突后重试';
+
+  @override
+  String categoryKeywordConflict(String keyword, String category) {
+    return '“$keyword”已关联到“$category”';
+  }
+
+  @override
+  String categoryKeywordCount(int count) {
+    return '$count 个关键词';
+  }
+
+  @override
   String get categoryNameLabel => '分类名称';
 
   @override

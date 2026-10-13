@@ -20,6 +20,7 @@ import '../l10n/app_localizations.dart';
 import 'ai_entry_sheet.dart';
 import 'entry_detail_page.dart';
 import 'pending_refunds_page.dart';
+import 'quick_text_entry_sheet.dart';
 import 'sheets.dart';
 import 'transaction_detail_page.dart';
 
@@ -997,12 +998,26 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   /// 快捷记账：Shell 的 `_startQuickEntry` 是 `_VeriFinShellState` 私有方法，本页
   /// 无法直接复用，这里用同一批公开件拼出同一条流程（设置里选「AI」走 AI 记账，
-  /// 否则先输金额再进记账页）。shell.dart 改动该流程时必须同步这里。
+  /// 否则先走「一句话记账」文字输入，选「改用数字键盘」再回落到数字键盘）。
+  /// shell.dart 改动该流程时必须同步这里。
   Future<void> _startQuickEntry(VeriFinController controller) async {
     if (controller.fabActionMode == FabActionMode.ai) {
       await startAiEntry(context);
       return;
     }
+    final textResult = await showQuickTextEntrySheet(context);
+    if (!mounted || textResult == null) {
+      return;
+    }
+    if (textResult is QuickTextEntryResult) {
+      await _pushEntryDetail(
+        controller,
+        amount: textResult.amount,
+        note: textResult.note.isEmpty ? null : textResult.note,
+      );
+      return;
+    }
+    // 走到这里即 quickTextEntryUseNumberPad。
     final defaultAccount = controller.accounts
         .where((account) => account.id == controller.defaultAccountId)
         .firstOrNull;
@@ -1017,12 +1032,21 @@ class _TransactionsPageState extends State<TransactionsPage> {
     if (!mounted || amount == null || amount <= 0) {
       return;
     }
+    await _pushEntryDetail(controller, amount: amount);
+  }
+
+  Future<void> _pushEntryDetail(
+    VeriFinController controller, {
+    required double? amount,
+    String? note,
+  }) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => EntryDetailPage(
-          initialAmount: amount,
+          initialAmount: amount ?? 0,
           // 未设默认账户时为 null，记账页回落到首个账户（沿用原行为）。
           initialAccountId: controller.defaultAccountId,
+          initialNote: note,
         ),
       ),
     );

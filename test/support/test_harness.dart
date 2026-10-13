@@ -230,6 +230,10 @@ Future<void> createQuickEntry(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('quick_entry_fab')));
   await tester.pumpAndSettle();
 
+  // 手动记账先弹「一句话记账」文字输入层；测试要走数字键盘，先选「改用数字键盘」。
+  await tester.tap(find.byKey(const Key('quick_text_entry_number_pad')));
+  await tester.pumpAndSettle();
+
   await tester.tap(find.byKey(const Key('number_key_4')));
   await tester.pump();
   await tester.tap(find.byKey(const Key('number_key_5')));

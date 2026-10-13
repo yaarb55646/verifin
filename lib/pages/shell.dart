@@ -11,6 +11,7 @@ import '../app/feedback.dart';
 import '../app/platform_bridge.dart';
 import '../app/root_navigation.dart';
 import '../app/root_navigation_styles.dart';
+import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'ai_entry_sheet.dart';
@@ -19,6 +20,7 @@ import 'capture_entry.dart';
 import 'entry_detail_page.dart';
 import 'home_page.dart';
 import 'profile_pages.dart';
+import 'quick_text_entry_sheet.dart';
 import 'reports_page.dart';
 import 'sheets.dart';
 
@@ -439,6 +441,33 @@ class _VeriFinShellState extends State<VeriFinShell> {
       await startAiEntry(context);
       return;
     }
+    // 手动路径：先给一层「一句话记账」输入框（本地解析金额 + 备注）。
+    // 取消则直接结束；选「改用数字键盘」则回落到原有的数字键盘流程。
+    final textResult = await showQuickTextEntrySheet(context);
+    if (!context.mounted) {
+      return;
+    }
+    if (textResult == null) {
+      return;
+    }
+    if (textResult is QuickTextEntryResult) {
+      await _pushEntryDetail(
+        context,
+        controller,
+        amount: textResult.amount,
+        note: textResult.note.isEmpty ? null : textResult.note,
+      );
+      return;
+    }
+    // 走到这里即 quickTextEntryUseNumberPad。
+    await _startQuickEntryWithNumberPad(context, controller);
+  }
+
+  /// 原数字键盘路径（保留为「改用数字键盘」的出口）。
+  Future<void> _startQuickEntryWithNumberPad(
+    BuildContext context,
+    VeriFinController controller,
+  ) async {
     final defaultAccount = controller.defaultAccountId == null
         ? null
         : controller.accounts
@@ -456,13 +485,24 @@ class _VeriFinShellState extends State<VeriFinShell> {
     if (!context.mounted || amount == null || amount <= 0) {
       return;
     }
+    await _pushEntryDetail(context, controller, amount: amount);
+  }
 
+  /// 打开记账页。金额已在入口处确定（可能为 null——文字里没拆出金额，由用户在
+  /// 记账页补填）。
+  Future<void> _pushEntryDetail(
+    BuildContext context,
+    VeriFinController controller, {
+    required double? amount,
+    String? note,
+  }) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => EntryDetailPage(
-          initialAmount: amount,
+          initialAmount: amount ?? 0,
           // 未设默认账户时为 null，记账页回落到首个账户（沿用原行为）。
           initialAccountId: controller.defaultAccountId,
+          initialNote: note,
         ),
       ),
     );

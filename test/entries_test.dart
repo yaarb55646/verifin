@@ -971,7 +971,11 @@ void main() {
     await tester.tap(fab);
     await tester.pumpAndSettle();
 
-    // 与首页快捷记账一致：先弹数字键盘。
+    // 与首页快捷记账一致：先弹「一句话记账」文字输入层。
+    expect(find.byKey(const Key('quick_text_entry_field')), findsOneWidget);
+    // 选「改用数字键盘」后回落到数字键盘。
+    await tester.tap(find.byKey(const Key('quick_text_entry_number_pad')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('number_pad_ok')), findsOneWidget);
   });
 

@@ -28,6 +28,7 @@ class EntryDetailPage extends StatefulWidget {
     super.key,
     required this.initialAmount,
     this.initialAccountId,
+    this.initialNote,
     this.initialDraft,
   }) : draftEntry = null,
        draftExtraAccounts = null,
@@ -50,10 +51,16 @@ class EntryDetailPage extends StatefulWidget {
        draftExtraTags = extraTags,
        initialAmount = entry.amount,
        initialAccountId = null,
+       initialNote = null,
        initialDraft = null;
 
   final double initialAmount;
   final String? initialAccountId;
+
+  /// 预填备注（如「一句话记账」本地解析出的文字部分）。非空时视为用户已输入：
+  /// 标记 `_noteTouched`，避免被历史识别回填覆盖；同时它仍会参与识别，用于推断
+  /// 类型/分类/标签。
+  final String? initialNote;
 
   /// AI 解析出的草稿：非空时预填表单并显示复核提示，供用户确认/修改后落账。
   final AiEntryDraft? initialDraft;
@@ -199,6 +206,16 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       _applyingSuggestion = true;
       _noteController.text = draft.note;
       _applyingSuggestion = false;
+    }
+    // 「一句话记账」等入口预先解析出的备注：金额已经在键盘外确定，备注直接落位。
+    // 标记为已改，免得历史识别又把备注覆盖成它自己那一份；但它仍会参与后续识别，
+    // 用于按备注推断类型/分类/标签。
+    final presetNote = widget.initialNote?.trim();
+    if (presetNote != null && presetNote.isNotEmpty) {
+      _applyingSuggestion = true;
+      _noteController.text = presetNote;
+      _applyingSuggestion = false;
+      _noteTouched = true;
     }
   }
 

@@ -9,7 +9,7 @@ import 'support/test_harness.dart';
 void main() {
   useTestDatabases();
 
-  testWidgets('点击手动·长按AI：单点走数字键盘', (tester) async {
+  testWidgets('点击手动·长按AI：单点走文字输入', (tester) async {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
     controller.setFabActionMode(FabActionMode.manualTapAiLongPress);
@@ -19,7 +19,11 @@ void main() {
     await tester.tap(find.byKey(const Key('quick_entry_fab')));
     await tester.pumpAndSettle();
 
-    // 数字键盘出现（OK 键存在）。
+    // 手动路径先弹「一句话记账」输入层。
+    expect(find.byKey(const Key('quick_text_entry_field')), findsOneWidget);
+    // 选「改用数字键盘」后进入数字键盘（OK 键存在）。
+    await tester.tap(find.byKey(const Key('quick_text_entry_number_pad')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('number_pad_ok')), findsOneWidget);
   });
 

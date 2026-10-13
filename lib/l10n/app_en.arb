@@ -1176,7 +1176,7 @@
   "aiEntryNoAmount": "Couldn't recognize an amount — include it, e.g. \"taxi 32\"",
   "quickTextEntryTitle": "Quick text entry",
   "quickTextEntryHint": "e.g. \"breakfast 5\" or \"taxi 32\"",
-  "quickTextEntryDesc": "Amount and note are parsed on this device, no network. If no amount is found, the whole text becomes the note",
+  "quickTextEntryDesc": "Amount, note and current-book categories are matched on this device, no network. Use a path such as Food/Lunch for duplicate names. If no amount is found, the whole text becomes the note",
   "quickTextEntrySubmit": "Next",
   "quickTextEntryEmpty": "Enter something first",
   "quickTextEntryManual": "Use the number pad instead",

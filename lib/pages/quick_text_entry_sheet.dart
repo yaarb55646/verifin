@@ -23,8 +23,8 @@ class QuickTextEntryResult {
 /// 再交给记账页确认。返回 [QuickTextEntryResult]；取消返回 null；
 /// 选「改用数字键盘」返回 [quickTextEntryUseNumberPad]。
 ///
-/// 与 AI 记账的区别：全程本地、不联网、不需要 API Key，因此只认「金额 + 备注」，
-/// 不解析日期、账户、分类——那些仍由记账页的历史识别与用户自己确认。
+/// 全程本地、不联网、不需要 API Key；弹层拆出金额与备注，
+/// 分类由记账页按当前账本的真实名称优先匹配；日期、账户仍由用户确认。
 Future<Object?> showQuickTextEntrySheet(BuildContext context) {
   return showVeriModalSheet<Object>(
     context: context,

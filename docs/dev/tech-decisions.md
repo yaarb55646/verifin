@@ -71,6 +71,18 @@ Veri Fin 关键技术选型与理由。变更相关实现时同步更新本表�
 | 仓库脚本语言 | `scripts/` 下的任务脚本一律用 Dart（`dart run scripts/*.dart`），不再维护 `.sh` / `.ps1` 双份；纯逻辑放 `scripts/src/` 并配单测；脚本依赖只进 `dev_dependencies` | 同一件事写两份必须靠人工同步（历史上发布逻辑散在 shell + python3 + PowerShell 三处）；shell 版本还依赖 bash/python3，且受「`.ps1` 是否需要 UTF-8 BOM」这类平台差异影响。Dart 是本项目必然存在的运行时，跨平台一份实现，并被 `dart format` / `flutter analyze` 自动纳入门禁；`publish.dart` 还能校验本机 Flutter 版本与 CI 一致——新版 analyzer 的 lint 差异曾导致「本地全绿、CI 失败」 |
 | UI 组件库选型 | **采用**：`animated_toggle_switch`（包装为 `VeriSegmentedControl`）、`fl_chart 1.2.0`（唯一图表入口是适配层 `chart_painters.dart`）、`month_picker_dialog 6.7.3`（看板期间栏的月份 / 年份对话框，经 `sheets.dart` 的 `showMonthPickerSheet` / `showYearPickerSheet` 两个入口调用）、`google_mlkit_text_recognition`（端上离线 OCR）、`url_launcher`（打开外部链接的唯一入口 `lib/app/external_links.dart`；Android 侧即 `Intent.ACTION_VIEW` 的官方封装，只跳系统默认浏览器，不引内嵌 WebView 与第二套网络栈）、`jdenticon_dart`（鸣谢页头像：`Jdenticon.toSvg(称呼)` → SVG，用已有的 `flutter_svg` 渲染。上游 SDK 上限停在 <3.0.0，所以**本地 vendor** 到 `third_party/jdenticon_dart`——MIT、只放宽 SDK 约束，同步方式见该目录 README——而不是加一条版本依赖）。**不引入**：`lottie`（空状态改用原生插画，跟随主题色且无素材许可证问题）、`bottom_bar_matu`（停靠底栏自持实现 `VeriBottomBar`）、`toastification`（短反馈用 `VeriFeedbackHost`）、`introduction_screen`（引导页沿用现有页面）、第三方玻璃材质/shader 库（液态玻璃自持）、`mat_month_picker_dialog`（Material 2 观感、没有只选年的入口、采用度低）、`flutter_date_pickers`（SDK 上限 <3.0，与本项目 Dart 3 不兼容）、其它头像生成库（`multiavatar` / `avatars` / `identicon` 的 SDK 上限均 <3.0；`boring_avatars` 兼容但采用度极低——头像改用本地 vendor 的 jdenticon，见 [known-limitations.md](known-limitations.md) L11） | 已评估并否决的库不重复评估——**打算引入新组件库前先读本行**。新依赖必须解决现有问题并通过 Flutter 版本、Android/R8、体积与隐私评估，且不得改变账目、备份、退款、多币种或保存语义；组件库必须复用项目的颜色、圆角、金额格式与弹窗入口；图表必须保留点按/滑动查看数据的交互，新增图表类型先查适配层是否覆盖，不得退回自绘。**期间选择不要自绘**：手写的月份 / 年份网格观感与平台不一致，系统 `showDatePicker` 又强制选到「日」、选完年还会掉进月/日，两轮反馈都已否决 |
 
+## 一句话记账分类匹配
+
+离线文字入口先由 `parseQuickEntryText` 拆出金额与备注，记账页在自动识别开启时通过
+`suggestCategoryFromText` 优先匹配当前账本的真实分类名称（包括任意层级子分类），无需历史交易。
+名称归一化复用 `normalizedCategoryLabel`；精确名称优先于包含匹配，包含匹配取最长名称，
+英文需词边界。同名或等长候选不任意选择，可用「餐饮/午餐」等相邻祖先路径消歧。
+候选只包含当前账本的支出/收入分类，排除系统余额调整；新增、改名与删除使用最新集合，不缓存字典。
+
+名称命中时只填类型与分类，不带入其它分类历史的标签或备注；未命中沿用既有历史识别。
+两条路径都尊重自动识别总开关及用户手动类型/分类选择，AI 与导入草稿不参与，数字键盘入口沿用原行为。
+解析与预选只改变编辑页草稿，确认保存才落账；不新增 SQLite/KV 字段或备份内容。
+
 ## 备份数据范围（哪些进入备份 payload / 哪些仅设备本地）
 
 **导出/导入必须与此表保持一致**（`exportDataJson`/`importDataJson`）。改动任一偏好的归属时同步更新这里与 `README.md`。

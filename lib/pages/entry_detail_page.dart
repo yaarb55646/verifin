@@ -60,7 +60,7 @@ class EntryDetailPage extends StatefulWidget {
 
   /// 预填备注（如「一句话记账」本地解析出的文字部分）。非空时视为用户已输入：
   /// 标记 `_noteTouched`，避免被历史识别回填覆盖；同时它仍会参与识别，用于推断
-  /// 类型/分类/标签。
+  /// 类型/分类/标签；一句话入口会优先按当前账本的真实分类名称匹配。
   final String? initialNote;
 
   /// AI 解析出的草稿：非空时预填表单并显示复核提示，供用户确认/修改后落账。
@@ -544,23 +544,39 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       return;
     }
     final controller = VeriFinScope.of(context);
-    final suggestion = suggestEntry(
-      history: controller.entries,
-      expenseCategoryIds: controller
-          .categoriesForType(EntryType.expense)
-          .map((c) => c.id)
-          .toSet(),
-      incomeCategoryIds: controller
-          .categoriesForType(EntryType.income)
-          .map((c) => c.id)
-          .toSet(),
-      note: _noteController.text,
-      amount: _amount,
-      currencyCode: _currencyCode ?? controller.activeBook.baseCurrencyCode,
-      hour: _occurredAt.hour,
-      // 用户已手动选过类型：不再翻转类型，只在该类型内识别分类/标签/备注。
-      forcedType: _typeTouched ? _type : null,
-    );
+    // 一句话中明确写出的分类名优先于历史金额习惯；用户已选分类后不再匹配。
+    final namedCategory = widget.initialNote != null && !_categoryTouched
+        ? suggestCategoryFromText(
+            categories: controller.categories,
+            bookId: controller.activeBook.id,
+            note: _noteController.text,
+            forcedType: _typeTouched ? _type : null,
+          )
+        : null;
+    // 名称明确时只填类型与分类，避免带入其它分类历史里的标签和备注。
+    final suggestion = namedCategory != null
+        ? EntrySuggestion(
+            type: namedCategory.type,
+            categoryId: namedCategory.id,
+          )
+        : suggestEntry(
+            history: controller.entries,
+            expenseCategoryIds: controller
+                .categoriesForType(EntryType.expense)
+                .map((c) => c.id)
+                .toSet(),
+            incomeCategoryIds: controller
+                .categoriesForType(EntryType.income)
+                .map((c) => c.id)
+                .toSet(),
+            note: _noteController.text,
+            amount: _amount,
+            currencyCode:
+                _currencyCode ?? controller.activeBook.baseCurrencyCode,
+            hour: _occurredAt.hour,
+            // 用户已手动选过类型：不再翻转类型，只在该类型内识别分类/标签/备注。
+            forcedType: _typeTouched ? _type : null,
+          );
     if (!suggestion.isEmpty) {
       setState(() {
         if (!_typeTouched && suggestion.type != null) {

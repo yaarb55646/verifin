@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/entry_subcategory_panel.dart';
+import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 import 'package:verifin/main.dart';
 
@@ -34,6 +36,164 @@ Future<String?> noteText(WidgetTester tester) async {
 
 void main() {
   useTestDatabases();
+
+  Category addLunch(VeriFinController controller) {
+    final dining = controller.categories.firstWhere((c) => c.key == 'dining');
+    controller.addCategory(
+      type: EntryType.expense,
+      label: '午餐',
+      iconCode: 'category',
+      parentId: dining.id,
+    );
+    return controller.categories.firstWhere(
+      (c) => c.label == '午餐' && c.parentId == dining.id,
+    );
+  }
+
+  Future<void> enterLunch(WidgetTester tester) async {
+    await tester.enterText(
+      find.byKey(const Key('quick_text_entry_field')),
+      '午餐10.25元',
+    );
+    await tester.tap(find.byKey(const Key('quick_text_entry_submit')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('新建午餐无历史即可识别，确认保存才写入真实子分类', (tester) async {
+    final controller = await makeController();
+    final lunch = addLunch(controller);
+    controller.addAccount(
+      Account(
+        id: 'cash-lunch',
+        bookId: controller.activeBook.id,
+        name: '现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+      ),
+    );
+    expect(controller.entries, isEmpty);
+    await tester.pumpWidget(VeriFinApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openQuickTextEntry(tester);
+    await enterLunch(tester);
+    expect(
+      tester
+          .widget<EntrySubcategoryPanel>(find.byType(EntrySubcategoryPanel))
+          .selectedId,
+      lunch.id,
+    );
+    expect(controller.entries, isEmpty);
+    expect(await noteText(tester), '午餐');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('save_entry_button')))
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(find.byKey(const Key('save_entry_button')));
+    await tester.pumpAndSettle();
+    expect(controller.entries, hasLength(1));
+    final entry = controller.entries.single;
+    expect(entry.type, EntryType.expense);
+    expect(entry.categoryId, lunch.id);
+    expect(entry.amount, 10.25);
+    expect(entry.note, '午餐');
+  });
+
+  testWidgets('交易列表一句话入口同样识别午餐子分类', (tester) async {
+    final controller = await makeController();
+    final lunch = addLunch(controller);
+    await tester.pumpWidget(VeriFinApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('最近交易'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('transactions_quick_entry_fab')));
+    await tester.pumpAndSettle();
+    await enterLunch(tester);
+    expect(
+      tester
+          .widget<EntrySubcategoryPanel>(find.byType(EntrySubcategoryPanel))
+          .selectedId,
+      lunch.id,
+    );
+    expect(controller.entries, isEmpty);
+  });
+
+  testWidgets('明确分类名优先于同金额收入历史', (tester) async {
+    final controller = await makeController();
+    final lunch = addLunch(controller);
+    final income = controller.categoriesForType(EntryType.income).first;
+    controller.addEntry(
+      LedgerEntry(
+        id: 'history',
+        bookId: controller.activeBook.id,
+        type: EntryType.income,
+        amount: 10.25,
+        categoryId: income.id,
+        accountId: '',
+        note: '之前收入',
+        occurredAt: DateTime(2026, 10, 12),
+      ),
+    );
+    await tester.pumpWidget(VeriFinApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openQuickTextEntry(tester);
+    await enterLunch(tester);
+    expect(
+      find.byKey(const Key('entry_type_selected_expense')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<EntrySubcategoryPanel>(find.byType(EntrySubcategoryPanel))
+          .selectedId,
+      lunch.id,
+    );
+    expect(await noteText(tester), '午餐');
+    expect(controller.entries, hasLength(1));
+  });
+
+  testWidgets('关闭自动识别不匹配，手动选分类不再被文字覆盖', (tester) async {
+    final controller = await makeController();
+    final lunch = addLunch(controller);
+    controller.setAutoSuggestEnabled(false);
+    await tester.pumpWidget(VeriFinApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openQuickTextEntry(tester);
+    await enterLunch(tester);
+    expect(
+      tester
+          .widget<EntrySubcategoryPanel>(find.byType(EntrySubcategoryPanel))
+          .selectedId,
+      isNot(lunch.id),
+    );
+    controller.setAutoSuggestEnabled(true);
+    await tester.pumpAndSettle();
+    final transport = controller.categories.firstWhere(
+      (c) => c.key == 'transport',
+    );
+    final chip = find.byKey(Key('entry_category_${transport.id}'));
+    await tester.ensureVisible(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(chip);
+    await tester.pumpAndSettle();
+    await _ensureNoteVisible(tester);
+    await tester.enterText(find.byKey(const Key('entry_note_field')), '今天午餐');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<EntrySubcategoryPanel>(find.byType(EntrySubcategoryPanel))
+          .selectedId,
+      transport.id,
+    );
+    expect(controller.entries, isEmpty);
+  });
 
   testWidgets('点快速记账先弹文字输入框，而不是直接弹数字键盘', (tester) async {
     final store = LocalKeyValueStore();

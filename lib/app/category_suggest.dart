@@ -1,6 +1,126 @@
 import 'dart:math' as math;
 
+import 'category_tree.dart';
 import 'models.dart';
+
+/// 一句话记账按当前账本的真实分类名称匹配，不依赖历史交易。
+///
+/// 完整名称优先于包含匹配；包含匹配取最长名称。同名或同等长度的多个
+/// 候选不猜测，可用「餐饮/午餐」的祖先路径消歧。只识别支出和收入。
+Category? suggestCategoryFromText({
+  required List<Category> categories,
+  required String bookId,
+  required String note,
+  EntryType? forcedType,
+}) {
+  final text = normalizedCategoryLabel(note);
+  if (text.isEmpty) return null;
+  final scoped = categories
+      .where((category) => category.bookId == bookId)
+      .toList();
+  final index = categoryIndex(scoped);
+  final matches = <({Category category, int rank, int length})>[];
+  for (final category in scoped) {
+    if (category.isBalanceAdjust ||
+        !_kAutoInferableTypes.contains(category.type) ||
+        (forcedType != null && category.type != forcedType)) {
+      continue;
+    }
+    final label = normalizedCategoryLabel(category.label);
+    if (label.isEmpty) continue;
+    var rank = 0;
+    var length = label.runes.length;
+    if (text == label) {
+      rank = 3;
+    } else if (_containsCategoryName(text, label)) {
+      rank = 1;
+    }
+    // 有序、相邻的祖先路径比单个名字更明确。每一级使用真实 label，
+    // 允许从任一祖先开始，也支持空格、斜杠、箭头等常见路径分隔符。
+    final ancestors = ancestorIdsFrom(index, category.id).reversed.toList();
+    final labels = <String>[
+      for (final id in ancestors) normalizedCategoryLabel(index[id]!.label),
+      label,
+    ];
+    for (var start = 0; start < labels.length - 1; start++) {
+      final path = labels.sublist(start);
+      if (path.any((part) => part.isEmpty)) continue;
+      final pattern = path
+          .map(RegExp.escape)
+          .join(r'\s*(?:/|>|→|·|:|：|、|\s)\s*');
+      for (final match in RegExp(pattern).allMatches(text)) {
+        if (_categoryNameBoundaries(
+          text,
+          match.start,
+          match.end,
+          path.first,
+          path.last,
+        )) {
+          final pathLength = path.fold<int>(
+            0,
+            (sum, part) => sum + part.runes.length,
+          );
+          if (rank < 4 || pathLength > length) {
+            rank = 4;
+            length = pathLength;
+          }
+        }
+      }
+    }
+    if (rank > 0) matches.add((category: category, rank: rank, length: length));
+  }
+  if (matches.isEmpty) return null;
+  matches.sort((a, b) {
+    final rankOrder = b.rank.compareTo(a.rank);
+    return rankOrder != 0 ? rankOrder : b.length.compareTo(a.length);
+  });
+  final best = matches.first;
+  if (matches
+      .skip(1)
+      .any((match) => match.rank == best.rank && match.length == best.length)) {
+    return null;
+  }
+  return best.category;
+}
+
+bool _containsCategoryName(String text, String label) {
+  var start = text.indexOf(label);
+  while (start >= 0) {
+    if (_categoryNameBoundaries(
+      text,
+      start,
+      start + label.length,
+      label,
+      label,
+    )) {
+      return true;
+    }
+    start = text.indexOf(label, start + 1);
+  }
+  return false;
+}
+
+/// 英文名称须在词边界，避免 car 命中 card；金额紧跟名称仍允许。
+bool _categoryNameBoundaries(
+  String text,
+  int start,
+  int end,
+  String first,
+  String last,
+) {
+  bool isLetter(int code) => (code >= 97 && code <= 122) || code == 95;
+  if (isLetter(first.codeUnitAt(0)) &&
+      start > 0 &&
+      isLetter(text.codeUnitAt(start - 1))) {
+    return false;
+  }
+  if (isLetter(last.codeUnitAt(last.length - 1)) &&
+      end < text.length &&
+      isLetter(text.codeUnitAt(end))) {
+    return false;
+  }
+  return true;
+}
 
 /// 记账自动识别：从用户**自己的历史交易**里推断当前这笔的「类型 + 分类 + 标签 +
 /// 备注」，而不只是分类。纯函数、不依赖 BuildContext，便于单测。

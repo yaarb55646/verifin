@@ -3350,7 +3350,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quickTextEntryDesc =>
-      'Amount and note are parsed on this device, no network. If no amount is found, the whole text becomes the note';
+      'Amount, note and current-book categories are matched on this device, no network. Use a path such as Food/Lunch for duplicate names. If no amount is found, the whole text becomes the note';
 
   @override
   String get quickTextEntrySubmit => 'Next';

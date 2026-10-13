@@ -3264,7 +3264,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get quickTextEntryHint => '输入例如「早餐 5 元」「打车 32」';
 
   @override
-  String get quickTextEntryDesc => '在本机识别金额与备注，不联网；拆不出金额时整段作为备注';
+  String get quickTextEntryDesc =>
+      '在本机识别金额、备注并匹配当前账本的分类，不联网；同名分类可写「餐饮/午餐」，拆不出金额时整段作为备注';
 
   @override
   String get quickTextEntrySubmit => '下一步';

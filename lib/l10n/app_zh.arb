@@ -2124,7 +2124,7 @@
   "aiEntryNoAmount": "未能识别金额，请在描述中说明金额，例如「打车 32」",
   "quickTextEntryTitle": "一句话记账",
   "quickTextEntryHint": "输入例如「早餐 5 元」「打车 32」",
-  "quickTextEntryDesc": "在本机识别金额与备注，不联网；拆不出金额时整段作为备注",
+  "quickTextEntryDesc": "在本机识别金额、备注并匹配当前账本的分类，不联网；同名分类可写「餐饮/午餐」，拆不出金额时整段作为备注",
   "quickTextEntrySubmit": "下一步",
   "quickTextEntryEmpty": "请先输入内容",
   "quickTextEntryManual": "改用数字键盘",

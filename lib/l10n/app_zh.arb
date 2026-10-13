@@ -332,6 +332,13 @@
     }
   },
   "panelAssetSummaryLabel": "资产汇总",
+  "panelCategoryShareLabel": "支出占比",
+  "panelIncomeShareLabel": "收入占比",
+  "panelCategoryShareDesc": "按当前统计范围查看分类占比，可拆分二级分类与显示金额",
+  "categoryShareSubcategories": "二级分类",
+  "categoryShareShowAmounts": "显示金额",
+  "totalExpenseLabel": "总支出",
+  "totalIncomeLabel": "总收入",
   "@panelAssetSummaryLabel": {
     "description": "看板日常面板:资产汇总卡片标题"
   },

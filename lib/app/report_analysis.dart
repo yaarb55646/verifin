@@ -275,6 +275,56 @@ List<ReportCategoryStat> reportCategoryStatsByOwn(
   return stats;
 }
 
+/// 分类占比面板的聚合：一级模式上卷到顶级，二级模式最多拆到顶级的直接子级。
+/// 更深的分类归入对应二级分类，直接记在顶级的金额仍留在顶级，不重复计数。
+/// 只计算当前账本的支出/收入净本位币金额；占比始终相对该窗口该类型的总额。
+List<ReportCategoryStat> reportCategoryShareStats({
+  required Iterable<LedgerEntry> entries,
+  required List<Category> categories,
+  required String bookId,
+  required EntryType type,
+  required bool showSubcategories,
+}) {
+  if (type != EntryType.expense && type != EntryType.income) return const [];
+  final scoped = categories
+      .where((category) => category.bookId == bookId)
+      .toList();
+  final index = categoryIndex(scoped);
+  final totals = <String, double>{};
+  final counts = <String, int>{};
+  for (final entry in entries) {
+    if (entry.bookId != bookId || entry.type != type) continue;
+    final ancestors = ancestorIdsFrom(
+      index,
+      entry.categoryId,
+    ).reversed.toList();
+    final path = <String>[...ancestors, entry.categoryId];
+    final id = showSubcategories && path.length > 1 ? path[1] : path.first;
+    totals.update(
+      id,
+      (value) => value + entry.netBaseAmount,
+      ifAbsent: () => entry.netBaseAmount,
+    );
+    counts.update(id, (value) => value + 1, ifAbsent: () => 1);
+  }
+  final total = totals.values.fold<double>(0, (sum, amount) => sum + amount);
+  return totals.entries
+      .map(
+        (item) => ReportCategoryStat(
+          categoryId: item.key,
+          category: categoryByIdFrom(scoped, item.key),
+          amount: item.value,
+          percent: total <= 0 ? 0 : item.value / total,
+          count: counts[item.key] ?? 0,
+        ),
+      )
+      .toList()
+    ..sort((a, b) {
+      final order = b.amount.compareTo(a.amount);
+      return order != 0 ? order : a.categoryId.compareTo(b.categoryId);
+    });
+}
+
 /// 某顶级分类 [rootId] 的下钻拆分：只取归属该顶级分类的交易，按其自身分类聚合
 /// （子分类各成一行；直接记在顶级分类上的归为「顶级分类」自己那行）。占比相对该
 /// 顶级分类的合计。[type] 只支持支出 / 收入。

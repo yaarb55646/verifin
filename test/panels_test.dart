@@ -101,7 +101,7 @@ void main() {
       find.byKey(const Key('panel_settings_entry_reportsMonthly')),
     );
     await tester.pumpAndSettle();
-    expect(find.text('4个月统计面板'), findsOneWidget);
+    expect(find.text('5个月统计面板'), findsOneWidget);
 
     await tester.tap(
       find.byKey(const Key('panel_settings_entry_reportsMonthly')),
@@ -112,7 +112,7 @@ void main() {
     // 进入排序模式后出现拖动手柄,拖动第一个面板到第二位。
     await tester.tap(find.byKey(const Key('panel_sort_toggle')));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.drag_indicator), findsNWidgets(4));
+    expect(find.byIcon(Icons.drag_indicator), findsNWidgets(5));
 
     final firstHandle = tester.getCenter(
       find.byIcon(Icons.drag_indicator).first,
@@ -251,7 +251,7 @@ void main() {
           .panelSettings(PanelPageKind.reportsMonthly)
           .map((panel) => panel.id)
           .take(3),
-      <String>['budget_execution', 'ranking', 'summary'],
+      <String>['budget_execution', 'category_share', 'summary'],
     );
 
     reloaded.resetAllData();
@@ -312,7 +312,13 @@ void main() {
         controller
             .panelSettings(PanelPageKind.reportsMonthly)
             .map((panel) => panel.id),
-        <String>['summary', 'budget_execution', 'ranking', 'daily_trend'],
+        <String>[
+          'summary',
+          'budget_execution',
+          'category_share',
+          'ranking',
+          'daily_trend',
+        ],
       );
       controller.dispose();
     },
@@ -328,5 +334,63 @@ void main() {
     expect(data['reportDailyPanels'], isA<List<Object?>>());
     expect(data['reportYearlyPanels'], isA<List<Object?>>());
     controller.dispose();
+  });
+
+  test('旧日常配置补入新面板，开关排序重启与备份恢复保持独立', () async {
+    final store = LocalKeyValueStore();
+    store.write(
+      'verifin.report_daily_panels.v1',
+      jsonEncode([
+        {'id': 'asset_summary', 'enabled': true},
+        {'id': 'recent_daily', 'enabled': false},
+      ]),
+    );
+    final controller = await makeController(store);
+    expect(
+      controller.panelSettings(PanelPageKind.reportsDaily).map((p) => p.id),
+      ['asset_summary', 'recent_daily', 'category_share', 'ranking'],
+    );
+    expect(
+      controller.panelSettings(PanelPageKind.reportsDaily)[1].enabled,
+      isFalse,
+    );
+    controller.setPanelEnabled(
+      PanelPageKind.reportsDaily,
+      'category_share',
+      false,
+    );
+    controller.reorderPanels(PanelPageKind.reportsDaily, 3, 0);
+    controller.setPanelEnabled(
+      PanelPageKind.reportsMonthly,
+      'category_share',
+      false,
+    );
+    final exported = controller.exportDataJson();
+    final reloaded = await makeController(store);
+    expect(reloaded.enabledPanelIds(PanelPageKind.reportsDaily), [
+      'ranking',
+      'asset_summary',
+    ]);
+    expect(
+      reloaded.enabledPanelIds(PanelPageKind.reportsYearly),
+      contains('category_share'),
+    );
+    final restored = await makeController();
+    await restored.importDataJson(exported);
+    expect(restored.enabledPanelIds(PanelPageKind.reportsDaily), [
+      'ranking',
+      'asset_summary',
+    ]);
+    expect(
+      restored.enabledPanelIds(PanelPageKind.reportsMonthly),
+      isNot(contains('category_share')),
+    );
+    expect(
+      restored.enabledPanelIds(PanelPageKind.reportsYearly),
+      contains('category_share'),
+    );
+    controller.dispose();
+    reloaded.dispose();
+    restored.dispose();
   });
 }

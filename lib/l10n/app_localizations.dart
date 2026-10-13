@@ -1124,6 +1124,48 @@ abstract class AppLocalizations {
   /// **'资产汇总'**
   String get panelAssetSummaryLabel;
 
+  /// No description provided for @panelCategoryShareLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'支出占比'**
+  String get panelCategoryShareLabel;
+
+  /// No description provided for @panelIncomeShareLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'收入占比'**
+  String get panelIncomeShareLabel;
+
+  /// No description provided for @panelCategoryShareDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'按当前统计范围查看分类占比，可拆分二级分类与显示金额'**
+  String get panelCategoryShareDesc;
+
+  /// No description provided for @categoryShareSubcategories.
+  ///
+  /// In zh, this message translates to:
+  /// **'二级分类'**
+  String get categoryShareSubcategories;
+
+  /// No description provided for @categoryShareShowAmounts.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示金额'**
+  String get categoryShareShowAmounts;
+
+  /// No description provided for @totalExpenseLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'总支出'**
+  String get totalExpenseLabel;
+
+  /// No description provided for @totalIncomeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'总收入'**
+  String get totalIncomeLabel;
+
   /// 看板日常面板:资产汇总卡片描述
   ///
   /// In zh, this message translates to:

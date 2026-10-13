@@ -11,6 +11,7 @@ import '../app/root_navigation.dart';
 import '../app/series_math.dart';
 import '../app/veri_fin_scope.dart';
 import 'ai_chat_page.dart';
+import 'category_share_panel.dart';
 import 'budget_pages.dart';
 import 'currency_rates_page.dart';
 import 'panel_settings_page.dart';
@@ -67,6 +68,21 @@ class _ReportsPageState extends State<ReportsPage> {
       monthEntries: budgetEntries,
     );
     final panelIds = controller.enabledPanelIds(_tab.panelPageKind);
+    // 占比/排行取数窗口：日常按含今天的近 7 日；月/年跟随期间栏所选焦点，
+    // 与上游期间切换保持同一口径，切历史月份/年份时两卡同步取那一期。
+    final categoryWindow = switch (_tab) {
+      ReportPeriodTab.daily => DateWindow(
+        start: addCalendarDays(dateOnly(now), -6),
+        end: dateOnly(now),
+      ),
+      ReportPeriodTab.monthly => monthWindow,
+      ReportPeriodTab.yearly => yearWindow,
+    };
+    final categoryRangeLabel = switch (_tab) {
+      ReportPeriodTab.daily => l10n.aiRangeLast7Days,
+      ReportPeriodTab.monthly => l10n.yearMonth(_monthFocus),
+      ReportPeriodTab.yearly => l10n.yearLabel(_yearFocus),
+    };
 
     // 面板 id 对应的卡片,渲染顺序与开关由面板管理页配置。
     Widget panelFor(String id) {
@@ -75,6 +91,12 @@ class _ReportsPageState extends State<ReportsPage> {
           return const _RecentDailyStatsPanel();
         case 'asset_summary':
           return const _AssetSummaryPanel();
+        case 'category_share':
+          return CategorySharePanel(
+            key: ValueKey('category_share_${_tab.name}'),
+            window: categoryWindow,
+            rangeLabel: categoryRangeLabel,
+          );
         case 'summary':
           return _PeriodSummaryPanel(
             window: monthWindow,
@@ -121,7 +143,10 @@ class _ReportsPageState extends State<ReportsPage> {
           );
         case 'ranking':
           return _RankingPanel(
-            window: _tab == ReportPeriodTab.yearly ? yearWindow : monthWindow,
+            key: ValueKey('ranking_${_tab.name}'),
+            window: categoryWindow,
+            rangeLabel:
+                _tab == ReportPeriodTab.daily ? categoryRangeLabel : null,
           );
         case 'year_trend':
           return _YearTrendPanel(
@@ -1130,13 +1155,14 @@ class _BudgetExecutionCard extends StatelessWidget {
 /// 分组口径：顶级分类（子分类金额并入父类）/ 记账所选子分类 / 标签。
 enum _RankGrouping { topCategory, subCategory, tag }
 
-/// 月统计的排行卡：分类 / 子分类 / 标签排行，点行可下钻到子分类拆分与交易列表。
+/// 三个统计 Tab 共用的排行卡：分类 / 子分类 / 标签排行，点行可下钻。
 /// 聚合口径来自 `report_analysis.dart` 的纯函数（与 AI 账目查询工具共用）。
 class _RankingPanel extends StatefulWidget {
-  const _RankingPanel({required this.window});
+  const _RankingPanel({super.key, required this.window, this.rangeLabel});
 
-  /// 排行取数窗口：月统计传整月、年统计传整年。
+  /// 排行取数窗口：日常传近 7 日、月统计传整月、年统计传整年。
   final DateWindow window;
+  final String? rangeLabel;
 
   @override
   State<_RankingPanel> createState() => _RankingPanelState();
@@ -1171,6 +1197,13 @@ class _RankingPanelState extends State<_RankingPanel> {
               onChanged: (type) => setState(() => _type = type),
             ),
           ),
+          if (widget.rangeLabel != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              widget.rangeLabel!,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ],
           const SizedBox(height: 10),
           // 分组维度（分类 / 子分类 / 标签）放在标题下方，同样是紧凑档。
           VeriSegmentedControl<_RankGrouping>(

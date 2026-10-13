@@ -544,6 +544,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get panelAssetSummaryLabel => 'Assets';
 
   @override
+  String get panelCategoryShareLabel => 'Expense share';
+
+  @override
+  String get panelIncomeShareLabel => 'Income share';
+
+  @override
+  String get panelCategoryShareDesc =>
+      'Category shares for this period, with subcategory and amount options';
+
+  @override
+  String get categoryShareSubcategories => 'Subcategories';
+
+  @override
+  String get categoryShareShowAmounts => 'Show amounts';
+
+  @override
+  String get totalExpenseLabel => 'Total expense';
+
+  @override
+  String get totalIncomeLabel => 'Total income';
+
+  @override
   String get panelAssetSummaryDesc =>
       'Positive or negative assets by account share';
 

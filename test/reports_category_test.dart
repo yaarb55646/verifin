@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/local_storage/local_storage.dart';
 
@@ -43,10 +42,9 @@ void main() {
     await openReportsMonthlyTab(tester);
     await tester.pumpAndSettle();
 
-    // 分类统计面板在预算执行卡之后；卡片变高后它在 800dp 测试视口下落到首屏之外，
-    // 而 ListView 不会构建屏幕外的子项。先滚到该面板再断言。
+    // 占比卡插入排行之前；按真实标题定位，不依赖卡片序号或首屏高度。
     await tester.scrollUntilVisible(
-      find.byType(SectionTitle).at(1),
+      find.text('分类 · 标签排行'),
       200,
       scrollable: firstVerticalScrollable(),
     );
@@ -92,6 +90,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // 排行卡默认按顶级分类分组，切到「标签」分组。
+    await tester.scrollUntilVisible(
+      find.text('标签'),
+      200,
+      scrollable: firstVerticalScrollable(),
+    );
+    await tester.ensureVisible(find.text('标签').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('标签').first);
     await tester.pumpAndSettle();
 

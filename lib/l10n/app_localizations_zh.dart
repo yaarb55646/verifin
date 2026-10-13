@@ -530,6 +530,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get panelAssetSummaryLabel => '资产汇总';
 
   @override
+  String get panelCategoryShareLabel => '支出占比';
+
+  @override
+  String get panelIncomeShareLabel => '收入占比';
+
+  @override
+  String get panelCategoryShareDesc => '按当前统计范围查看分类占比，可拆分二级分类与显示金额';
+
+  @override
+  String get categoryShareSubcategories => '二级分类';
+
+  @override
+  String get categoryShareShowAmounts => '显示金额';
+
+  @override
+  String get totalExpenseLabel => '总支出';
+
+  @override
+  String get totalIncomeLabel => '总收入';
+
+  @override
   String get panelAssetSummaryDesc => '按账户占比查看正资产或负资产';
 
   @override

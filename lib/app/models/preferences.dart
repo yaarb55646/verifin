@@ -342,6 +342,8 @@ class PagePanelSpec {
         return l10n.panelRecentDailyLabel;
       case 'asset_summary':
         return l10n.panelAssetSummaryLabel;
+      case 'category_share':
+        return l10n.panelCategoryShareLabel;
       case 'ranking':
         return l10n.panelRankingLabel;
       case 'year_summary':
@@ -374,6 +376,8 @@ class PagePanelSpec {
         return l10n.panelRecentDailyDesc;
       case 'asset_summary':
         return l10n.panelAssetSummaryDesc;
+      case 'category_share':
+        return l10n.panelCategoryShareDesc;
       case 'ranking':
         return l10n.panelRankingDesc;
       case 'year_summary':
@@ -399,22 +403,26 @@ const List<PagePanelSpec> homePanelSpecs = <PagePanelSpec>[
 const List<PagePanelSpec> reportMonthlyPanelSpecs = <PagePanelSpec>[
   PagePanelSpec(id: 'summary'),
   PagePanelSpec(id: 'budget_execution'),
+  PagePanelSpec(id: 'category_share'),
   PagePanelSpec(id: 'ranking'),
   PagePanelSpec(id: 'daily_trend'),
 ];
 
-/// 看板「日常」Tab 的面板目录：近 7 日统计 + 资产汇总。
+/// 看板「日常」Tab：近 7 日统计、资产汇总、分类占比与近 7 日排行。
 const List<PagePanelSpec> reportDailyPanelSpecs = <PagePanelSpec>[
   PagePanelSpec(id: 'recent_daily'),
   PagePanelSpec(id: 'asset_summary'),
+  PagePanelSpec(id: 'category_share'),
+  PagePanelSpec(id: 'ranking'),
 ];
 
-/// 看板「年统计」Tab：本年收支摘要、本年 12 个月收支双柱、全年收支热力、排行。
+/// 看板「年统计」Tab：本年收支摘要、收支双柱、全年热力、分类占比、排行。
 /// 排行复用月统计的 `ranking` 面板，只是取数窗口换成整年。
 const List<PagePanelSpec> reportYearlyPanelSpecs = <PagePanelSpec>[
   PagePanelSpec(id: 'year_summary'),
   PagePanelSpec(id: 'year_trend'),
   PagePanelSpec(id: 'year_heatmap'),
+  PagePanelSpec(id: 'category_share'),
   PagePanelSpec(id: 'ranking'),
 ];
 

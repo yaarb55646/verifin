@@ -7,10 +7,11 @@
 
 ## 0. 一句话概览
 
-这是 [LumiDesk/verifin](https://github.com/LumiDesk/verifin) 的**个人 fork**，只加了两个自用功能：
+这是 [LumiDesk/verifin](https://github.com/LumiDesk/verifin) 的**个人 fork**，保留并扩展以下自用功能：
 
 1. **一句话记账**：点「记一笔」先弹文字输入框，输入「午餐10.25元」自动拆出金额和备注，并匹配当前账本里新建的「餐饮 → 午餐」子分类（纯本地、不联网）。
 2. **子分类常驻面板**：记账页分类网格下方加一个灰框，显示当前选中父分类的子分类，点一下直接选中。
+3. **看板分类占比与日常排行**：日常/月/年新增收支分类圆环，支持二级分类、金额显示；日常复用分类·标签排行，新增两卡取含今天的近 7 日，月/年取自然月/年。
 
 外加一个**手动触发的 APK 构建工作流**（上游的构建流程不适合个人用）。
 
@@ -192,7 +193,7 @@ flutter build apk --release --target-platform android-arm64 --flavor github
 
 ## 3. 我改了什么（完整清单）
 
-分叉基点：上游 `v1.20.1`（`937b6b0`）。以下 5 个 commit 是全部改动。
+分叉基点：上游 `v1.20.1`（`937b6b0`）。下表保留分叉初期的提交清单；当前改动以 `git log` 与源码为准。
 
 ### 3.1 提交历史
 
@@ -213,7 +214,9 @@ flutter build apk --release --target-platform android-arm64 --flavor github
 | `lib/pages/quick_text_entry_sheet.dart` | 一句话记账的输入弹层 |
 | `lib/app/entry_subcategory_panel.dart` | 子分类常驻灰框组件 |
 | `test/quick_entry_text_test.dart` | 解析函数单测（约 25 个用例） |
-| `test/quick_text_entry_test.dart` | 一句话记账端到端测试（8 个用例） |
+| `test/quick_text_entry_test.dart` | 一句话记账端到端测试（含分类联动） |
+| `lib/pages/category_share_panel.dart` | 三个统计 Tab 复用的分类占比面板 |
+| `test/category_share_panel_test.dart`、`test/category_share_math_test.dart` | 分类占比交互、范围、布局与净额聚合测试 |
 
 ### 3.3 修改的上游文件（**未来 rebase 的冲突点**）
 
@@ -222,7 +225,7 @@ flutter build apk --release --target-platform android-arm64 --flavor github
 | `lib/pages/shell.dart` | 快速记账入口插入文字输入层；抽出 `_startQuickEntryWithNumberPad` / `_pushEntryDetail` | 41 | 中 |
 | `lib/pages/transactions_pages.dart` | 同步同一条流程（交易页 FAB） | 55 | 中 |
 | `lib/pages/entry_detail_page.dart` | 加 `initialNote` 参数；分类网格下插入子分类面板；去掉二次点击弹窗；加 `_subcategoriesOf` / `_createSubcategory` | **59** | **高** |
-| `lib/l10n/app_zh.arb` | 新增 7 个文案 key | 164 | 低（追加式） |
+| `lib/l10n/app_zh.arb` | 一句话记账与看板分类占比文案 | 164 | 低（追加式） |
 | `lib/l10n/app_en.arb` | 同上 | 165 | 低 |
 | `lib/l10n/app_localizations*.dart` | **自动生成**，不要手改 | 164 | 忽略 |
 | `test/support/test_harness.dart` | `createQuickEntry` 加一步；新增 `openNumberPadFromQuickEntry` | 18 | 中 |
@@ -234,6 +237,9 @@ flutter build apk --release --target-platform android-arm64 --flavor github
 | `test/number_pad_layout_test.dart` | 1 处加辅助函数调用 | — | 低 |
 | `test/entry_category_inline_test.dart` | 子分类从「不常驻」改为「常驻」断言 | — | 中 |
 | `test/import_preview_test.dart` | 备注框加滚动（页面变高） | — | 低 |
+| `lib/pages/reports_page.dart` | 三个 Tab 接入分类占比，日常复用排行与近 7 日窗口 | — | 中 |
+| `lib/app/report_analysis.dart` | 增加分类占比纯函数，一级上卷与二级归并 | — | 低（追加式） |
+| `lib/app/models/preferences.dart` | 三组看板面板目录与分类占比名称 | — | 低（追加式） |
 
 > 「上游改动次数」统计的是**分叉前**上游对每个文件的提交数，用来估算未来 rebase 的冲突风险（数字越大，上游越可能改到同一片代码）。
 
@@ -302,6 +308,14 @@ flutter build apk --release --target-platform android-arm64 --flavor github
 **去掉了什么**：原来是「点父分类选中 → 再点一次才弹子分类列表」，选子分类要 3 次点击。现在 1 次。上游 issue #48 有人提过类似改动的 PR 但被拒（作者理由是"折叠让高频路径从 3 次变 1 次"——他理解的是折叠，我要的是平铺，方向相反）。
 
 **只显示直接子分类（一层）**，三级分类仍需通过右上角 `···` 或「全部」进入多级选择器。
+
+### 看板分类占比与日常排行
+
+`reportDailyPanelSpecs` 增加 `category_share` 和 `ranking`，月/年目录增加 `category_share`，各 Tab 仍独立开关排序并随原有面板配置备份。旧配置自动补入新面板，保留原顺序与关闭项。
+
+`CategorySharePanel` 复用现有圆环与收支切换组件，`reportCategoryShareStats` 按当前账本的净本位币金额聚合。一级模式合并整个分类树；「二级分类」将三级及更深归到对应二级，直接记在一级的金额单独列出，百分比相对该范围的总收支；「显示金额」在百分比旁补金额。两项与支出/收入切换仅为当前视图状态，不新增数据库或备份字段。日常新增两卡按含今天的近 7 日，月/年分别为当前自然月/年。
+
+日常排行直接复用 `_RankingPanel`，支持分类/子分类/标签与原有下钻，无需重复制作截图中的对比行。
 
 ### 3.6 遗留事项：分类管理页未改
 

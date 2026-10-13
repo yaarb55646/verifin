@@ -2,11 +2,13 @@
 
 感谢参与 Veri Fin（包名 `verifin`）——一个免费、数据自主、本地优先的 Flutter 记账应用。本文件是快速上手入口，完整规范见 [`AGENTS.md`](AGENTS.md)，架构说明见 [`docs/dev/architecture.md`](docs/dev/architecture.md)。
 
+本仓库的个人开发分支为 `mine`，fork 功能、Windows 工具路径与上游同步方法见 [`MY_FORK.md`](MY_FORK.md)。源码推送到 `origin mine`；个人 APK 使用 `.github/workflows/mine-build.yml` 手动构建并从 Artifacts 下载，推送源码不会自动发布。
+
 ## 环境准备
 
 - Flutter **3.47.2**（与 CI 固定版本一致），Dart 随之附带。
 - Java 17（Android 构建用）。
-- 本地预览只在 **Android 模拟器或真机** 上进行；不在本机打 APK 作为交付物（APK 只由 GitHub CI 在打 `vX.Y.Z` 标签时构建）。
+- 本地预览只在 **Android 模拟器或真机** 上进行；本地 release APK 可用于个人验收。正式安装包由 GitHub CI 构建，标签发布仍需明确授权。
 
 ```bash
 flutter pub get                     # 安装依赖（同时生成 l10n）

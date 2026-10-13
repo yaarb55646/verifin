@@ -14,6 +14,8 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 | SQLite 与持久化 | `lib/data/`；[技术决策](tech-decisions.md)、repository contract 与 migration matrix 测试 |
 | 模型 | `lib/app/models/`；`models.dart` 稳定导出；JSON/SQLite 映射须同步 |
 | 页面与弹窗 | `lib/pages/`、`pages/sheets.dart`、`app/entry_sheets.dart`；[组件目录](../design/components.md) |
+| 一句话与分类关键词 | `quick_entry_text.dart`、`category_suggest.dart`、`category_tree.dart`、`pages/quick_text_entry_sheet.dart`、`pages/sheets.dart`；分类模型/SQLite v20 持久化，见 [技术决策](tech-decisions.md) |
+| 看板分类占比与排行 | `pages/reports_page.dart`、`pages/category_share_panel.dart`、`report_analysis.dart`、`models/preferences.dart`；三 Tab 共用计算与卡片 |
 | 共享绘制、菜单、图表 | `common_widgets.dart`、`chart_painters.dart`、`root_navigation.dart`、`veri_bottom_bar.dart`；[统一设计](../design/design-system.md) |
 | 多币种、预算、退款 | [多币种](multi-currency.md)、[单期预算](category-budget-override.md)、[退款](refund.md) |
 | 导入、备份 | `lib/app/backup/import/`、`lib/app/backup/`；只在预览确认后落库，字节格式仅由 BackupService 编解码 |
@@ -23,6 +25,7 @@ Controller 经 repository 写库。`VeriFinController.create()` 是生产初始�
 | 国际化 | `lib/l10n/*.arb` 与 gen-l10n 输出；[国际化验收](i18n-verification.md) |
 | 本地调试、发布 | [Android 开发](android-development.md)、`scripts/*.dart`（`dart run scripts/doctor.dart` 环境自检、`publish.dart` 发版、`prune_prereleases.dart` 清理预发布、`clean.dart` 清构建产物） |
 | 第三方 vendor 源码 | `third_party/`（目前只有 `third_party/jdenticon_dart`：上游 SDK 上限过旧，本地复刻一份并只放宽约束）；与上游的差异、许可与同步方式写在各目录 README，不要在里面做业务改动 |
+| 个人 fork 维护 | [MY_FORK.md](../../MY_FORK.md)、`.github/workflows/mine-build.yml`；`mine` 分支与手动 APK Artifacts，不因 push 自动发版 |
 
 内存仓储、插件 stub 和 ffi factory 用于测试，不能替代生产持久化。
 

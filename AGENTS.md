@@ -10,6 +10,13 @@
 
 本文件是仓库内 Agent 与贡献者的执行规范。Veri Fin 是一个仅交付 Android 的 Flutter 记账应用：Dart 包名为 `verifin`，Android applicationId 为 `top.talyra42.verifin`。
 
+### 个人 fork 约定
+
+- 当前仓库为 `yaarb55646/verifin`，个人开发分支为 `mine`；上游为 `LumiDesk/verifin`。功能差异、工具路径、数据兼容与同步方法见 [MY_FORK.md](MY_FORK.md)，不维护第二份执行规范。
+- 用户授权上传项目时，提交相关变更并推送 `origin mine`。不把源码上传解释为授权打标签、创建 Release 或发布 APK；普通 `mine` push 不运行手动 APK 工作流。
+- `.github/workflows/mine-build.yml` 是个人按需构建入口；本地 `github` release APK 可用于用户验收，正式发布继续遵循下方 CI 与授权规则。
+- 一句话输入是手动记账入口，数字键盘保留为切换入口；维护时保留真实子分类匹配、自定义关键词、子分类常驻面板和三个统计 Tab 的分类占比口径。
+
 ### 已确认的 Code Review 取舍
 
 以下两项是维护者明确接受的产品与供应链取舍，后续 Code Review 默认不再作为缺陷重复报告：

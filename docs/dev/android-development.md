@@ -41,12 +41,12 @@ Windows 安装顺序：
    `flutter doctor -v` 和 `adb devices -l` 复核。macOS/Linux 同样使用官方 Flutter
    归档、JDK 与对应平台 Command-line Tools，不执行 Windows 安装命令。
 
-本机已持久化配置（写进环境变量，新终端直接生效；供发现已有安装，不能作为其他环境的硬依赖）：
+本 fork 当前 Windows 工具路径（供发现已有安装，不是其他环境的硬依赖；终端环境设置见 [MY_FORK.md](../../MY_FORK.md)）：
 
-- Flutter：`C:\Dev\flutter-3.47.2`，本地 `stable` 分支固定在该 tag，`flutter --version` 为 3.47.2（与 CI 一致）；机器 PATH 中排在通用安装 `C:\Dev\flutter` 之前。
-- Android SDK：`C:\Dev\android-sdk`；`ANDROID_HOME` / `ANDROID_SDK_ROOT` 指向它，`platform-tools` 已在 PATH 上，SDK 许可已全部接受（`flutter doctor` 的 Android toolchain 为 ✓）。
-- JDK：`JAVA_HOME` 指向 `jdk-17.0.20.101-hotspot`，与 CI 同为 Java 17。
-- 早先 `C:\Android\Sdk` 是个没有 `platforms/`、`build-tools/` 的空壳目录，已删除，避免工具把它当成可用的 SDK。
+- Flutter：`E:\Dev\flutter`，`flutter --version` 为 3.47.2（与 CI 一致）。
+- Android SDK：`E:\Dev\Android\Sdk`；`ANDROID_HOME` / `ANDROID_SDK_ROOT` 指向它，SDK 许可已接受（`flutter doctor` 的 Android toolchain 为 ✓）。
+- JDK：`E:\Dev\jdk\jdk-17`，与 CI 同为 Java 17；在当前 PATH 前置其 `bin`，避免系统其他 JDK 抢先。
+- Gradle / Android 用户目录：`E:\Dev\gradle-home` / `E:\Dev\android-home`，用相应环境变量指定，避免缓存写入默认目录。
 
 复核（新终端）：
 
@@ -59,11 +59,11 @@ adb devices -l
 遇到 Java AF_UNIX 临时目录或跨盘 Kotlin 缓存报错时，按需临时叠加（不要写进 CI 或提交的配置）：
 
 ```powershell
-New-Item -ItemType Directory -Force C:/Dev/java-tmp | Out-Null
-$env:JAVA_TOOL_OPTIONS='-Djava.io.tmpdir=C:/Dev/java-tmp -Djdk.net.unixdomain.tmpdir=C:/Dev/java-tmp -Dorg.gradle.project.kotlin.incremental=false'
+New-Item -ItemType Directory -Force E:/Dev/java-tmp | Out-Null
+$env:JAVA_TOOL_OPTIONS='-Djava.io.tmpdir=E:/Dev/java-tmp -Djdk.net.unixdomain.tmpdir=E:/Dev/java-tmp -Dorg.gradle.project.kotlin.incremental=false'
 ```
 
-仅在复现同类错误时使用上述 Java/Kotlin 绕过，不复制到 CI 全局配置。`local.properties`
+仅在复现同类错误时使用上述 Java/Kotlin 绕过，不复制到 CI 全局配置。本机已在 `E:\Dev\gradle-home\gradle.properties` 设置 `kotlin.incremental=false`，不要为相同绕过修改仓库 `android/gradle.properties`。`local.properties`
 由 Flutter 维护且不提交；正式 keystore 永远不替换或输出。
 
 **别拿并行 `input tap` 压测模拟器。** 每次 `input` 都会在设备上起一个 JVM，几十路并发足以把
@@ -121,7 +121,8 @@ debug 支持 hot reload；最终图形/OCR/插件行为必须另外用 release/R
   卡片、弹层与默认停靠底栏必须保持不透明实色；作为可选底部导航样式的液态玻璃
   （`root_navigation_liquid_glass.dart`）是唯一例外。其他位置出现背景模糊、渐变或 Shader 滤镜即为回归。
 - 提交前 format、analyze、全量测试及发布外观专项；数据库相关改动跑 ffi 持久化/迁移矩阵。
-- 正式 APK/AAB 只由授权后的 CI 发布生成。本地 APK 是诊断证据，不作为正式交付。
+- 本地 `flutter build apk --release --target-platform android-arm64 --flavor github` 可生成个人验收包，路径为 `build/app/outputs/flutter-apk/app-github-release.apk`；本地成功不能替代真机验收。正式 APK/AAB 只由授权后的 CI 发布生成。
+- 个人 fork 可手动运行 `.github/workflows/mine-build.yml`，从 Artifacts 下载验收 APK；`mine` push 不自动构建或发版。应用内检查更新仍查询上游 Release，个人 Artifacts 通过手动安装更新。
 - CI 成功后下载同签名、更高 versionCode APK 覆盖安装，保留账目；用户验收后才提升 Latest。
 - 应用内检查预发布需开启“包含预发布版本（Beta）”；发布后核对 releases 列表中的版本与 APK 元数据。
   用户要求自行通过应用更新时，不代替用户安装或触发下载。

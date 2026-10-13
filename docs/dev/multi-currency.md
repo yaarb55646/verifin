@@ -235,7 +235,7 @@ resolveRate(bookId, currencyCode, date)
 
 ## SQLite 与迁移
 
-当前 `AppDatabase.schemaVersion` 为 **17**。多币种相关的表结构（`ledger_books.base_currency_code`/`currency_setup_status`、`accounts.currency_code`、`entries` 的 `currency_code`/`account_amount`/`to_account_amount`/`base_amount`/`conversion_source`、`recurring_rules` 的币种/金额列与 `rate_policy`、`exchange_rates` 表与索引）以 `lib/data/app_database.dart` 的 `_schemaCurrent` 和迁移段为准。
+当前 `AppDatabase.schemaVersion` 为 **20**；v19→v20 为分类增加默认空的 `keywords` 列，不改变币种或金额。多币种相关的表结构（`ledger_books.base_currency_code`/`currency_setup_status`、`accounts.currency_code`、`entries` 的 `currency_code`/`account_amount`/`to_account_amount`/`base_amount`/`conversion_source`、`recurring_rules` 的币种/金额列与 `rate_policy`、`exchange_rates` 表与索引）以 `lib/data/app_database.dart` 的 `_schemaCurrent` 和迁移段为准。
 
 修改表结构必须：提升 `schemaVersion`、同步 `_schemaCurrent`、在 `_migrations` 注册新迁移段、更新 `test/migration_matrix_test.dart`、更新模型四向映射与 `test/model_roundtrip_test.dart`、更新内存/SQLite 仓储契约测试。
 

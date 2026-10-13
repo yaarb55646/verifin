@@ -27,15 +27,16 @@
 
 - **首页**：走势卡（Spending trend / Net / Income / Days tracked / Daily average）、预算卡（Jul budget / Remaining / Budget …）、日历卡（Calendar，周表头 Mon–Sun）、最近交易、空态文案；图表点按气泡的日期应为「Jul 5」样式（中文为「7月5日」）。
 - **资产**：资产卡（Net worth / Assets / Liabilities）、分区标题（账户类型 Online payment / Cash…）、资产操作菜单、添加账户表单（含校验错误 Account name is required）、账户详情（Balance trend / Statement day / Due day / 还款提醒条）、隐藏账户页、分组管理页、账户报告页。
-- **看板**：顶部「日常 / 月统计 / 年统计」三个 Tab 与各自面板和空态（近 7 日统计、资产汇总、本月收支、预算执行、分类 · 标签排行、日趋势、月度结构、本年收支、收支统计、收支热力）；面板管理页（开关、排序、恢复默认弹窗）。
+- **看板**：顶部「日常 / 月统计 / 年统计」三个 Tab 与各自面板和空态（近 7 日统计、资产汇总、本月收支、预算执行、分类占比、分类 · 标签排行、日趋势、本年收支、收支统计、收支热力）；分类占比的支出/收入、二级分类、显示金额文案；月统计 / 年统计的期间栏（步进、月份/年份弹层、「本月 / 今年」）；面板管理页（开关、排序、恢复默认弹窗）。
 - **我的**：宫格入口、账本 / 分类 / 标签管理（含各删除确认弹窗与轻提示）、周期记账、个人信息编辑、设置页、鸣谢页、数据管理页全链路（导出 / 导入 / CSV / 本地备份 / 加密 / WebDAV / 初始化双重确认 / 检查更新弹窗）。
 
 ## 三、记账链路（英文模式，5 分钟）
 
-1. 快速记账数字键盘 → 保存；交易详情页各行（Type / Category / Account / Date / Time / Note / Tag / Mark reimbursable / Refund）。
+1. 一句话输入 → 下一步 / 改用数字键盘 → 详情 → 保存；子分类常驻面板与新增入口；交易详情页各行（Type / Category / Account / Date / Time / Note / Tag / Mark reimbursable / Refund）。
 2. 转账（From account / To account / Fee）、待报销徽标（Reimbursable）、退款到账徽标（Received）。
 3. 交易列表：筛选（时间 / 排序 / 账户 / 分类 / 标签 / 待报销）、搜索占位、多选批量操作栏（Select all / Category / Account / Delete）、删除确认弹窗。
 4. 图片附件行（Attachments / Take photo / Choose from gallery）。
+5. 分类管理的记账关键词弹层、数量与冲突/保存失败文案；一句话备注下方的关联入口。切语言后已有用户分类名称与关键词保持原样，不自动翻译用户数据。
 
 ## 四、系统集成点（英文模式，10 分钟）
 

@@ -95,6 +95,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `CategoryPickerSheet` | Widget | `entry_sheets.dart` | 上面 helper 的内部 widget（一般经 `showCategoryPickerSheet`）；`categoryPickerAll` / `categoryPickerTopLevel` 哨兵常量在此 |
 | `showCategoryIconPickerSheet` | Sheet 函数 | `sheets.dart` | 分类图标（内置网格 + emoji 快选 + 自由输入） |
 | `showCategoryKeywordsSheet` | Sheet 函数 | `sheets.dart` | `context:` / `categoryId` / 可选 `initialKeyword`；分类管理与一句话确认页共用的词标签编辑弹层，添加/删除仅改草稿，确认保存调用 `saveCategoryKeywords`，成功返回 `true`、取消 `null`；冲突与保存失败内联反馈 |
+| `EntrySubcategoryPanel` | Widget | `entry_subcategory_panel.dart` | 记账详情页常驻显示当前父分类的直接子分类，五列布局、点击选中与新增入口；深层分类仍走多级选择器 |
 | `categoryById` / `categoryByIdFrom` / `categoriesFor` | 纯函数 | `model_lookup.dart` | 取分类 / 按类型过滤 |
 | 分类树工具集 | 纯函数 | `category_tree.dart` | `categoryIndex` `rootCategories` `childrenOf` `hasChildren` `ancestorIds` `rootIdOf` `descendantIds` `isDescendantOf` `depthOf` `pathLabel` `flattenTree`（均带环检测）；`CategoryNode` 携带 depth |
 | 分类关键词 | 纯函数 | `category_tree.dart` | `normalizedCategoryKeywords`（trim/大小写/全半角去重并保留显示形式）、`categoryKeywordOwner`（账本内关键词归属/排除正在编辑的分类），分类名和关键词共用归一口径 |
@@ -105,6 +106,8 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 |---|---|---|---|
 | `showNumberPadSheet` | Sheet 函数 | `sheets.dart` | **数字键盘弹窗**（四则算式 + 结果预览）；输入区默认空并显示「请输入金额」占位，初始值为 0 时不预填 `0`；`allowNegative` 时可在首位按 `-` 输入负数（`-` 后按小数点补成 `-0.`），`allowZero` 决定清空后能否确认为 0；数字区支持设置中的标准（7 8 9 / 4 5 6 / 1 2 3）与电话（1 2 3 / 4 5 6 / 7 8 9）布局，默认标准；货币金额传 `currencyCode` 自动遵循 ISO minor unit，汇率输入才显式用 `maxFractionDigits:10`；`maxAmount` 的展示/比较也随币种精度，JPY 自动禁用小数点。触感偏好内部自取。**输金额一律用它**（含新建账户初始余额、新手引导的余额与预算），不要弹系统 TextField、不要裸包 `showModalBottomSheet` |
 | `NumberPadSheet` | Widget | `entry_sheets.dart` | 上面 helper 的内部 widget（一般经 `showNumberPadSheet`） |
+| `showQuickTextEntrySheet` | Sheet 函数 | `pages/quick_text_entry_sheet.dart` | 手动快速记账的文字入口；返回金额/备注草稿或切换数字键盘的请求，取消不记账 |
+| `parseQuickEntryText` / `QuickEntryParse` | 纯函数 / 模型 | `quick_entry_text.dart` | 本地拆分阿拉伯数字金额与备注，支持单位、货币符号和纯算式；不解析中文金额，未识别金额留空 |
 | `showCurrencyPickerSheet` | Sheet 函数 | `sheets.dart` | 可搜索的离线 ISO 4217 法定货币选择器（代码/中英文名/符号，支持常用/业务优先币种与排除项）；取消返回 `null` |
 | `evaluateAmountExpression` / `amountExpressionHasOperator` | 纯函数 | `calc_expression.dart` | 算式求值（不完整返回 null，结果已规整到分）/ 是否含运算符 |
 | `CurrencyCatalog` | 静态目录 | `currency_catalog.dart` | 离线 ISO 4217 法定货币定义、常用币种排序与中英文搜索；业务层不得另建货币清单 |

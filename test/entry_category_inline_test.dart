@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/entry_sheets.dart';
+import 'package:verifin/app/icon_catalog.dart';
 import 'package:verifin/app/models.dart';
+import 'package:verifin/app/entry_subcategory_panel.dart';
 import 'package:verifin/app/veri_fin_controller.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/pages/entry_detail_page.dart';
+import 'package:verifin/pages/sheets.dart';
 
 import 'support/test_harness.dart';
 
@@ -177,5 +180,73 @@ void main() {
     );
 
     expect(find.byKey(const Key('entry_subcategory_add')), findsOneWidget);
+  });
+
+  testWidgets('子分类面板按实际可用宽度在一行显示五格', (tester) async {
+    final controller = await controllerWithSubcategories();
+    final diningId = idOfLabel(controller, '餐饮');
+    for (final label in <String>['晚餐', '零食', '夜宵']) {
+      controller.addCategory(
+        type: EntryType.expense,
+        label: label,
+        iconCode: 'dining',
+        parentId: diningId,
+      );
+    }
+    await pumpPage(
+      tester,
+      controller,
+      const EntryDetailPage(initialAmount: 30),
+    );
+
+    final children = controller.childCategories(diningId);
+    expect(children, hasLength(5));
+    final firstRect = tester.getRect(
+      find.byKey(Key('entry_subcategory_${children.first.id}')),
+    );
+    final fifthRect = tester.getRect(
+      find.byKey(Key('entry_subcategory_${children[4].id}')),
+    );
+    final addRect = tester.getRect(
+      find.byKey(const Key('entry_subcategory_add')),
+    );
+    expect(fifthRect.top, closeTo(firstRect.top, 0.1));
+    expect(addRect.top, greaterThan(firstRect.top));
+  });
+
+  testWidgets('新增子分类时可选择图标', (tester) async {
+    final controller = await controllerWithSubcategories();
+    final diningId = idOfLabel(controller, '餐饮');
+    await pumpPage(
+      tester,
+      controller,
+      const EntryDetailPage(initialAmount: 30),
+    );
+
+    await tester.tap(find.byKey(const Key('entry_subcategory_add')));
+    await tester.pumpAndSettle();
+    final dialog = find.byType(AlertDialog);
+    await tester.enterText(
+      find.descendant(of: dialog, matching: find.byType(TextField)),
+      '晚餐',
+    );
+    await tester.tap(find.descendant(of: dialog, matching: find.text('确认')));
+    await tester.pumpAndSettle();
+
+    final emoji = categoryEmojiChoices.first;
+    await tester.ensureVisible(find.text(emoji));
+    await tester.tap(find.text(emoji));
+    await tester.pumpAndSettle();
+
+    final created = controller.categories.singleWhere(
+      (category) => category.parentId == diningId && category.label == '晚餐',
+    );
+    expect(created.iconCode, emojiIconCode(emoji));
+    expect(
+      tester
+          .widget<EntrySubcategoryPanel>(find.byType(EntrySubcategoryPanel))
+          .selectedId,
+      created.id,
+    );
   });
 }

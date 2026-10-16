@@ -70,22 +70,20 @@ class EntrySubcategoryPanel extends StatelessWidget {
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(veriRadiusMd),
       ),
-      child: Wrap(
-        spacing: 4,
-        runSpacing: 10,
-        children: <Widget>[
-          for (final cell in cells)
-            SizedBox(
-              // 5 列：减去容器左右内边距（16）与 4 个 4px 间距（16）。
-              width:
-                  (MediaQuery.sizeOf(context).width -
-                      14 * 2 -
-                      16 -
-                      4 * (_columns - 1)) /
-                  _columns,
-              child: cell,
-            ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 按面板内层的实际约束均分。不能从屏幕宽度反推：记账页的外边距或
+          // 容器最大宽度变化时，会让最后一格被 Wrap 挤到下一行。
+          final cellWidth =
+              (constraints.maxWidth - 4 * (_columns - 1)) / _columns;
+          return Wrap(
+            spacing: 4,
+            runSpacing: 10,
+            children: <Widget>[
+              for (final cell in cells) SizedBox(width: cellWidth, child: cell),
+            ],
+          );
+        },
       ),
     );
   }

@@ -1641,13 +1641,16 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       label: AppLocalizations.of(context).categoryNameLabel,
     );
     if (!mounted || label == null) return;
+    final iconCode = await showCategoryIconPickerSheet(
+      context: context,
+      selected: 'category',
+    );
+    if (!mounted || iconCode == null) return;
     final controller = VeriFinScope.of(context);
-    // 与分类管理页一致：新建子分类落在当前类型下，图标给一个中性默认值，
-    // 用户可随后在分类管理里换图标。
     controller.addCategory(
       type: parent.type,
       label: label,
-      iconCode: 'category',
+      iconCode: iconCode,
       parentId: parent.id,
     );
     if (!mounted) return;

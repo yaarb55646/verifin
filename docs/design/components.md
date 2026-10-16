@@ -95,7 +95,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `CategoryPickerSheet` | Widget | `entry_sheets.dart` | 上面 helper 的内部 widget（一般经 `showCategoryPickerSheet`）；`categoryPickerAll` / `categoryPickerTopLevel` 哨兵常量在此 |
 | `showCategoryIconPickerSheet` | Sheet 函数 | `sheets.dart` | 分类图标（内置网格 + emoji 快选 + 自由输入） |
 | `showCategoryKeywordsSheet` | Sheet 函数 | `sheets.dart` | `context:` / `categoryId` / 可选 `initialKeyword`；分类管理与一句话确认页共用的词标签编辑弹层，添加/删除仅改草稿，确认保存调用 `saveCategoryKeywords`，成功返回 `true`、取消 `null`；冲突与保存失败内联反馈 |
-| `EntrySubcategoryPanel` | Widget | `entry_subcategory_panel.dart` | 记账详情页常驻显示当前父分类的直接子分类，五列布局、点击选中与新增入口；深层分类仍走多级选择器 |
+| `EntrySubcategoryPanel` | Widget | `entry_subcategory_panel.dart` | 记账详情页常驻显示当前父分类的直接子分类，按面板实际约束宽度五等分（不依赖屏幕宽度或外层边距）、点击选中与新增入口；「新增」先确认名称再经 `showCategoryIconPickerSheet` 选图标，取消不创建；深层分类仍走多级选择器 |
 | `categoryById` / `categoryByIdFrom` / `categoriesFor` | 纯函数 | `model_lookup.dart` | 取分类 / 按类型过滤 |
 | 分类树工具集 | 纯函数 | `category_tree.dart` | `categoryIndex` `rootCategories` `childrenOf` `hasChildren` `ancestorIds` `rootIdOf` `descendantIds` `isDescendantOf` `depthOf` `pathLabel` `flattenTree`（均带环检测）；`CategoryNode` 携带 depth |
 | 分类关键词 | 纯函数 | `category_tree.dart` | `normalizedCategoryKeywords`（trim/大小写/全半角去重并保留显示形式）、`categoryKeywordOwner`（账本内关键词归属/排除正在编辑的分类），分类名和关键词共用归一口径 |

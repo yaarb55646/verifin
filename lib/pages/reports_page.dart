@@ -95,7 +95,11 @@ class _ReportsPageState extends State<ReportsPage> {
           return CategorySharePanel(
             key: ValueKey('category_share_${_tab.name}'),
             window: categoryWindow,
-            rangeLabel: categoryRangeLabel,
+            // 日常 Tab 没有期间栏，卡片自带范围标签；月/年由期间栏标注期间，
+            // 卡片不再重复显示同一标签（与排行卡同一处理）。
+            rangeLabel: _tab == ReportPeriodTab.daily
+                ? categoryRangeLabel
+                : null,
           );
         case 'summary':
           return _PeriodSummaryPanel(
@@ -145,8 +149,9 @@ class _ReportsPageState extends State<ReportsPage> {
           return _RankingPanel(
             key: ValueKey('ranking_${_tab.name}'),
             window: categoryWindow,
-            rangeLabel:
-                _tab == ReportPeriodTab.daily ? categoryRangeLabel : null,
+            rangeLabel: _tab == ReportPeriodTab.daily
+                ? categoryRangeLabel
+                : null,
           );
         case 'year_trend':
           return _YearTrendPanel(

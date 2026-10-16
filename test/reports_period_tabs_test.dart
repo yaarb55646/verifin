@@ -252,10 +252,18 @@ void main() {
     await tester.pumpAndSettle();
 
     // 标题行（标题 + 右上角口径切换）与分组切换行各自成行，卡片宽度再窄也不溢出
-    // （溢出会直接抛错让用例失败）。
+    // （溢出会直接抛错让用例失败）。月统计页同时存在分类占比与排行卡两枚口径切换，
+    // 均为紧凑档，逐个校验高度。
     expect(find.byKey(const Key('dimension_toggle_expense')), findsOneWidget);
     expect(find.byKey(const Key('ranking_group_topCategory')), findsOneWidget);
-    expect(tester.getSize(find.byType(VeriEntryTypeToggle)).height, 30);
+    for (final element in find.byType(VeriEntryTypeToggle).evaluate()) {
+      expect(
+        tester
+            .getSize(find.byElementPredicate((e) => identical(e, element)))
+            .height,
+        30,
+      );
+    }
   });
 
   testWidgets('年统计热力图在窄屏（360dp）不溢出', (tester) async {

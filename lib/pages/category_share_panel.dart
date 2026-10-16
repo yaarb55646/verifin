@@ -13,14 +13,12 @@ import '../l10n/app_localizations.dart';
 
 /// 日常/月/年共用的分类占比卡。范围由外层明确提供，卡内切换只影响当前视图。
 class CategorySharePanel extends StatefulWidget {
-  const CategorySharePanel({
-    super.key,
-    required this.window,
-    required this.rangeLabel,
-  });
+  const CategorySharePanel({super.key, required this.window, this.rangeLabel});
 
   final DateWindow window;
-  final String rangeLabel;
+
+  /// 取数范围标签；为 null 时不显示（月/年 Tab 由期间栏标注期间）。
+  final String? rangeLabel;
 
   @override
   State<CategorySharePanel> createState() => _CategorySharePanelState();
@@ -81,6 +79,7 @@ class _CategorySharePanelState extends State<CategorySharePanel> {
             title: title,
             trailingWidget: VeriEntryTypeToggle(
               compact: true,
+              keyPrefix: 'category_share_dimension_',
               dimension: _type,
               onChanged: (type) => setState(() {
                 _type = type;
@@ -88,13 +87,15 @@ class _CategorySharePanelState extends State<CategorySharePanel> {
               }),
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            widget.rangeLabel,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          if (widget.rangeLabel != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              widget.rangeLabel!,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 12),
           if (stats.isEmpty)
             EmptyState(

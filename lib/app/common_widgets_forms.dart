@@ -10,6 +10,7 @@ class VeriEntryTypeToggle extends StatelessWidget {
     required this.dimension,
     required this.onChanged,
     this.compact = false,
+    this.keyPrefix = 'dimension_toggle_',
   });
 
   final EntryType dimension;
@@ -19,6 +20,10 @@ class VeriEntryTypeToggle extends StatelessWidget {
 
   /// 紧凑档：用于卡片标题行内（与 `VeriSegmentedControl.compact` 同一档）。
   final bool compact;
+
+  /// Key 前缀：同一页可能同时存在多个口径切换（如分类占比与排行卡），
+  /// 各自传不同前缀避免 key 重复；默认值保持既有 key 不变。
+  final String keyPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +40,7 @@ class VeriEntryTypeToggle extends StatelessWidget {
           ? veriSemantic(context, veriExpense)
           : veriSemantic(context, veriIncome),
       // Key 只挂选中项：分段控件会把选中项多渲染一份用于滑动动画。
-      keyOf: (type) =>
-          type == dimension ? Key('dimension_toggle_${type.name}') : null,
+      keyOf: (type) => type == dimension ? Key('$keyPrefix${type.name}') : null,
       onChanged: onChanged,
     );
   }

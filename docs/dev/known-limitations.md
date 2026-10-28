@@ -11,7 +11,7 @@
 > 编号一经使用即固定，不得复用或重排；新增条目按 L8、L9… 顺延。其它文档引用时请写编号 + 一句话，避免编号与内容脱节。
 
 ### L1 · 数据库 schema 只升不降
-- **现状**：`AppDatabase._onUpgrade` 只有升级路径，无 downgrade。用户装了高版本再装回低版本，打开库会命中 `DatabaseErrorApp` 兜底页（明确提示「数据可能还在，别清数据」）。
+- **现状**：`AppDatabase._onUpgrade` 只有升级路径，无 downgrade。用户装了高版本再装回低版本，打开库会命中启动失败页（数据库阶段，明确提示「数据可能还在，别清数据」）。
 - **为何接受**：Android 正常渠道不会降级安装；写双向迁移成本高、收益低。
 - **缓解 / 约定**：已有兜底页保护用户数据不被误删。发版说明里应提示「不支持降级安装」。改 schema 必须升 `schemaVersion` 并在 `_migrations` 注册迁移段（迁移矩阵测试覆盖从每个历史版本升级）。
 
@@ -41,7 +41,7 @@
 ### L6 · 部分第三方账单 parser 没有真实 fixture
 - **现状**：`test/fixtures/` 只保留钱迹与一木（账单 / 转账 / 退款 / 子分类）的真实导出样例；支付宝、微信、薄荷、Tally 与 CSV 模板的测试用**内联构造的字节**。解析分支有覆盖，但字节不是真实导出。
 - **影响**：这些平台的格式变更（列名、编码、金额符号、时间格式）不会被测试自动发现，只能等用户反馈。
-- **为何接受**：真实导出含用户隐私，用户已明确表示无法再提供样例，以现有样例为准。**禁止凭空编造第三方格式来"补全" fixture**（AGENTS.md 的导入规范）。
+- **为何接受**：真实导出含用户隐私，用户已明确表示无法再提供样例，以现有样例为准。**禁止凭空编造第三方格式来"补全" fixture**（AGENTS.md 的「数据、备份与导入」）。
 - **触发阈值**：收到某平台导入失败反馈时，先用该平台真实文件补 fixture 再改 parser。
 
 ### L7 · 单位显示闸门只看已落库数据，未保存的中间态不参与
@@ -88,9 +88,30 @@
 ---
 
 ### L11 · 鸣谢名单随版本发布，头像依赖一个已停更的上游
-- **现状**：`lib/app/credits.dart` 的鸣谢名单是随包发布的常量，加一位支持者要发一次版；头像在 `lib/app/credits_avatar.dart` 里由 `Jdenticon.toSvg(称呼)` 生成（SHA1 决定图形与色相，再补一层淡彩圆底），算法来自本地 vendor 的 `third_party/jdenticon_dart`。
+- **现状**：`lib/app/credits.dart` 的鸣谢名单是随包发布的常量，加一位支持者要发一次版；未提供真实头像时，`lib/app/credits_avatar.dart` 用 `Jdenticon.toSvg(称呼)` 生成头像（SHA1 决定图形与色相，再补一层淡彩圆底），算法来自本地 vendor 的 `third_party/jdenticon_dart`。提供 `avatarAsset` 时改为渲染 `assets/credits/` 内的包内图片。
 - **为何接受**：名单不联网拉取——应用没有自有服务端，也不该为一张名单开一个网络入口（与「本地优先、无自有服务端」一致）。头像也没有可用的现成库：能按名字生成头像的 pub 包（`multiavatar` / `avatars` / `identicon`）SDK 上限都 <3.0、在当前 Dart 3 上装不上，`boring_avatars` 兼容但采用度极低（2 likes）；`jdenticon_dart` 的算法与 SVG 输出已冻结，但 SDK 上限同样停在 <3.0.0、2021 年后未再发版。因此按「复刻上游到本地」的做法 vendor 一份（只放宽 SDK 约束，MIT 许可与出处见该目录 README）：比自行复刻算法代码量小，图形质量也不必由我们保证。
-- **代价 / 缓解**：上游若有修复不会自动进来，需要时 diff 一次 `third_party/jdenticon_dart/lib/`；名单更新滞后一个版本；改展示名会让头像变化，可用 `seed` 固定。等名单长到需要搜索或分页时再评估展现方式。
+- **代价 / 缓解**：上游若有修复不会自动进来，需要时 diff 一次 `third_party/jdenticon_dart/lib/`；名单更新滞后一个版本；生成头像会随展示名变化，可用 `seed` 固定，真实头像则直接绑定包内资源。等名单长到需要搜索或分页时再评估展现方式。
+
+---
+
+### L12 · Controller、交易详情与 MainActivity 仍然过大
+- **现状**：`veri_fin_controller_ops.dart` 约 5,273 行，`entry_detail_page.dart` 约 2,380 行，
+  `MainActivity.kt` 约 1,514 行。Controller 已按状态/操作拆 part，但操作层仍覆盖交易、账户、
+  分类、预算、导入、备份与应用锁；`MainActivity.kt` 同时承载 SAF、更新下载、截图入口与
+  小组件桥。
+- **影响**：单文件上下文中仍可能出现跨领域修改，代码审查和故障定位成本偏高；当前有
+  repository contract、迁移矩阵、控制器原子命令与平台编译门禁兜底。
+- **为何暂不一次性重写**：这些文件是运行时咽喉点，整块搬迁会在同一变更中混合行为调整与
+  文件移动，难以用现有回归测试证明无行为变化。当前先以“新增领域逻辑不再堆回操作层”为约定。
+- **触发阈值**：新增导入/备份或 Android 原生能力再次修改同一大文件超过 200 行，或出现
+  两个以上跨领域回归时，按领域拆出导入恢复服务、备份传输服务和 Android `UpdateBridge` /
+  `BackupSafBridge`，保持单一 MethodChannel 入口不变。
+
+### L13 · 两个 Android 插件仍应用 Kotlin Gradle Plugin
+- **现状**：Flutter 3.47.2 构建 `flutter_timezone`、`home_widget` 时会提示它们仍 apply KGP；当前 debug 构建可以通过。
+- **影响**：Flutter 已提示未来版本会拒绝这类插件；升级 Flutter、AGP 或 Kotlin 前必须确认插件已迁移到 Built-in Kotlin，否则 Android 构建会直接失败。
+- **为何暂不改**：当前版本可构建，替换/升级插件需要同时验证提醒、时区与桌面小组件行为，不宜在工具链升级中顺手改。
+- **触发阈值**：升级 Flutter/AGP/Kotlin，或 CI 出现对应构建失败时，先把这两个插件升级到支持 Built-in Kotlin 的版本，再调整构建配置。
 
 ---
 

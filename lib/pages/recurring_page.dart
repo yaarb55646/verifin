@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -607,7 +608,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                               : () => _pickAccount(true),
                         ),
                       ..._currencyAmountFields(controller, accounts),
-                      VeriAnchoredChoice<RecurringRatePolicy>(
+                      AnchoredMenuChoice<RecurringRatePolicy>(
                         values: RecurringRatePolicy.values,
                         selected: _ratePolicy,
                         idOf: (value) => 'recurring_rate_${value.name}',
@@ -643,7 +644,7 @@ class _RecurringRuleEditPageState extends State<RecurringRuleEditPage> {
                           onTap: openMenu,
                         ),
                       ),
-                      VeriAnchoredChoice<RecurringFrequency>(
+                      AnchoredMenuChoice<RecurringFrequency>(
                         values: RecurringFrequency.values,
                         selected: _frequency,
                         idOf: (value) => 'recurring_frequency_${value.name}',

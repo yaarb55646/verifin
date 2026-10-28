@@ -74,8 +74,33 @@ List<LedgerEntry> queryLedgerEntries(
   LedgerQuery query, {
   double? Function(LedgerEntry entry)? amountOf,
 }) {
+  final limit = query.limit;
+  if (limit != null && limit <= 0) return const <LedgerEntry>[];
   final keyword = query.keyword.trim().toLowerCase();
   final result = <LedgerEntry>[];
+
+  int compare(LedgerEntry a, LedgerEntry b) {
+    var cmp = 0;
+    switch (query.sortBy) {
+      case LedgerSortField.date:
+        cmp = a.occurredAt.compareTo(b.occurredAt);
+        if (cmp == 0) {
+          cmp = a.id.compareTo(b.id);
+        }
+      case LedgerSortField.amount:
+        final aValue = amountOf == null ? a.netAmount : amountOf(a);
+        final bValue = amountOf == null ? b.netAmount : amountOf(b);
+        if (aValue == null && bValue != null) return 1;
+        if (aValue != null && bValue == null) return -1;
+        cmp = aValue == null || bValue == null ? 0 : aValue.compareTo(bValue);
+        if (cmp == 0) {
+          final byDate = a.occurredAt.compareTo(b.occurredAt);
+          cmp = byDate != 0 ? byDate : a.id.compareTo(b.id);
+        }
+    }
+    return query.descending ? -cmp : cmp;
+  }
+
   for (final entry in entries) {
     if (query.types.isNotEmpty && !query.types.contains(entry.type)) {
       continue;
@@ -111,26 +136,36 @@ List<LedgerEntry> queryLedgerEntries(
     if (keyword.isNotEmpty && !entry.note.toLowerCase().contains(keyword)) {
       continue;
     }
-    result.add(entry);
-  }
-
-  result.sort((a, b) {
-    final int cmp;
-    switch (query.sortBy) {
-      case LedgerSortField.date:
-        cmp = a.occurredAt.compareTo(b.occurredAt);
-      case LedgerSortField.amount:
-        final aValue = amountOf == null ? a.netAmount : amountOf(a);
-        final bValue = amountOf == null ? b.netAmount : amountOf(b);
-        if (aValue == null && bValue != null) return 1;
-        if (aValue != null && bValue == null) return -1;
-        cmp = aValue == null || bValue == null ? 0 : aValue.compareTo(bValue);
+    if (limit == null) {
+      result.add(entry);
+      continue;
     }
-    return query.descending ? -cmp : cmp;
-  });
-
-  if (query.limit != null && result.length > query.limit!) {
-    return result.sublist(0, query.limit!);
+    if (result.length < limit) {
+      _insertSorted(result, entry, compare);
+    } else if (compare(entry, result.last) < 0) {
+      result.removeLast();
+      _insertSorted(result, entry, compare);
+    }
   }
+
+  if (limit == null) result.sort(compare);
   return result;
+}
+
+void _insertSorted(
+  List<LedgerEntry> values,
+  LedgerEntry entry,
+  int Function(LedgerEntry a, LedgerEntry b) compare,
+) {
+  var low = 0;
+  var high = values.length;
+  while (low < high) {
+    final middle = (low + high) >>> 1;
+    if (compare(values[middle], entry) <= 0) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  values.insert(low, entry);
 }

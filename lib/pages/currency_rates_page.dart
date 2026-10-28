@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/common_widgets.dart';
+import '../app/calendar_days.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/feedback.dart';
@@ -47,6 +49,8 @@ class _CurrencyRatesPageState extends State<CurrencyRatesPage> {
         if (account.currencyCode != book.baseCurrencyCode) account.currencyCode,
       for (final entry in controller.entries)
         if (entry.currencyCode != book.baseCurrencyCode) entry.currencyCode,
+      for (final rule in controller.recurringRules)
+        if (rule.currencyCode != book.baseCurrencyCode) rule.currencyCode,
       for (final rate in controller.exchangeRates) rate.currencyCode,
     }.toList()..sort();
 
@@ -215,8 +219,24 @@ class _CurrencyRateRow extends StatelessWidget {
     final rates = controller.exchangeRates
         .where((rate) => rate.currencyCode == currencyCode)
         .toList();
-    final latest = rates.isEmpty ? null : rates.first;
-    final stale = latest != null && isExchangeRateStale(latest, DateTime.now());
+    final today = DateTime.now();
+    final current = controller.exchangeRateFor(currencyCode, today);
+    final future =
+        rates
+            .where((rate) => calendarDaysBetween(today, rate.effectiveDate) > 0)
+            .toList()
+          ..sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
+    final displayed = current ?? (future.isEmpty ? null : future.first);
+    final stale = current != null && isExchangeRateStale(current, today);
+    final status = displayed == null
+        ? null
+        : <String>[
+            exchangeRateSourceLabel(l10n, displayed.source),
+            if (displayed == current && stale) l10n.exchangeRateStale,
+            if (displayed != current) l10n.exchangeRateNotEffective,
+            if (current != null && future.isNotEmpty)
+              l10n.exchangeRateFutureCount(future.length),
+          ].join(' · ');
     return Material(
       color: Colors.transparent,
       child: ListTile(
@@ -232,24 +252,22 @@ class _CurrencyRateRow extends StatelessWidget {
           ),
         ),
         title: Text(
-          latest == null
+          displayed == null
               ? currency.nameForLocale(
                   Localizations.localeOf(context).toLanguageTag(),
                 )
               : l10n.exchangeRateEquation(
                   currencyCode,
-                  formatRateValue(latest.rateToBase),
+                  formatRateValue(displayed.rateToBase),
                   controller.activeBook.baseCurrencyCode,
                 ),
         ),
         subtitle: Text(
-          latest == null
+          displayed == null
               ? l10n.exchangeRateNotSet
               : l10n.exchangeRateDateAndStatus(
-                  l10n.dateMonthDay(latest.effectiveDate),
-                  stale
-                      ? l10n.exchangeRateStale
-                      : exchangeRateSourceLabel(l10n, latest.source),
+                  l10n.dateYearMonthDay(displayed.effectiveDate),
+                  status!,
                 ),
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -336,7 +354,7 @@ class _RateHistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final stale = isExchangeRateStale(rate, DateTime.now());
+    final future = calendarDaysBetween(DateTime.now(), rate.effectiveDate) > 0;
     return Material(
       color: Colors.transparent,
       child: ListTile(
@@ -350,10 +368,11 @@ class _RateHistoryRow extends StatelessWidget {
         ),
         subtitle: Text(
           l10n.exchangeRateDateAndStatus(
-            l10n.dateMonthDay(rate.effectiveDate),
-            stale
-                ? l10n.exchangeRateStale
-                : exchangeRateSourceLabel(l10n, rate.source),
+            l10n.dateYearMonthDay(rate.effectiveDate),
+            <String>[
+              exchangeRateSourceLabel(l10n, rate.source),
+              if (future) l10n.exchangeRateNotEffective,
+            ].join(' · '),
           ),
         ),
         onTap: () => editExchangeRate(
@@ -361,11 +380,11 @@ class _RateHistoryRow extends StatelessWidget {
           currencyCode: rate.currencyCode,
           existing: rate,
         ),
-        trailing: VeriAnchoredMenuButton(
+        trailing: AnchoredMenuButton(
           icon: Icons.more_vert,
           tooltip: l10n.exchangeRateHistory(rate.currencyCode),
-          entries: <VeriMenuEntry>[
-            VeriMenuItem(
+          entries: <AnchoredMenuEntry>[
+            AnchoredMenuItem(
               id: 'rate_edit',
               icon: Icons.edit_outlined,
               title: l10n.commonEdit,
@@ -375,8 +394,8 @@ class _RateHistoryRow extends StatelessWidget {
                 existing: rate,
               ),
             ),
-            const VeriMenuDivider(),
-            VeriMenuItem(
+            const AnchoredMenuDivider(),
+            AnchoredMenuItem(
               id: 'rate_delete',
               icon: Icons.delete_outline,
               title: l10n.commonDelete,
@@ -447,7 +466,9 @@ Future<void> editExchangeRate({
     currencyCode: currencyCode,
     effectiveDate: date,
     rateToBase: amount,
-    source: existing?.source ?? ExchangeRateSource.manual,
+    // 用户只要在编辑器里确认保存，这条记录就已经是手工维护的值；不能再把
+    // 手工修改后的结果标成“导入”。
+    source: ExchangeRateSource.manual,
   );
   if (!context.mounted) return;
   if (!saved) {

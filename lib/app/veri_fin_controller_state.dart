@@ -187,11 +187,6 @@ mixin _ControllerState on ChangeNotifier {
   AiSettings _aiSettings = const AiSettings();
   AiCapabilityProfile? _aiCapabilityProfile;
 
-  /// AI 对话查询的聊天记录：每条 `{role, content, displays?}`——助手消息可带序列化的
-  /// 结果卡片（`displays` 为 [AiResultDisplay] 的 JSON），重开时连同图表一起还原。
-  /// 设备本地偏好，不进 JSON 备份、初始化保留。
-  List<Map<String, Object?>> _aiChatHistory = <Map<String, Object?>>[];
-
   void _loadDefaultAccounts() {
     final raw = _store.read(_defaultAccountKey);
     if (raw == null || raw.isEmpty) {
@@ -317,7 +312,8 @@ mixin _ControllerState on ChangeNotifier {
       _aiCapabilityProfile = null;
       _store.delete(_aiCapabilitiesKey);
     }
-    _aiChatHistory = _decodeChatHistory(_store.read(_aiChatHistoryKey));
+    // 旧版本把 AI 对话写在设备 KV；新版只保留页面内存会话，不读取也不迁移。
+    _store.delete(_legacyAiChatHistoryKey);
     _homeTrendConfig = HomeTrendConfig.decode(_store.read(_homeTrendKey));
   }
 
@@ -1154,13 +1150,6 @@ mixin _ControllerState on ChangeNotifier {
     _trackWrite(
       _repository.saveRecurringRules(List<RecurringRule>.of(_recurringRules)),
     );
-  }
-
-  void _persistExchangeRates() {
-    _trackWrite(
-      _repository.saveExchangeRates(List<ExchangeRate>.of(_exchangeRates)),
-    );
-    _markWidgetProjectionChanged();
   }
 
   void _persistBudgets() {

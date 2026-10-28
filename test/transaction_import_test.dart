@@ -26,6 +26,16 @@ void main() {
       final rows = parseCsv('a,b\n\n\n1,2\n');
       expect(rows.length, 2);
     });
+
+    test('CSV 模板每行列数与表头一致', () {
+      final rows = parseCsv(transactionCsvTemplate());
+      expect(rows.first, contains('记录编号'));
+      expect(rows.first, contains('原支出编号'));
+      expect(rows.first, contains('到账日期'));
+      for (final row in rows.skip(1)) {
+        expect(row.length, rows.first.length);
+      }
+    });
   });
 
   group('buildImportPlan', () {
@@ -308,7 +318,7 @@ void main() {
       final controller = await makeController();
       final beforeEntries = controller.entries.length;
       final beforeAccounts = controller.accounts.length;
-      final plan = controller.importTransactionsFromCsv(
+      final plan = await controller.importTransactionsFromCsv(
         '日期,类型,金额,分类,账户,转入账户,备注\n'
         '2026-01-05,支出,23.5,夜宵,钱包A,,宵夜\n'
         '2026-01-06,收入,100,红包,钱包A,,压岁钱',
@@ -325,7 +335,7 @@ void main() {
 
     test('导入的模板自身可被解析导入', () async {
       final controller = await makeController();
-      final plan = controller.importTransactionsFromCsv(
+      final plan = await controller.importTransactionsFromCsv(
         transactionCsvTemplate(),
       );
       expect(plan.importedCount, 3);

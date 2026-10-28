@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../app/app_theme.dart';
+import '../app/app_lock_session.dart';
 import '../app/models.dart';
 import '../app/feedback.dart';
 import '../app/platform_bridge.dart';
@@ -13,6 +14,7 @@ import '../app/root_navigation.dart';
 import '../app/root_navigation_styles.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
+import '../app/widgets/widget_refresh_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'ai_entry_sheet.dart';
 import 'assets_pages.dart';
@@ -35,6 +37,10 @@ class _VeriFinShellState extends State<VeriFinShell> {
   int _index = 0;
   int? _programmaticPageTarget;
   DateTime? _lastBackPressedAt;
+
+  /// 已经进入退出流程（等待最后一次桌面投影冲刷）。期间再按返回键直接忽略，
+  /// 避免重复冲刷或重复调用 `SystemNavigator.pop()`。
+  bool _exiting = false;
   final PageController _pageController = PageController();
 
   /// 最近一次滚动更新时的位置与帧时间戳，用于在打断切页动画时估算当前速度。
@@ -87,6 +93,10 @@ class _VeriFinShellState extends State<VeriFinShell> {
     AppWidgetBridge.setRouteHandler(_openWidgetRouteFromPlatform);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // 同意与引导由外部门卫完成后才构建本壳。
+      await AppLockSessionScope.waitUntilUnlocked(context);
+      if (!mounted) {
+        return;
+      }
       if (await AppCaptureBridge.consumeInitialQuickEntryIntent() && mounted) {
         await _openQuickEntryFromPlatform();
       }
@@ -306,7 +316,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
         if (didPop) {
           return;
         }
-        _handleRootBack();
+        unawaited(_handleRootBack());
       },
       child: Scaffold(
         key: const Key('main_shell_scaffold'),
@@ -372,9 +382,9 @@ class _VeriFinShellState extends State<VeriFinShell> {
                             clipBehavior: Clip.antiAlias,
                             child: InkWell(
                               key: const Key('quick_entry_action'),
-                              onTap: () => _startQuickEntry(context),
+                              onTap: _requestQuickEntry,
                               onLongPress: () =>
-                                  _startQuickEntry(context, longPress: true),
+                                  _requestQuickEntry(longPress: true),
                               child: Icon(
                                 Icons.add_rounded,
                                 size: 28,
@@ -403,7 +413,10 @@ class _VeriFinShellState extends State<VeriFinShell> {
     );
   }
 
-  void _handleRootBack() {
+  Future<void> _handleRootBack() async {
+    if (_exiting) {
+      return;
+    }
     if (_index != 0) {
       _goToTab(0);
       return;
@@ -413,7 +426,16 @@ class _VeriFinShellState extends State<VeriFinShell> {
         _lastBackPressedAt != null &&
         now.difference(_lastBackPressedAt!) < const Duration(seconds: 2);
     if (shouldExit) {
-      SystemNavigator.pop();
+      _exiting = true;
+      await _flushWidgetProjectionBeforeExit();
+      if (!mounted) {
+        return;
+      }
+      await SystemNavigator.pop();
+      if (mounted) {
+        // 平台没有真正关闭（异常返回）时恢复可退出状态，避免把用户卡在应用里。
+        _exiting = false;
+      }
       return;
     }
     _lastBackPressedAt = now;
@@ -424,6 +446,87 @@ class _VeriFinShellState extends State<VeriFinShell> {
         dedupeKey: 'root-exit',
       ),
     );
+  }
+
+  /// 退出前把桌面投影冲刷完。
+  ///
+  /// `SystemNavigator.pop()` 会 finish Activity，Flutter 引擎随之下线：挂在
+  /// `hidden` / `paused` 上的异步冲刷会被直接掐断，用户「记完账立刻按返回退出」时
+  /// 桌面快照就停在上一笔，而且不会自愈——直到下次冷启动的强制推送才补上。
+  /// 这里在真正关闭前等一次发布完成。
+  ///
+  /// 退出优先：平台通道异常或迟迟不返回时按超时放过，未完成的发布由下次冷启动补推，
+  /// 绝不因为刷新失败把用户卡在应用里。
+  Future<void> _flushWidgetProjectionBeforeExit() async {
+    final coordinator = WidgetRefreshScope.maybeOf(context);
+    if (coordinator == null) {
+      return;
+    }
+    try {
+      await coordinator.flush().timeout(const Duration(milliseconds: 600));
+    } on TimeoutException {
+      // 见方法注释：超时直接退出。
+    } on Object catch (error, stackTrace) {
+      if (!mounted) {
+        return;
+      }
+      VeriFinScope.of(context).logger?.error(
+        'Widget projection flush on exit failed',
+        source: 'widgets',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// 正在进行的快速记账请求（键盘/编辑页/「记一笔」AI 面板）。
+  ///
+  /// 组件、磁贴与右下角按钮共用这一条单飞通道：重复投递（组件 PendingIntent 被
+  /// 连点、磁贴与组件同时到达、按钮连点）只能复用已打开的那一层，绝不再叠一个
+  /// 一模一样的数字键盘——那会表现成「卡在记账页面、怎么关都还在」。
+  Future<void>? _quickEntryTask;
+
+  /// 打开快速记账（单飞）。[fromPlatform] 为真时先等解锁并切回首页。
+  Future<void> _requestQuickEntry({
+    bool longPress = false,
+    bool fromPlatform = false,
+  }) async {
+    final existing = _quickEntryTask;
+    if (existing != null) {
+      return existing;
+    }
+    final task = _runQuickEntry(
+      longPress: longPress,
+      fromPlatform: fromPlatform,
+    );
+    _quickEntryTask = task;
+    try {
+      await task;
+    } finally {
+      if (identical(_quickEntryTask, task)) {
+        _quickEntryTask = null;
+      }
+    }
+  }
+
+  Future<void> _runQuickEntry({
+    required bool longPress,
+    required bool fromPlatform,
+  }) async {
+    if (fromPlatform) {
+      await AppLockSessionScope.waitUntilUnlocked(context);
+      if (!mounted) {
+        return;
+      }
+      if (_index != 0) {
+        _goToTab(0);
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+      }
+      if (!mounted) {
+        return;
+      }
+    }
+    await _startQuickEntry(context, longPress: longPress);
   }
 
   Future<void> _startQuickEntry(
@@ -508,22 +611,12 @@ class _VeriFinShellState extends State<VeriFinShell> {
     );
   }
 
-  Future<void> _openQuickEntryFromPlatform() async {
-    if (!mounted) {
-      return;
-    }
-    if (_index != 0) {
-      _goToTab(0);
-      await Future<void>.delayed(const Duration(milliseconds: 120));
-    }
-    if (!mounted) {
-      return;
-    }
-    await _startQuickEntry(context);
-  }
+  Future<void> _openQuickEntryFromPlatform() =>
+      _requestQuickEntry(fromPlatform: true);
 
   /// 应用运行中收到分享/外部采集内容（原生 onNewIntent 通知）时拉取并识别。
   Future<void> _openSharedCaptureFromPlatform() async {
+    await AppLockSessionScope.waitUntilUnlocked(context);
     if (!mounted) {
       return;
     }
@@ -531,6 +624,7 @@ class _VeriFinShellState extends State<VeriFinShell> {
   }
 
   Future<void> _openWidgetRouteFromPlatform(Map<String, Object?> args) async {
+    await AppLockSessionScope.waitUntilUnlocked(context);
     if (!mounted) return;
     final controller = VeriFinScope.of(context);
     final bookId = args['bookId'] as String?;

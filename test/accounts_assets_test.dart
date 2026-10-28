@@ -1,6 +1,8 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
+import 'package:verifin/app/chart_painters.dart';
 import 'package:verifin/app/common_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
@@ -349,6 +351,7 @@ void main() {
     await tapBottomTab(tester, 1);
 
     expect(find.text('有 1 个账户待设置汇率'), findsOneWidget);
+    expect(find.text('还没有可用于折算的历史汇率，设置今天或更早的汇率后显示资产走势。'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('美元现金'),
       260,
@@ -368,9 +371,190 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('有 1 个账户待设置汇率'), findsNothing);
+    expect(find.text('还没有可用于折算的历史汇率，设置今天或更早的汇率后显示资产走势。'), findsNothing);
     expect(find.text('172 ¥'), findsNWidgets(2));
     expect(find.text('10 \$'), findsOneWidget);
     expect(find.text('资产估值最旧汇率：2020年1月 · 可能已过期'), findsOneWidget);
+  });
+
+  testWidgets('零余额外币账户不要求汇率，历史资产走势仍显示', (WidgetTester tester) async {
+    final controller = await pumpApp(tester);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'cny-zero-rate-account',
+          bookId: bookId,
+          name: '人民币现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 100,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'CNY',
+        ),
+      )
+      ..addAccount(
+        Account(
+          id: 'usd-zero-balance-account',
+          bookId: bookId,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 0,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      );
+    await tester.pump();
+    await tapBottomTab(tester, 1);
+
+    expect(find.text('还没有可用于折算的历史汇率，设置今天或更早的汇率后显示资产走势。'), findsNothing);
+    expect(find.byType(InteractiveTrendChart), findsOneWidget);
+  });
+
+  testWidgets('非零外币账户设置当前汇率后显示可估值的历史走势', (WidgetTester tester) async {
+    final controller = await pumpApp(tester);
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(
+        Account(
+          id: 'cny-history-account',
+          bookId: bookId,
+          name: '人民币现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 100,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'CNY',
+        ),
+      )
+      ..addAccount(
+        Account(
+          id: 'usd-history-account',
+          bookId: bookId,
+          name: '美元现金',
+          type: AccountType.cash,
+          groupId: null,
+          initialBalance: 8,
+          iconCode: 'cash',
+          note: '',
+          includeInAssets: true,
+          hidden: false,
+          currencyCode: 'USD',
+        ),
+      );
+    await tester.pump();
+    await tapBottomTab(tester, 1);
+    expect(find.text('还没有可用于折算的历史汇率，设置今天或更早的汇率后显示资产走势。'), findsOneWidget);
+
+    expect(
+      await controller.saveExchangeRateDraft(
+        currencyCode: 'USD',
+        effectiveDate: DateTime.now(),
+        rateToBase: 7.2,
+      ),
+      isTrue,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('还没有可用于折算的历史汇率，设置今天或更早的汇率后显示资产走势。'), findsNothing);
+    expect(find.byType(InteractiveTrendChart), findsOneWidget);
+    final chart = tester.widget<LineChart>(find.byType(LineChart));
+    expect(chart.data.lineBarsData.single.dotData.show, isTrue);
+    expect(
+      chart.data.lineBarsData.single.spots
+          .where((spot) => !spot.isNull())
+          .length,
+      greaterThan(0),
+    );
+    if (DateTime.now().month > 1) {
+      expect(find.textContaining('部分月份缺少 USD 汇率'), findsOneWidget);
+    }
+  });
+
+  testWidgets('历史走势全部缺率时给出可操作的汇率入口', (WidgetTester tester) async {
+    final controller = await pumpApp(tester);
+    final bookId = controller.activeBook.id;
+    controller.addAccount(
+      Account(
+        id: 'usd-no-rate-account',
+        bookId: bookId,
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 8,
+        iconCode: 'cash',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      ),
+    );
+    await tester.pump();
+    await tapBottomTab(tester, 1);
+
+    expect(find.byType(InteractiveTrendChart), findsNothing);
+    expect(find.text('设置汇率'), findsOneWidget);
+    await tester.tap(find.text('设置汇率'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('货币与汇率'), findsOneWidget);
+  });
+
+  testWidgets('账户报告页在多币种下不在页头声明单一单位', (WidgetTester tester) async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    final account = Account(
+      id: 'usd-report-account',
+      bookId: bookId,
+      name: '美元现金',
+      type: AccountType.cash,
+      groupId: null,
+      initialBalance: 10,
+      iconCode: 'cash',
+      note: '',
+      includeInAssets: true,
+      hidden: false,
+      currencyCode: 'USD',
+    );
+    controller
+      ..addAccount(account)
+      ..addEntry(
+        LedgerEntry(
+          id: 'usd-report-entry',
+          bookId: bookId,
+          type: EntryType.expense,
+          amount: 10,
+          currencyCode: 'USD',
+          accountAmount: 10,
+          baseAmount: 72,
+          categoryId: controller.categoriesForType(EntryType.expense).first.id,
+          accountId: account.id,
+          note: '',
+          occurredAt: DateTime.now(),
+        ),
+      );
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(home: AccountReportPage(account: account)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('单位：'), findsNothing);
+    expect(find.textContaining('10 \$'), findsWidgets);
+    expect(find.textContaining('72 ¥'), findsWidgets);
   });
 
   testWidgets('shows empty state on account groups page', (

@@ -183,7 +183,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                 VeriCard(
                   child: Column(
                     children: <Widget>[
-                      VeriAnchoredMenuAnchor(
+                      AnchoredMenuAnchor(
                         entries: _viewModeMenuEntries(l10n),
                         semanticLabel: l10n.assetViewModeLabel,
                         builder: (context, openMenu, menuOpen) => SelectField(
@@ -193,7 +193,7 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
                           onTap: openMenu,
                         ),
                       ),
-                      VeriAnchoredMenuAnchor(
+                      AnchoredMenuAnchor(
                         entries: _coverMenuEntries(l10n),
                         semanticLabel: l10n.assetsCoverTitle,
                         builder: (context, openMenu, menuOpen) => SettingsRow(
@@ -278,10 +278,10 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
     );
   }
 
-  List<VeriMenuEntry> _viewModeMenuEntries(AppLocalizations l10n) {
-    return <VeriMenuEntry>[
+  List<AnchoredMenuEntry> _viewModeMenuEntries(AppLocalizations l10n) {
+    return <AnchoredMenuEntry>[
       for (final mode in AssetAccountViewMode.values)
-        VeriMenuItem(
+        AnchoredMenuItem(
           id: 'asset_view_${mode.name}',
           icon: switch (mode) {
             AssetAccountViewMode.group => Icons.folder_outlined,
@@ -338,15 +338,15 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
     });
   }
 
-  List<VeriMenuEntry> _coverMenuEntries(AppLocalizations l10n) {
-    return <VeriMenuEntry>[
-      VeriMenuItem(
+  List<AnchoredMenuEntry> _coverMenuEntries(AppLocalizations l10n) {
+    return <AnchoredMenuEntry>[
+      AnchoredMenuItem(
         id: 'asset_cover_online',
         icon: Icons.public_outlined,
         title: l10n.coverUseOnline,
-        children: <VeriMenuEntry>[
+        children: <AnchoredMenuEntry>[
           for (final preset in _AssetsPageState._coverPresets)
-            VeriMenuItem(
+            AnchoredMenuItem(
               id: 'asset_cover_preset_${preset.id}',
               title: preset.label(l10n),
               selected: preset.url == _coverUrl,
@@ -354,20 +354,20 @@ class _AssetDisplaySettingsPageState extends State<AssetDisplaySettingsPage> {
             ),
         ],
       ),
-      VeriMenuItem(
+      AnchoredMenuItem(
         id: 'asset_cover_custom_url',
         icon: Icons.link_outlined,
         title: l10n.coverEnterUrl,
         onPressed: () async => _enterCustomCoverUrl(),
       ),
-      VeriMenuItem(
+      AnchoredMenuItem(
         id: 'asset_cover_local',
         icon: Icons.photo_library_outlined,
         title: l10n.coverPickLocal,
         onPressed: () async => _pickLocalCover(),
       ),
-      const VeriMenuDivider(),
-      VeriMenuItem(
+      const AnchoredMenuDivider(),
+      AnchoredMenuItem(
         id: 'asset_cover_clear',
         icon: Icons.hide_image_outlined,
         title: l10n.coverClear,

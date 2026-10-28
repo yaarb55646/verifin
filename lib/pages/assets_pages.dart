@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
@@ -96,7 +97,7 @@ class _AssetsPageState extends State<AssetsPage> {
               .where((value) => value < 0)
               .fold<double>(0, (sum, value) => sum + value)
         : null;
-    final assetTrendValues = _baseCurrencyAssetTrend(
+    final assetTrend = _baseCurrencyAssetTrend(
       accounts: valuedAccounts,
       entries: controller.entries,
       convert: ({required amount, required currencyCode, required date}) =>
@@ -180,7 +181,7 @@ class _AssetsPageState extends State<AssetsPage> {
                 : AppLocalizations.of(
                     context,
                   ).baseCurrencyAmountLabel(baseUnit),
-            trailing: VeriAnchoredMenuButton(
+            trailing: AnchoredMenuButton(
               icon: Icons.add,
               tooltip: AppLocalizations.of(context).assetsActions,
               entries: _assetActionMenuEntries(context),
@@ -295,17 +296,38 @@ class _AssetsPageState extends State<AssetsPage> {
                         ),
                       ],
                       const SizedBox(height: 14),
-                      if (assetTrendValues == null)
+                      if (assetTrend.hasNoData)
                         SizedBox(
                           height: 112,
                           child: Center(
-                            child: Text(
-                              AppLocalizations.of(
-                                context,
-                              ).assetTrendMissingRate,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: assetCardMutedColor),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  ).assetTrendMissingRate,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: assetCardMutedColor),
+                                ),
+                                const SizedBox(height: 4),
+                                TextButton(
+                                  onPressed: () => _openCurrencyRates(context),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: assetCardTextColor,
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    ).exchangeRateSetAction,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         )
@@ -314,7 +336,8 @@ class _AssetsPageState extends State<AssetsPage> {
                           height: 112,
                           child: InteractiveTrendChart(
                             color: assetCardTextColor,
-                            values: assetTrendValues,
+                            values: assetTrend.values,
+                            missingIndexes: assetTrend.missingIndexes,
                             xLabels: yearMonthAxisLabels(),
                             labelColor: assetCardMutedColor,
                             tooltipOf: (index) => ChartTooltip(
@@ -326,7 +349,7 @@ class _AssetsPageState extends State<AssetsPage> {
                                   text: AppLocalizations.of(context)
                                       .netAssetsAmount(
                                         formatUserMoney(
-                                          assetTrendValues[index],
+                                          assetTrend.values[index],
                                           baseCurrencyCode,
                                         ),
                                       ),
@@ -335,6 +358,50 @@ class _AssetsPageState extends State<AssetsPage> {
                             ),
                           ),
                         ),
+                      if (assetTrend.missingIndexes.isNotEmpty &&
+                          !assetTrend.hasNoData) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(
+                                  context,
+                                ).assetTrendPartialMissing(
+                                  (assetTrend.missingCurrencyCodes.toList()
+                                        ..sort())
+                                      .join(', '),
+                                  assetTrend.missingIndexes
+                                      .map(
+                                        (index) => AppLocalizations.of(
+                                          context,
+                                        ).monthNumber(index + 1),
+                                      )
+                                      .join('、'),
+                                ),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: assetCardMutedColor),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => _openCurrencyRates(context),
+                              style: TextButton.styleFrom(
+                                foregroundColor: assetCardTextColor,
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              child: Text(
+                                AppLocalizations.of(
+                                  context,
+                                ).exchangeRateSetAction,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -476,10 +543,10 @@ class _AssetsPageState extends State<AssetsPage> {
     );
   }
 
-  List<VeriMenuEntry> _assetActionMenuEntries(BuildContext context) {
+  List<AnchoredMenuEntry> _assetActionMenuEntries(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return <VeriMenuEntry>[
-      VeriMenuItem(
+    return <AnchoredMenuEntry>[
+      AnchoredMenuItem(
         id: 'asset_add_account',
         icon: Icons.add_card_outlined,
         title: l10n.accountAdd,
@@ -491,7 +558,7 @@ class _AssetsPageState extends State<AssetsPage> {
           ),
         ),
       ),
-      VeriMenuItem(
+      AnchoredMenuItem(
         id: 'asset_manage_groups',
         icon: Icons.folder_outlined,
         title: l10n.groupManage,
@@ -503,7 +570,7 @@ class _AssetsPageState extends State<AssetsPage> {
           ),
         ),
       ),
-      VeriMenuItem(
+      AnchoredMenuItem(
         id: 'asset_display_settings',
         icon: Icons.tune_rounded,
         title: l10n.assetDisplaySettingsTitle,
@@ -511,6 +578,14 @@ class _AssetsPageState extends State<AssetsPage> {
       ),
     ];
   }
+}
+
+void _openCurrencyRates(BuildContext context) {
+  unawaited(
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const CurrencyRatesPage()),
+    ),
+  );
 }
 
 class _AssetAccountSection {
@@ -532,29 +607,67 @@ typedef _AssetCurrencyConverter =
       required DateTime date,
     });
 
-List<double>? _baseCurrencyAssetTrend({
+class _AssetTrendData {
+  const _AssetTrendData({
+    required this.values,
+    required this.missingIndexes,
+    required this.missingCurrencyCodes,
+  });
+
+  final List<double> values;
+  final Set<int> missingIndexes;
+  final Set<String> missingCurrencyCodes;
+
+  bool get hasNoData => missingIndexes.length == values.length;
+}
+
+_AssetTrendData _baseCurrencyAssetTrend({
   required List<Account> accounts,
   required List<LedgerEntry> entries,
   required _AssetCurrencyConverter convert,
 }) {
   final nativeSeries = accountMonthlyBalanceSeriesBatch(accounts, entries);
   final now = DateTime.now();
-  final result = <double>[];
+  final result = List<double>.filled(12, 0);
+  final missingIndexes = <int>{};
+  final missingCurrencyCodes = <String>{};
   for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
     final monthEnd = DateTime(now.year, monthIndex + 2, 0);
     var total = 0.0;
+    var complete = true;
     for (final account in accounts) {
+      final nativeBalance = nativeSeries[account.id]![monthIndex];
+      // 零余额不需要汇率：任何币种的 0 折算后仍是 0。这里与
+      // convertAccountBalancesToBase 的零余额口径保持一致，避免新加的空外币账户
+      // 把整条历史走势误判为缺率。
+      if (isZeroCurrencyAmount(nativeBalance, account.currencyCode)) {
+        continue;
+      }
       final conversion = convert(
-        amount: nativeSeries[account.id]![monthIndex],
+        amount: nativeBalance,
         currencyCode: account.currencyCode,
         date: monthEnd,
       );
-      if (conversion is! ConvertedCurrencyAmount) return null;
-      total += conversion.amount;
+      if (conversion is ConvertedCurrencyAmount) {
+        total += conversion.amount;
+      } else {
+        complete = false;
+        if (conversion is MissingCurrencyRate) {
+          missingCurrencyCodes.addAll(conversion.currencyCodes);
+        }
+      }
     }
-    result.add(total);
+    if (complete) {
+      result[monthIndex] = total;
+    } else {
+      missingIndexes.add(monthIndex);
+    }
   }
-  return result;
+  return _AssetTrendData(
+    values: result,
+    missingIndexes: missingIndexes,
+    missingCurrencyCodes: missingCurrencyCodes,
+  );
 }
 
 String _assetSectionTotalText({

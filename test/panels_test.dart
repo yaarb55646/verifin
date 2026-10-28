@@ -254,7 +254,7 @@ void main() {
       <String>['budget_execution', 'category_share', 'summary'],
     );
 
-    reloaded.resetAllData();
+    await reloaded.resetAllData();
     expect(
       reloaded.enabledPanelIds(PanelPageKind.home).length,
       homePanelSpecs.length,

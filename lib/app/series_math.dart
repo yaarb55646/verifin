@@ -187,7 +187,11 @@ List<double> monthlyNetAssetSeries(
 
 /// 余额类序列的纵轴刻度:范围取序列实际的 [min, max](含 0)。
 
-List<String> balanceAxisLabels(List<double> values, AppLocalizations l10n) {
+List<String> balanceAxisLabels(
+  List<double> values,
+  AppLocalizations l10n, {
+  required String currencyCode,
+}) {
   var maxValue = 0.0;
   var minValue = 0.0;
   for (final value in values) {
@@ -202,15 +206,15 @@ List<String> balanceAxisLabels(List<double> values, AppLocalizations l10n) {
   // 否则统一保留金额小数（如 585.00 / 292.50 / 0），不能混排。
   final integerScale = math.max(maxValue.abs(), minValue.abs()) >= 1000;
   String labelOf(double value) {
-    if (isZeroAmount(value)) {
+    if (isZeroCurrencyAmount(value, currencyCode)) {
       return '0';
     }
     if (!integerScale) {
-      return formatAmount(value);
+      return formatCurrencyNumber(value, currencyCode);
     }
     // 千位以上统一取整；万以上沿用带本地化单位的紧凑写法。
     return value.abs() >= 10000
-        ? formatCompactAmount(l10n, value)
+        ? formatCompactAmount(l10n, value, currencyCode: currencyCode)
         : value.toStringAsFixed(0);
   }
 
@@ -226,7 +230,7 @@ List<String> balanceAxisLabels(List<double> values, AppLocalizations l10n) {
   for (var i = 1; i < labels.length; i++) {
     if (labels[i] == labels[i - 1]) {
       final value = minValue + (maxValue - minValue) * i / 2;
-      labels[i] = formatAmount(value);
+      labels[i] = formatCurrencyNumber(value, currencyCode);
     }
   }
   return labels;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:verifin/app/models.dart';
 import 'package:verifin/app/root_navigation.dart';
 import 'package:verifin/app/root_navigation_docked.dart';
@@ -74,7 +75,7 @@ void main() {
       NavigationStylePreference.docked,
     );
 
-    restarted.resetAllData();
+    await restarted.resetAllData();
     expect(
       restarted.navigationStylePreference,
       NavigationStylePreference.docked,
@@ -178,7 +179,7 @@ void main() {
         findsOneWidget,
       );
     }
-    // 停靠预览仍是不透明实色；液态玻璃预览是唯一会绘制背景模糊的已注册样式。
+    // 停靠预览仍是不透明实色；液态玻璃预览复用第三方 `GlassTabBar.bottom`。
     expect(
       find.descendant(
         of: find.byKey(const ValueKey<String>('navigation_style_docked')),
@@ -189,9 +190,20 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const ValueKey<String>('navigation_style_liquidGlass')),
-        matching: find.byType(BackdropFilter),
+        matching: find.byType(GlassTabBar),
       ),
-      findsWidgets,
+      findsOneWidget,
+    );
+    final liquidBar = tester.widget<GlassTabBar>(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('navigation_style_liquidGlass')),
+        matching: find.byType(GlassTabBar),
+      ),
+    );
+    expect(
+      liquidBar.quality,
+      GlassQuality.minimal,
+      reason: '预览必须避开 premium shader 的滚动位置缓存',
     );
     // 玻璃预览同样复用 buildBar：四个条目与常显标签一起渲染。
     for (final label in <String>['首页', '资产', '看板', '我的']) {
@@ -202,7 +214,7 @@ void main() {
           ),
           matching: find.text(label),
         ),
-        findsOneWidget,
+        findsWidgets,
       );
     }
   });

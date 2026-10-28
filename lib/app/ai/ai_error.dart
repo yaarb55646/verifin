@@ -15,7 +15,10 @@ enum AiErrorCode {
   serverError,
   badResponse,
   incompleteStream,
+  responseTooLarge,
+  requestTooLarge,
   protocolUnsupported,
+  modelListUnsupported,
   upstream,
   unknown,
 }
@@ -46,7 +49,10 @@ String aiErrorMessage(AppLocalizations l10n, AiException error) {
     AiErrorCode.serverError => l10n.aiErrServer,
     AiErrorCode.badResponse => l10n.aiErrBadResponse,
     AiErrorCode.incompleteStream => l10n.aiErrBadResponse,
+    AiErrorCode.responseTooLarge => l10n.aiErrResponseTooLarge,
+    AiErrorCode.requestTooLarge => l10n.aiErrRequestTooLarge,
     AiErrorCode.protocolUnsupported => l10n.aiErrNotSupported,
+    AiErrorCode.modelListUnsupported => l10n.aiErrModelListUnsupported,
     AiErrorCode.upstream => l10n.aiErrUpstream,
     AiErrorCode.unknown => l10n.aiErrUnknown,
   };

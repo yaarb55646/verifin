@@ -329,7 +329,9 @@ void main() {
       await tester.tap(seriesChoice);
       await tester.pumpAndSettle();
       expect(
-        find.byKey(const ValueKey<String>('veri_menu_item_home_series_income')),
+        find.byKey(
+          const ValueKey<String>('anchored_menu_item_home_series_income'),
+        ),
         findsOneWidget,
       );
       await tester.tap(find.text('收入').last);

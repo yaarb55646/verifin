@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' hide Category;
 import '../data/ledger_repository.dart';
 import '../local_storage/local_storage.dart';
 import 'ai/ai_capabilities.dart';
+import 'ai/ai_ledger_snapshot.dart';
 import 'ai/ai_settings.dart';
 import 'app_lock.dart';
 import 'attachments/attachment_store.dart';
@@ -73,7 +74,7 @@ const String _activeBookKey = 'verifin.active_book.v1';
 const String _assetCoverKey = 'verifin.asset_cover.v1';
 const String _hapticsKey = 'verifin.haptics.v1';
 const String _privacyConsentKey = 'verifin.privacy_consent.v1';
-const String _appLockKey = 'verifin.app_lock.v1';
+const String _appLockKey = appLockStorageKey;
 const String _assetViewModeKey = 'verifin.asset_view_mode.v1';
 const String _assetSectionCollapsedKey = 'verifin.asset_section_collapsed.v1';
 const String _assetAccountOrderKey = 'verifin.asset_account_order.v1';
@@ -103,7 +104,7 @@ const String _autoSuggestKey = 'verifin.auto_suggest.v1';
 const String _runningBalanceKey = 'verifin.entry_running_balance.v1';
 const String _aiSettingsKey = 'verifin.ai.v1';
 const String _aiCapabilitiesKey = 'verifin.ai_capabilities.v1';
-const String _aiChatHistoryKey = 'verifin.ai_chat.v1';
+const String _legacyAiChatHistoryKey = 'verifin.ai_chat.v1';
 const String _homeTrendKey = 'verifin.home_metrics.v1';
 const String _onboardingKey = 'verifin.onboarding.v1';
 
@@ -279,6 +280,8 @@ enum EntryValidationCode {
   tagOutOfScope,
 }
 
+enum RenameResult { success, invalid, duplicate, persistenceFailure }
+
 sealed class EntrySaveResult {
   const EntrySaveResult();
 
@@ -356,48 +359,6 @@ Map<String, List<String>> _decodeStringListMap(Object? value) {
     }
     return MapEntry(key, rawList.whereType<String>().toList());
   });
-}
-
-/// 解码 AI 聊天记录（`[{role, content, displays?, steps?}, …]`）；损坏数据回退空列表。
-/// 结果卡片与已完成 Agent 步骤原样保留，具体类型校验由聊天页负责。
-List<Map<String, Object?>> _decodeChatHistory(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return <Map<String, Object?>>[];
-  }
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is List) {
-      return decoded
-          .whereType<Map>()
-          .map((item) {
-            final displays = item['displays'];
-            final steps = item['steps'];
-            return <String, Object?>{
-              'role': item['role']?.toString() ?? 'user',
-              'content': item['content']?.toString() ?? '',
-              if (displays is List)
-                'displays': displays
-                    .whereType<Map>()
-                    .map((d) => Map<String, Object?>.from(d))
-                    .toList(),
-              if (steps is List)
-                'steps': steps
-                    .whereType<Map>()
-                    .map((step) => Map<String, Object?>.from(step))
-                    .toList(),
-            };
-          })
-          .where(
-            (m) =>
-                (m['content']! as String).isNotEmpty ||
-                (m['displays'] as List?)?.isNotEmpty == true,
-          )
-          .toList();
-    }
-  } catch (_) {
-    // 损坏记录忽略。
-  }
-  return <Map<String, Object?>>[];
 }
 
 String _categoryBudgetKey(String bookId, DateTime month, String categoryId) {

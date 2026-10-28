@@ -181,6 +181,8 @@ void main() {
           ),
           throwsA(isA<BackupCryptoException>()),
         );
+        expect(await File(outPath).exists(), isFalse);
+        expect(await File('$outPath.partial').exists(), isFalse);
       } finally {
         await dir.delete(recursive: true);
       }

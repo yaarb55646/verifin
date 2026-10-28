@@ -26,6 +26,11 @@ const String _archiveMimeKey = '_archiveMime';
 const int maxBackupArchiveFileCount = 200000;
 const int maxBackupAttachmentCount = 200000;
 
+/// 单个 ZIP 条目解压后的大小上限。附件通常只有几 MB；这个上限用于阻断
+/// ZIP 炸弹，同时保留容纳旧版大图的空间。总量仍由用户数据规模决定。
+const int maxBackupAttachmentBytes = 64 * 1024 * 1024;
+const int maxBackupJsonBytes = 64 * 1024 * 1024;
+
 /// 附件元数据存在但字节取不到（文件缺失且无旧版 base64）时抛出。
 ///
 /// 宁可让整次备份失败并明确告知，也不产出静默缺附件的备份文件。
@@ -76,6 +81,7 @@ Future<void> packBackupArchiveToFile({
       if (id is! String || id.isEmpty) {
         continue;
       }
+      requireValidAttachmentId(id);
       final mime = attachment['mimeType'] as String? ?? 'image/jpeg';
       final Uint8List bytes;
       try {
@@ -114,6 +120,7 @@ Future<String> unpackBackupArchiveFile({
   required AttachmentStore sink,
   void Function(int done, int total)? onProgress,
   bool Function()? isCancelled,
+  int? availableBytes,
 }) async {
   final input = InputFileStream(archivePath);
   final Archive archive;
@@ -129,6 +136,10 @@ Future<String> unpackBackupArchiveFile({
   var attachmentCount = 0;
   onProgress?.call(0, 0);
   try {
+    final requiredBytes = _declaredExtractionBytes(archive);
+    if (availableBytes != null && requiredBytes > availableBytes) {
+      throw const FormatException('设备存储空间不足，无法解压备份');
+    }
     for (final file in archive) {
       if (isCancelled?.call() ?? false) {
         throw const BackupCancelledException();
@@ -141,7 +152,11 @@ Future<String> unpackBackupArchiveFile({
         throw const FormatException('备份条目数量过多');
       }
       if (file.name == backupJsonEntryName) {
-        jsonBytes = file.content;
+        jsonBytes = _readArchiveEntry(
+          file,
+          maxBytes: maxBackupJsonBytes,
+          label: '备份索引',
+        );
         continue;
       }
       if (!file.name.startsWith('$_attachmentsDir/')) {
@@ -155,7 +170,14 @@ Future<String> unpackBackupArchiveFile({
       if (id.isEmpty) {
         continue;
       }
-      final content = file.content;
+      if (!isValidAttachmentId(id)) {
+        throw const FormatException('备份附件 id 格式不正确');
+      }
+      final content = _readArchiveEntry(
+        file,
+        maxBytes: maxBackupAttachmentBytes,
+        label: '备份附件',
+      );
       if (content.isEmpty) {
         continue;
       }
@@ -195,6 +217,21 @@ Future<String> unpackBackupArchiveFile({
   return jsonEncode(root);
 }
 
+int _declaredExtractionBytes(Archive archive) {
+  var total = 0;
+  for (final file in archive.files) {
+    if (!file.isFile) continue;
+    if (file.name != backupJsonEntryName &&
+        !file.name.startsWith('$_attachmentsDir/')) {
+      continue;
+    }
+    if (file.size > 0) {
+      total += file.size;
+    }
+  }
+  return total;
+}
+
 /// 旧版明文 JSON（v1/v2，附件内嵌 base64）→ 暂存附件 + 元数据 JSON。
 ///
 /// 与新版备份归一到同一形态：`dataUrl` 抽取成附件文件、正文只留元数据，后续导入
@@ -218,6 +255,7 @@ Future<String> extractLegacyAttachments(
     if (id is! String || id.isEmpty) {
       continue;
     }
+    requireValidAttachmentId(id);
     if (dataUrl is! String || !dataUrl.startsWith('data:')) {
       continue;
     }
@@ -244,6 +282,81 @@ Iterable<Map<Object?, Object?>> _attachmentsOf(Object? root) {
     return const <Map<Object?, Object?>>[];
   }
   return attachments.whereType<Map<Object?, Object?>>();
+}
+
+/// 读取一个 ZIP 条目，但先限制声明尺寸，并对实际解压结果设置硬上限。
+///
+/// `ArchiveFile.content` 会无条件把整条内容解压到内存；恶意 ZIP 可以伪造
+/// 很小的 header 或使用高压缩比内容。这里在解压输出端再做一次限流。
+Uint8List _readArchiveEntry(
+  ArchiveFile file, {
+  required int maxBytes,
+  required String label,
+}) {
+  if (file.size < 0 || file.size > maxBytes) {
+    throw FormatException('$label过大');
+  }
+  final raw = file.rawContent;
+  if (raw == null) {
+    return Uint8List(0);
+  }
+  if (raw.length > maxBytes) {
+    throw FormatException('$label过大');
+  }
+  final compression = file.compression;
+  if (compression == null || compression == CompressionType.none) {
+    final bytes = raw.getStream(decompress: false).toUint8List();
+    if (bytes.length > maxBytes) {
+      throw FormatException('$label过大');
+    }
+    return bytes;
+  }
+  if (compression == CompressionType.deflate) {
+    final output = _LimitedOutputMemoryStream(maxBytes);
+    ZLibDecoder().decodeStream(
+      raw.getStream(decompress: false),
+      output,
+      raw: true,
+    );
+    return output.getBytes();
+  }
+  throw const FormatException('备份使用了不支持的压缩方式');
+}
+
+class _LimitedOutputMemoryStream extends OutputMemoryStream {
+  _LimitedOutputMemoryStream(this.maxBytes);
+
+  final int maxBytes;
+
+  void _ensureCapacity(int additional) {
+    if (additional < 0 || length + additional > maxBytes) {
+      throw const FormatException('备份条目解压后过大');
+    }
+  }
+
+  @override
+  void writeByte(int value) {
+    _ensureCapacity(1);
+    super.writeByte(value);
+  }
+
+  @override
+  void writeBytes(List<int> bytes, {int? length}) {
+    _ensureCapacity(length ?? bytes.length);
+    super.writeBytes(bytes, length: length);
+  }
+
+  @override
+  void writeStream(InputStream stream) {
+    _ensureCapacity(stream.length);
+    super.writeStream(stream);
+  }
+
+  @override
+  void writeBackReference(int distance, int count) {
+    _ensureCapacity(count);
+    super.writeBackReference(distance, count);
+  }
 }
 
 Uint8List? _decodeDataUrl(String dataUrl) {

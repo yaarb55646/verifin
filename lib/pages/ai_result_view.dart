@@ -8,30 +8,52 @@ import '../app/chart_painters.dart';
 import '../app/common_widgets.dart';
 import '../app/currency_math.dart';
 import '../app/ledger_math.dart';
-import '../app/models.dart';
-import '../app/veri_fin_scope.dart';
+import '../app/models.dart' show MoneyCodeDisplay;
 import '../l10n/app_localizations.dart';
-import 'transaction_detail_page.dart';
 
 /// 把一条 [AiResultDisplay] 渲染成卡片。
 class AiResultView extends StatelessWidget {
-  const AiResultView({super.key, required this.display});
+  const AiResultView({
+    super.key,
+    required this.display,
+    required this.baseCurrencyCode,
+    required this.moneyCodeDisplay,
+  });
 
   final AiResultDisplay display;
+  final String baseCurrencyCode;
+  final MoneyCodeDisplay moneyCodeDisplay;
 
   @override
   Widget build(BuildContext context) {
     return switch (display) {
-      final AiStatDisplay d => _StatCard(d),
-      final AiRankingDisplay d => _RankingCard(d),
-      final AiTrendDisplay d => _TrendCard(d),
-      final AiTransactionsDisplay d => _TransactionsCard(d),
+      final AiStatDisplay d => _StatCard(d, baseCurrencyCode, moneyCodeDisplay),
+      final AiRankingDisplay d => _RankingCard(
+        d,
+        baseCurrencyCode,
+        moneyCodeDisplay,
+      ),
+      final AiTrendDisplay d => _TrendCard(
+        d,
+        baseCurrencyCode,
+        moneyCodeDisplay,
+      ),
+      final AiTransactionsDisplay d => _TransactionsCard(
+        d,
+        baseCurrencyCode: baseCurrencyCode,
+        moneyCodeDisplay: moneyCodeDisplay,
+      ),
       final AiTableDisplay d => _TableCard(d),
     };
   }
 }
 
-Widget _cardTitle(BuildContext context, String title, {String? currencyCode}) {
+Widget _cardTitle(
+  BuildContext context,
+  String title, {
+  String? currencyCode,
+  MoneyCodeDisplay? moneyCodeDisplay,
+}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(
@@ -44,7 +66,8 @@ Widget _cardTitle(BuildContext context, String title, {String? currencyCode}) {
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
-        if (currencyCode != null) MoneyUnitLabel(currencyCode: currencyCode),
+        if (currencyCode != null)
+          MoneyUnitLabel(currencyCode: currencyCode, display: moneyCodeDisplay),
       ],
     ),
   );
@@ -59,7 +82,7 @@ Widget _emptyHint(BuildContext context, String text) {
   );
 }
 
-/// 图表纵轴 3 档标签：max / max·½ / 0（紧凑格式）。
+/// 图表纵轴 3 档标签，自下而上：0 / max·½ / max（紧凑格式）。
 List<String> _yLabels(BuildContext context, Iterable<double> values) {
   final max = values.fold<double>(0, (m, v) => v.abs() > m ? v.abs() : m);
   if (max <= 0) {
@@ -67,26 +90,30 @@ List<String> _yLabels(BuildContext context, Iterable<double> values) {
   }
   final l10n = AppLocalizations.of(context);
   return <String>[
-    formatCompactAmount(l10n, max),
-    formatCompactAmount(l10n, max / 2),
     '0',
+    formatCompactAmount(l10n, max / 2),
+    formatCompactAmount(l10n, max),
   ];
 }
 
 class _StatCard extends StatelessWidget {
-  const _StatCard(this.display);
+  const _StatCard(this.display, this.baseCurrencyCode, this.moneyCodeDisplay);
   final AiStatDisplay display;
+  final String baseCurrencyCode;
+  final MoneyCodeDisplay moneyCodeDisplay;
 
   @override
   Widget build(BuildContext context) {
-    final baseCurrencyCode = VeriFinScope.of(
-      context,
-    ).activeBook.baseCurrencyCode;
     return VeriCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
+          _cardTitle(
+            context,
+            display.title,
+            currencyCode: baseCurrencyCode,
+            moneyCodeDisplay: moneyCodeDisplay,
+          ),
           for (final item in display.items)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
@@ -98,7 +125,11 @@ class _StatCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    formatUserMoney(item.value, baseCurrencyCode),
+                    formatMoney(
+                      item.value,
+                      baseCurrencyCode,
+                      display: moneyCodeDisplay,
+                    ),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: item.emphasize
                           ? FontWeight.w700
@@ -118,21 +149,29 @@ class _StatCard extends StatelessWidget {
 }
 
 class _RankingCard extends StatelessWidget {
-  const _RankingCard(this.display);
+  const _RankingCard(
+    this.display,
+    this.baseCurrencyCode,
+    this.moneyCodeDisplay,
+  );
   final AiRankingDisplay display;
+  final String baseCurrencyCode;
+  final MoneyCodeDisplay moneyCodeDisplay;
 
   @override
   Widget build(BuildContext context) {
-    final baseCurrencyCode = VeriFinScope.of(
-      context,
-    ).activeBook.baseCurrencyCode;
     final rows = display.rows;
     if (rows.isEmpty) {
       return VeriCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
+            _cardTitle(
+              context,
+              display.title,
+              currencyCode: baseCurrencyCode,
+              moneyCodeDisplay: moneyCodeDisplay,
+            ),
             _emptyHint(context, AppLocalizations.of(context).aiChatNoData),
           ],
         ),
@@ -146,18 +185,31 @@ class _RankingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
+          _cardTitle(
+            context,
+            display.title,
+            currencyCode: baseCurrencyCode,
+            moneyCodeDisplay: moneyCodeDisplay,
+          ),
           SizedBox(
             height: 172,
             child: InteractiveBarChart(
               values: values,
               xLabels: labels,
               yLabels: _yLabels(context, values),
+              color: veriSemantic(
+                context,
+                display.isExpense ? veriExpense : veriIncome,
+              ),
               tooltipOf: (index) => ChartTooltip(
                 title: labels[index],
                 lines: <ChartTooltipLine>[
                   ChartTooltipLine(
-                    text: formatUserMoney(values[index], baseCurrencyCode),
+                    text: formatMoney(
+                      values[index],
+                      baseCurrencyCode,
+                      display: moneyCodeDisplay,
+                    ),
                   ),
                   ChartTooltipLine(
                     text:
@@ -190,7 +242,11 @@ class _RankingCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    formatUserMoney(row.amount, baseCurrencyCode),
+                    formatMoney(
+                      row.amount,
+                      baseCurrencyCode,
+                      display: moneyCodeDisplay,
+                    ),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -205,20 +261,24 @@ class _RankingCard extends StatelessWidget {
 }
 
 class _TrendCard extends StatelessWidget {
-  const _TrendCard(this.display);
+  const _TrendCard(this.display, this.baseCurrencyCode, this.moneyCodeDisplay);
   final AiTrendDisplay display;
+  final String baseCurrencyCode;
+  final MoneyCodeDisplay moneyCodeDisplay;
 
   @override
   Widget build(BuildContext context) {
-    final baseCurrencyCode = VeriFinScope.of(
-      context,
-    ).activeBook.baseCurrencyCode;
     if (display.values.isEmpty) {
       return VeriCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
+            _cardTitle(
+              context,
+              display.title,
+              currencyCode: baseCurrencyCode,
+              moneyCodeDisplay: moneyCodeDisplay,
+            ),
             _emptyHint(context, AppLocalizations.of(context).aiChatNoData),
           ],
         ),
@@ -228,12 +288,17 @@ class _TrendCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _cardTitle(context, display.title, currencyCode: baseCurrencyCode),
+          _cardTitle(
+            context,
+            display.title,
+            currencyCode: baseCurrencyCode,
+            moneyCodeDisplay: moneyCodeDisplay,
+          ),
           SizedBox(
             height: 172,
             child: InteractiveTrendChart(
               color: display.isExpense
-                  ? Theme.of(context).colorScheme.primary
+                  ? veriSemantic(context, veriExpense)
                   : veriSemantic(context, veriIncome),
               values: display.values,
               xLabels: display.labels,
@@ -244,9 +309,10 @@ class _TrendCard extends StatelessWidget {
                     : '',
                 lines: <ChartTooltipLine>[
                   ChartTooltipLine(
-                    text: formatUserMoney(
+                    text: formatMoney(
                       display.values[index],
                       baseCurrencyCode,
+                      display: moneyCodeDisplay,
                     ),
                   ),
                 ],
@@ -260,19 +326,18 @@ class _TrendCard extends StatelessWidget {
 }
 
 class _TransactionsCard extends StatelessWidget {
-  const _TransactionsCard(this.display);
+  const _TransactionsCard(
+    this.display, {
+    required this.baseCurrencyCode,
+    required this.moneyCodeDisplay,
+  });
   final AiTransactionsDisplay display;
+  final String baseCurrencyCode;
+  final MoneyCodeDisplay moneyCodeDisplay;
 
   @override
   Widget build(BuildContext context) {
-    final controller = VeriFinScope.of(context);
-    final byId = <String, LedgerEntry>{
-      for (final entry in controller.entries) entry.id: entry,
-    };
-    final entries = display.entryIds
-        .map((id) => byId[id])
-        .whereType<LedgerEntry>()
-        .toList();
+    final entries = display.entries;
     if (entries.isEmpty) {
       return VeriCard(
         child: Column(
@@ -281,7 +346,8 @@ class _TransactionsCard extends StatelessWidget {
             _cardTitle(
               context,
               display.title,
-              currencyCode: controller.activeBook.baseCurrencyCode,
+              currencyCode: baseCurrencyCode,
+              moneyCodeDisplay: moneyCodeDisplay,
             ),
             _emptyHint(
               context,
@@ -299,16 +365,17 @@ class _TransactionsCard extends StatelessWidget {
           child: _cardTitle(
             context,
             display.title,
-            currencyCode: controller.activeBook.baseCurrencyCode,
+            currencyCode: baseCurrencyCode,
+            moneyCodeDisplay: moneyCodeDisplay,
           ),
         ),
         TransactionListCard(
           entries: entries,
-          accounts: controller.accounts,
-          categories: controller.categories,
-          tags: controller.tags,
-          baseCurrencyCode: controller.activeBook.baseCurrencyCode,
-          onEntryTap: (entry) => openEntryDetail(context, entry),
+          accounts: display.accounts,
+          categories: display.categories,
+          tags: display.tags,
+          baseCurrencyCode: baseCurrencyCode,
+          moneyDisplay: moneyCodeDisplay,
         ),
       ],
     );
@@ -323,7 +390,7 @@ class _TableCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final headerBg = isDark ? Colors.white10 : veriSurfaceAltLight;
+    final headerBg = isDark ? veriSurfaceAltDark : veriSurfaceAltLight;
     final divider = theme.colorScheme.onSurface.withValues(alpha: 0.07);
     final headerStyle = theme.textTheme.bodyMedium?.copyWith(
       fontWeight: FontWeight.w700,

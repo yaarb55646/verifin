@@ -9,12 +9,12 @@
 | 个人仓库 / origin | `https://github.com/yaarb55646/verifin` |
 | 开发分支 | `mine` |
 | 上游 / upstream | `https://github.com/LumiDesk/verifin` |
-| 分叉基点 | 上游 `v1.20.1`，提交 `937b6b0`；2026-10-16 已 rebase 到上游 `v1.20.3` 之后的 `7ed8962`（`git describe` 为 `v1.20.3-2-g7ed8962`） |
-| 与上游差距 | 截至 2026-10-25：落后 `upstream/main` **119 个提交**（上游已到 `v1.20.12`，版本 `1.20.12+182`，提交 `cdef08a`），领先 13 个个人提交 |
+| 分叉基点 | 上游 `v1.20.1`，提交 `937b6b0`；2026-10-26 已合并 `upstream/main` 到 `v1.20.13`（`09b4f73`），个人提交保留为 `mine` 上的独立提交 |
+| 与上游差距 | 截至 2026-10-26：与 `upstream/main` 同步（合并后零落后），领先 14 个个人提交 |
 | 本地目录 | `D:\CC Switch\Hello\verifin` |
 | Android applicationId | `top.talyra42.verifin` |
-| 应用版本 | `1.20.3+173`（随上游 rebase 带入，个人功能未另行发版） |
-| 当前数据库 | SQLite schema v20（个人关键词迁移；上游 `v1.20.12` 仍为 v19） |
+| 应用版本 | `1.20.13+183`（随上游合并带入，个人功能未另行发版） |
+| 当前数据库 | SQLite schema v20（个人关键词迁移；上游 `v1.20.13` 仍为 v19） |
 | 许可证 | GPL-3.0-or-later，保留上游版权与 LICENSE |
 
 普通开发提交推送到 `origin mine`，`main` 用作上游镜像。代码上传、个人验收构建与正式发版是独立操作；打标签和创建 Release 必须获得明确授权。
@@ -111,7 +111,7 @@ flutter build apk --release --target-platform android-arm64 --flavor github
 
 产物为 `build\app\outputs\flutter-apk\app-github-release.apk`，用于个人真机验收。使用项目既有 release 签名，不修改签名配置，不通过卸载或清数据解决安装问题。
 
-下述产物记录对应 2026-10-13 的提交 `a70c17d`，**不是当前 `mine` 的产物**（HEAD 已推进到 `ab0ada5`，且版本已随上游 rebase 升到 `1.20.3+173`），仅作历史参考，不能当成新构建的校验值：
+下述产物记录对应 2026-10-13 的提交 `a70c17d`，**不是当前 `mine` 的产物**（版本已随上游合并升到 `1.20.13+183`），仅作历史参考，不能当成新构建的校验值：
 
 - 实际包体 **61,713,765 字节（约 58.9 MiB）**，包含 `arm64-v8a`、`armeabi-v7a`、`x86_64` 三种 ABI；即使命令指定 arm64，也应以 APK 元数据为准，不能据命令保证包体架构。
 - 包名 / 版本：`top.talyra42.verifin` / `1.20.1`，versionCode `171`。
@@ -166,9 +166,9 @@ git -c http.sslBackend=openssl push origin mine
 
 新增文件也可能与未来上游同名文件冲突。合并时优先关注记账入口、详情页、分类模型/Controller、SQLite 迁移和看板目录。
 
-当前 v20 为个人关键词迁移。截至 2026-10-25 核对，`upstream/main`（`v1.20.12`）的 `schemaVersion` 仍为 **19**，暂未与个人 v20 撞号；但上游下一次改表结构就会占用 v20。同步前重新执行 `git show upstream/main:lib/data/app_database.dart | Select-String "schemaVersion"` 核对两边版本：一旦上游也用 v20，不能直接覆盖双方迁移或视为同一结构，需把个人迁移重号到上游之后。无论是哪种情况，都要核对已安装用户数据库与全部历史迁移，设计兼容升级后再验证，禁止回改已发布迁移或降级。
+当前 v20 为个人关键词迁移。截至 2026-10-26 核对，`upstream/main`（`v1.20.13`）的 `schemaVersion` 仍为 **19**，暂未与个人 v20 撞号；但上游下一次改表结构就会占用 v20。同步前重新执行 `git show upstream/main:lib/data/app_database.dart | Select-String "schemaVersion"` 核对两边版本：一旦上游也用 v20，不能直接覆盖双方迁移或视为同一结构，需把个人迁移重号到上游之后。无论是哪种情况，都要核对已安装用户数据库与全部历史迁移，设计兼容升级后再验证，禁止回改已发布迁移或降级。
 
-组件清单、README、产品/设计/技术文档和 CHANGELOG 必须随行为更新；减少冲突不能成为跳过必要文档同步的理由。版本字段由发版流程管理，未获授权时保持 `1.20.3+173`（该值随上游 rebase 带入，不是个人发版）。
+组件清单、README、产品/设计/技术文档和 CHANGELOG 必须随行为更新；减少冲突不能成为跳过必要文档同步的理由。版本字段由发版流程管理，未获授权时保持 `1.20.13+183`（该值随上游合并带入，不是个人发版）。
 
 ### 上游同步
 
@@ -179,16 +179,23 @@ git -c http.sslBackend=openssl fetch upstream --tags
 git log --oneline mine..upstream/main
 git diff --stat mine upstream/main
 git checkout mine
-git rebase upstream/main
 
-# 冲突解决后逐文件 git add，再 git rebase --continue；放弃使用 git rebase --abort。
-# 全部验证通过后再推送；只有本次确实重写历史时才用 --force-with-lease。
-git -c http.sslBackend=openssl push --force-with-lease origin mine
+# 推荐 merge：冲突只解一轮。rebase 会逐个重放个人提交，
+# 菜单 API 改名这类冲突会在同一文件上反复命中。
+git merge upstream/main
+
+# 冲突解决后逐文件 git add，再 git commit；放弃使用 git merge --abort。
+git -c http.sslBackend=openssl push origin mine
 ```
 
 上游镜像可另外在 `main` 上 `git merge --ff-only upstream/main` 后切回 `mine`。不把个人功能合入镜像分支。
 
-待同步量已经不小：截至 2026-10-25 落后 119 个提交、跳过了 `v1.20.4` 到 `v1.20.12` 九个版本。这次 rebase 预计冲突面较大，且集中在上表的个人功能文件上；尤其要先核对 SQLite schema（下条），不要直接开始解冲突。
+已完成的同步记录：2026-10-26 从 `v1.20.3` 一带合并到 `v1.20.13`（跳过 `v1.20.4`～`v1.20.13` 十个版本）。实际冲突 12 个文件（10 个文档 + 2 个 Dart），解析要点：
+
+- 锚点菜单改名（`VeriMenu*` → `AnchoredMenu*`）已随上游自动完成，全仓库无残留符号；个人新增的「记账关键词」菜单项在 `category_management_page.dart` 中按新类型重写。
+- `renameCategory` 改为返回 `Future<RenameResult>`，个人测试中的调用补 `await`。
+- 旧液态玻璃实现（`liquid_glass_lens/material/surface.dart` 与 `shaders/`）已删，`pubspec.yaml` 与上游一致；`AGENTS.md` 材质条款同步为 vendor `GlassTabBar.bottom` 口径。
+- 上游 v1.20.13 新增的「只弹一层输入层」防重入测试（`quick_widget_route_test.dart`）需断言 `QuickTextEntrySheet` 而非 `NumberPadSheet`。
 
 ## 6. 验证约定与当前状态
 
@@ -203,6 +210,6 @@ flutter test
 
 SQLite 变更同时验证迁移矩阵、模型往返、内存/SQLite 仓储契约、持久化及备份。仅文档修改可执行 diff、链接、路径校验；不把旧结果写成新一轮执行。
 
-截至 **2026-10-25**，HEAD `ab0ada5` 已实际执行并通过：`dart format --output=none --set-exit-if-changed .`（387 个文件，0 需改动）、`flutter analyze --no-pub`（No issues found）、`flutter test --no-pub`（**1285 项全部通过**）。真机验收与本地 APK 构建由用户继续进行。
+截至 **2026-10-26**（合并 `upstream/main` 到 `v1.20.13` 后）已实际执行并通过：`dart format .`（567 个文件，0 需改动）、`flutter analyze --no-pub`（No issues found）、`flutter test --no-pub`（**1433 项全部通过**）。真机验收与本地 APK 构建由用户继续进行。
 
 定位当前文档提交用 `git log -1 --oneline`；定位最新功能源码用 `git log -1 --oneline -- lib test android`，避免将会随文档提交变化的 HEAD 写死在手册中。

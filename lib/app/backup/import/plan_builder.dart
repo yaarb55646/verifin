@@ -93,6 +93,16 @@ ImportPlan buildImportPlanFromRecords({
   final errors = <ImportRowError>[...parsed.errors];
   final conversionIssues = <ImportConversionIssue>[];
   var idCounter = 0;
+  final importedRootIndexByRecordId = <String, int>{};
+  final seenRecordIds = <String>{};
+  final refundRecords = <RawImportRecord>[];
+  final explicitRefundRootIds = <String>{
+    for (final record in parsed.records)
+      if (record.type == EntryType.refund &&
+          record.refundOfRecordId != null &&
+          record.refundOfRecordId!.trim().isNotEmpty)
+        record.refundOfRecordId!.trim(),
+  };
 
   String nextId(String prefix) {
     idCounter++;
@@ -366,7 +376,22 @@ ImportPlan buildImportPlanFromRecords({
   }
 
   for (final record in parsed.records) {
+    if (record.type == EntryType.refund) {
+      // 退款必须等所有原始交易落位后再按「记录编号」关联，允许退款行出现在
+      // 原支出之前，也能统一校验累计可退上限与已到账缓存。
+      refundRecords.add(record);
+      continue;
+    }
     final line = record.sourceLine ?? 0;
+    final recordId = record.recordId?.trim() ?? '';
+    if (recordId.isNotEmpty && !seenRecordIds.add(recordId)) {
+      errors.add(ImportRowError(line: line, message: '记录编号重复：$recordId'));
+      continue;
+    }
+    if (record.refundOfRecordId != null || record.settledAt != null) {
+      errors.add(ImportRowError(line: line, message: '只有退款行可以填写原支出编号或到账日期'));
+      continue;
+    }
     final currencyCode = (record.currencyCode ?? baseCurrencyCode)
         .toUpperCase();
     if (!CurrencyCatalog.isSupported(currencyCode)) {
@@ -542,6 +567,9 @@ ImportPlan buildImportPlanFromRecords({
         tagIds: tagIds,
       );
       entries.add(entry);
+      if (recordId.isNotEmpty) {
+        importedRootIndexByRecordId[recordId] = entries.length - 1;
+      }
       registerCandidateRate(providedRate, candidateRateKey, entry.id);
       continue;
     }
@@ -606,7 +634,10 @@ ImportPlan buildImportPlanFromRecords({
     );
     // 支出可带退款（部分/全额）：钳制在 [0, 金额]，使净额=金额−退款、退款回原账户
     // （与 App 内退款冲抵语义一致）。收入行忽略。
-    final refundedOriginal = record.type == EntryType.expense
+    final hasExplicitRefunds =
+        recordId.isNotEmpty && explicitRefundRootIds.contains(recordId);
+    final refundedOriginal =
+        record.type == EntryType.expense && !hasExplicitRefunds
         ? normalizeCurrencyAmount(
             record.refunded.clamp(0, normalizedAmount),
             currencyCode,
@@ -638,6 +669,9 @@ ImportPlan buildImportPlanFromRecords({
       tagIds: tagIds,
     );
     entries.add(entry);
+    if (recordId.isNotEmpty) {
+      importedRootIndexByRecordId[recordId] = entries.length - 1;
+    }
     if (refundedOriginal > 0) {
       final ratio = refundedOriginal / normalizedAmount;
       entries.add(
@@ -665,6 +699,194 @@ ImportPlan buildImportPlanFromRecords({
       );
     }
     registerCandidateRate(providedRate, candidateRateKey, entry.id);
+  }
+
+  // 显式退款行：原支出全部落位后再关联，保留多笔、待到账、跨账户到账和双日期。
+  final refundedAmountByRoot = <String, double>{};
+  final settledBaseByRoot = <String, double>{};
+  for (final record in refundRecords) {
+    final line = record.sourceLine ?? 0;
+    final rootKey = record.refundOfRecordId?.trim() ?? '';
+    if (rootKey.isEmpty) {
+      errors.add(ImportRowError(line: line, message: '退款缺少原支出编号'));
+      continue;
+    }
+    final rootIndex = importedRootIndexByRecordId[rootKey];
+    if (rootIndex == null) {
+      errors.add(ImportRowError(line: line, message: '找不到原支出编号：$rootKey'));
+      continue;
+    }
+    final expense = entries[rootIndex];
+    if (expense.type != EntryType.expense) {
+      errors.add(ImportRowError(line: line, message: '原支出编号必须指向支出'));
+      continue;
+    }
+    // 退款币种必须与原支出一致；来源省略币种时直接沿用原支出币种，
+    // 而不是回退本位币后再误报“退款币种不一致”。
+    final currencyCode = (record.currencyCode ?? expense.currencyCode)
+        .toUpperCase();
+    if (!CurrencyCatalog.isSupported(currencyCode)) {
+      errors.add(ImportRowError(line: line, message: '币种代码无法识别：$currencyCode'));
+      continue;
+    }
+    if (currencyCode != expense.currencyCode) {
+      errors.add(ImportRowError(line: line, message: '退款币种必须与原支出一致'));
+      continue;
+    }
+    if (!record.amount.isFinite || record.amount <= 0) {
+      errors.add(ImportRowError(line: line, message: '退款金额无效（应为大于 0 的数字）'));
+      continue;
+    }
+    if (record.fee != 0) {
+      errors.add(ImportRowError(line: line, message: '退款不能填写手续费'));
+      continue;
+    }
+    if (record.toAccount.trim().isNotEmpty || record.toAccountAmount != null) {
+      errors.add(ImportRowError(line: line, message: '退款不能填写转入账户或转入金额'));
+      continue;
+    }
+    final normalizedAmount = normalizeCurrencyAmount(
+      record.amount,
+      currencyCode,
+    );
+    final refundedSoFar = refundedAmountByRoot[rootKey] ?? 0;
+    if (refundedSoFar + normalizedAmount >
+        expense.amount + currencyAmountTolerance(currencyCode)) {
+      errors.add(ImportRowError(line: line, message: '退款累计金额超过原支出可退金额'));
+      continue;
+    }
+    ExchangeRate? providedRate;
+    if (record.rateToBase != null) {
+      if (!isValidExchangeRate(record.rateToBase!)) {
+        errors.add(ImportRowError(line: line, message: '汇率无效（应为大于 0 的数字）'));
+        continue;
+      }
+      if (currencyCode != baseCurrencyCode) {
+        final effectiveDate = record.rateDate ?? record.date;
+        providedRate = ExchangeRate(
+          id:
+              'rate_import_${now.microsecondsSinceEpoch}_refund_'
+              '${currencyCode}_${currencyDateKey(effectiveDate)}',
+          bookId: bookId,
+          baseCurrencyCode: baseCurrencyCode,
+          currencyCode: currencyCode,
+          effectiveDate: effectiveDate,
+          rateToBase: record.rateToBase!,
+          source: record.rateSource ?? ExchangeRateSource.imported,
+          createdAt: now,
+          updatedAt: now,
+        );
+      }
+    }
+    final accountCurrencyHint = record.accountCurrencyCode?.toUpperCase();
+    if (accountCurrencyHint != null &&
+        !CurrencyCatalog.isSupported(accountCurrencyHint)) {
+      errors.add(
+        ImportRowError(
+          line: line,
+          message: '退款到账账户币种无法识别：$accountCurrencyHint',
+        ),
+      );
+      continue;
+    }
+    final accountName = record.account.trim();
+    if (accountName.isEmpty && record.accountAmount != null) {
+      errors.add(ImportRowError(line: line, message: '无到账账户时不能填写账户金额'));
+      continue;
+    }
+    if (record.accountAmount != null &&
+        (!record.accountAmount!.isFinite || record.accountAmount! <= 0)) {
+      errors.add(ImportRowError(line: line, message: '退款到账金额无效'));
+      continue;
+    }
+    final accountId = accountName.isEmpty
+        ? ''
+        : resolveAccount(
+            accountName,
+            accountCurrencyHint ?? currencyCode,
+            allowUniqueOtherCurrency:
+                accountCurrencyHint == null && record.accountAmount != null,
+          );
+    final accountCurrency = accountId.isEmpty
+        ? null
+        : accountByResolvedId(accountId)?.currencyCode;
+    final accountAmount = accountCurrency == null
+        ? null
+        : record.accountAmount ??
+              (accountCurrency == currencyCode
+                  ? normalizedAmount
+                  : convertedRecordAmount(
+                      record: record,
+                      sourceCurrencyCode: currencyCode,
+                      targetCurrencyCode: accountCurrency,
+                      providedRate: providedRate,
+                    ));
+    if (accountCurrency != null && accountAmount == null) {
+      addConversionIssue(record, currencyCode, '缺少退款到账金额或可用汇率');
+      continue;
+    }
+    final convertedBaseAmount = currencyCode == baseCurrencyCode
+        ? normalizeCurrencyAmount(record.amount, baseCurrencyCode)
+        : convertedRecordAmount(
+            record: record,
+            sourceCurrencyCode: currencyCode,
+            targetCurrencyCode: baseCurrencyCode,
+            providedRate: providedRate,
+          );
+    final rawBaseAmount = record.baseAmount ?? convertedBaseAmount;
+    if (rawBaseAmount == null) {
+      addConversionIssue(record, currencyCode, '缺少退款本位币金额或可用汇率');
+      continue;
+    }
+    if (!rawBaseAmount.isFinite || rawBaseAmount <= 0) {
+      errors.add(ImportRowError(line: line, message: '退款本位币金额无效'));
+      continue;
+    }
+    final baseAmount = normalizeCurrencyAmount(rawBaseAmount, baseCurrencyCode);
+    if (record.baseAmount != null &&
+        record.rateToBase != null &&
+        convertedBaseAmount != null &&
+        (record.baseAmount! - convertedBaseAmount).abs() >=
+            currencyAmountTolerance(baseCurrencyCode)) {
+      addConversionIssue(record, currencyCode, '退款本位币金额与汇率换算结果不一致');
+      continue;
+    }
+    final refund = LedgerEntry(
+      id: nextId('refund'),
+      bookId: bookId,
+      type: EntryType.refund,
+      amount: normalizedAmount,
+      currencyCode: currencyCode,
+      accountAmount: accountAmount == null
+          ? null
+          : normalizeCurrencyAmount(accountAmount, accountCurrency!),
+      baseAmount: baseAmount,
+      conversionSource: ConversionSource.imported,
+      categoryId: expense.categoryId,
+      accountId: accountId,
+      note: record.note,
+      occurredAt: record.date,
+      refundOf: expense.id,
+      settledAt: record.settledAt,
+      tagIds: resolveTags(record.tags),
+    );
+    entries.add(refund);
+    refundedAmountByRoot[rootKey] = refundedSoFar + normalizedAmount;
+    if (record.settledAt != null) {
+      settledBaseByRoot[rootKey] =
+          (settledBaseByRoot[rootKey] ?? 0) + baseAmount;
+    }
+  }
+  // 显式退款行存在时，旧「退款」汇总列不再参与合成；缓存只认已到账退款。
+  for (final rootKey in explicitRefundRootIds) {
+    final rootIndex = importedRootIndexByRecordId[rootKey];
+    if (rootIndex == null) continue;
+    final expense = entries[rootIndex];
+    if (expense.type != EntryType.expense) continue;
+    final settledBase = (settledBaseByRoot[rootKey] ?? 0)
+        .clamp(0.0, expense.baseAmount)
+        .toDouble();
+    entries[rootIndex] = expense.copyWith(refundedBaseAmount: settledBase);
   }
 
   // 携带余额/类型的账户元数据（Tally）：回推初始余额对齐来源、补建无流水账户。

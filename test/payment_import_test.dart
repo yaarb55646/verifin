@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/backup/payment_import.dart';
 import 'package:verifin/app/backup/transaction_import.dart'
     show transactionCsvExport;
+import 'package:verifin/app/ledger_data_validation.dart';
 import 'package:verifin/app/ledger_math.dart';
 import 'package:verifin/app/models.dart';
 
@@ -388,7 +389,7 @@ void main() {
       expect(plan.newAccounts.single.currencyCode, 'CNY');
     });
 
-    test('外币退款 CSV 导出后重新导入保留三层退款金额', () {
+    test('旧标量退款仍由退款汇总列导出并重新导入', () {
       final account = Account(
         id: 'usd',
         bookId: 'book_default',
@@ -449,6 +450,229 @@ void main() {
       expect(refund.accountAmount, 5);
       expect(refund.baseAmount, 36);
       expect(refund.refundOf, expense.id);
+    });
+
+    test('旧版 CSV 表头只有退款汇总列时仍导入为已到账退款', () {
+      const content =
+          '日期,类型,金额,分类,账户,转入账户,备注,退款,币种,账户金额,本位币金额,账户币种\n'
+          '2026-07-01,支出,100,餐饮,美元现金,,午餐,30,USD,100,720,USD\n';
+      final plan = run(
+        ImportPlatform.csvTemplate,
+        Uint8List.fromList(utf8.encode(content)),
+      );
+
+      expect(plan.errors, isEmpty);
+      expect(plan.conversionIssues, isEmpty);
+      final expense = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.expense,
+      );
+      final refund = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.refund,
+      );
+      expect(expense.refundedBaseAmount, 216);
+      expect(refund.amount, 30);
+      expect(refund.accountAmount, 30);
+      expect(refund.baseAmount, 216);
+      expect(refund.settledAt, DateTime(2026, 7, 1));
+      expect(refund.refundOf, expense.id);
+    });
+
+    test('多笔退款 CSV 往返保留待到账、跨账户与双日期', () {
+      final usd = Account(
+        id: 'usd-cash',
+        bookId: 'book_default',
+        name: '美元现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'USD',
+      );
+      final cny = Account(
+        id: 'cny-cash',
+        bookId: 'book_default',
+        name: '人民币现金',
+        type: AccountType.cash,
+        groupId: null,
+        initialBalance: 0,
+        iconCode: 'wallet',
+        note: '',
+        includeInAssets: true,
+        hidden: false,
+        currencyCode: 'CNY',
+      );
+      const category = Category(
+        bookId: 'book_default',
+        id: 'dining',
+        label: '餐饮',
+        type: EntryType.expense,
+        iconCode: 'dining',
+      );
+      const tag = Tag(id: 'reimbursement', bookId: 'book_default', label: '报销');
+      final expense = LedgerEntry(
+        id: 'expense-usd',
+        bookId: 'book_default',
+        type: EntryType.expense,
+        amount: 100,
+        currencyCode: 'USD',
+        accountAmount: 100,
+        baseAmount: 720,
+        conversionSource: ConversionSource.manual,
+        categoryId: category.id,
+        accountId: usd.id,
+        note: '午餐',
+        occurredAt: DateTime(2026, 7, 1),
+        refundedBaseAmount: 150,
+      );
+      final settled = LedgerEntry(
+        id: 'refund-settled',
+        bookId: 'book_default',
+        type: EntryType.refund,
+        amount: 20,
+        currencyCode: 'USD',
+        accountAmount: 150,
+        baseAmount: 150,
+        conversionSource: ConversionSource.manual,
+        categoryId: category.id,
+        accountId: cny.id,
+        note: '退到人民币',
+        occurredAt: DateTime(2026, 7, 5),
+        refundOf: expense.id,
+        settledAt: DateTime(2026, 7, 10),
+        tagIds: <String>[tag.id],
+      );
+      final pending = LedgerEntry(
+        id: 'refund-pending',
+        bookId: 'book_default',
+        type: EntryType.refund,
+        amount: 30,
+        currencyCode: 'USD',
+        accountAmount: 30,
+        baseAmount: 216,
+        conversionSource: ConversionSource.manual,
+        categoryId: category.id,
+        accountId: usd.id,
+        note: '待到账',
+        occurredAt: DateTime(2026, 7, 15),
+        refundOf: expense.id,
+        tagIds: <String>[tag.id],
+      );
+      final csv = transactionCsvExport(
+        entries: <LedgerEntry>[expense, settled, pending],
+        accounts: <Account>[usd, cny],
+        categories: const <Category>[category],
+        tags: const <Tag>[tag],
+        baseCurrencyCode: 'CNY',
+      );
+      final plan = buildPlatformImportPlan(
+        platform: ImportPlatform.csvTemplate,
+        bytes: Uint8List.fromList(utf8.encode(csv)),
+        bookId: 'book_default',
+        existingAccounts: <Account>[usd, cny],
+        existingCategories: const <Category>[category],
+        now: DateTime(2026, 7, 20),
+        baseCurrencyCode: 'CNY',
+      );
+
+      expect(plan.errors, isEmpty);
+      expect(plan.conversionIssues, isEmpty);
+      final importedExpense = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.expense,
+      );
+      final importedRefunds =
+          plan.entries.where((entry) => entry.type == EntryType.refund).toList()
+            ..sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
+      expect(importedRefunds, hasLength(2));
+      expect(importedExpense.refundedBaseAmount, 150);
+
+      final importedSettled = importedRefunds[0];
+      expect(importedSettled.refundOf, importedExpense.id);
+      expect(importedSettled.amount, 20);
+      expect(importedSettled.currencyCode, 'USD');
+      expect(importedSettled.accountId, cny.id);
+      expect(importedSettled.accountAmount, 150);
+      expect(importedSettled.baseAmount, 150);
+      expect(importedSettled.occurredAt, DateTime(2026, 7, 5));
+      expect(importedSettled.settledAt, DateTime(2026, 7, 10));
+      expect(importedSettled.note, '退到人民币');
+      expect(importedSettled.categoryId, category.id);
+      expect(importedSettled.tagIds, hasLength(1));
+
+      final importedPending = importedRefunds[1];
+      expect(importedPending.refundOf, importedExpense.id);
+      expect(importedPending.amount, 30);
+      expect(importedPending.accountId, usd.id);
+      expect(importedPending.accountAmount, 30);
+      expect(importedPending.baseAmount, 216);
+      expect(importedPending.occurredAt, DateTime(2026, 7, 15));
+      expect(importedPending.settledAt, isNull);
+      expect(importedPending.note, '待到账');
+      expect(importedPending.tagIds, hasLength(1));
+
+      expect(
+        validateLedgerEntries(
+          books: <LedgerBook>[
+            LedgerBook(
+              id: 'book_default',
+              name: '日常账本',
+              createdAt: DateTime(2026),
+              isDefault: true,
+              baseCurrencyCode: 'CNY',
+            ),
+          ],
+          accounts: <Account>[usd, cny],
+          entries: plan.entries,
+        ),
+        isNull,
+      );
+    });
+
+    test('显式退款找不到原支出编号时逐行报错且不产生悬空退款', () {
+      const content =
+          '日期,类型,金额,分类,账户,转入账户,备注,币种,账户金额,本位币金额,'
+          '转入金额,汇率（1原币=X本位币）,账户币种,转入账户币种,记录编号,'
+          '原支出编号,到账日期\n'
+          '2026-07-05,退款,20,餐饮,人民币现金,,退款,USD,150,150,,,CNY,,'
+          'refund-1,missing-expense,2026-07-10\n';
+      final plan = run(
+        ImportPlatform.csvTemplate,
+        Uint8List.fromList(utf8.encode(content)),
+      );
+
+      expect(plan.entries, isEmpty);
+      expect(plan.errors, hasLength(1));
+      expect(plan.errors.single.message, contains('找不到原支出编号'));
+    });
+
+    test('多笔退款累计超过原支出时拒绝超额行并保留其余退款', () {
+      const content =
+          '日期,类型,金额,分类,账户,转入账户,备注,币种,账户金额,本位币金额,'
+          '转入金额,汇率（1原币=X本位币）,账户币种,转入账户币种,记录编号,'
+          '原支出编号,到账日期\n'
+          '2026-07-01,支出,100,餐饮,现金,,午餐,CNY,100,100,,,CNY,,expense-1,,\n'
+          '2026-07-05,退款,60,餐饮,现金,,部分退款,CNY,60,60,,,CNY,,'
+          'refund-1,expense-1,2026-07-06\n'
+          '2026-07-10,退款,50,餐饮,现金,,待到账,CNY,50,50,,,CNY,,'
+          'refund-2,expense-1,\n';
+      final plan = run(
+        ImportPlatform.csvTemplate,
+        Uint8List.fromList(utf8.encode(content)),
+      );
+
+      expect(plan.errors, hasLength(1));
+      expect(plan.errors.single.message, contains('累计金额超过'));
+      final expense = plan.entries.singleWhere(
+        (entry) => entry.type == EntryType.expense,
+      );
+      final refunds = plan.entries
+          .where((entry) => entry.type == EntryType.refund)
+          .toList();
+      expect(refunds, hasLength(1));
+      expect(refunds.single.amount, 60);
+      expect(expense.refundedBaseAmount, 60);
     });
 
     test('跨币转账 CSV 重建不同币种的两端账户', () {

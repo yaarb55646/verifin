@@ -1,3 +1,4 @@
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import 'models.dart';
@@ -208,6 +209,17 @@ ThemeData buildVeriFinTheme(
   );
 
   return baseTheme.copyWith(
+    extensions: <ThemeExtension<dynamic>>[
+      AnchoredMenuThemeData(
+        surfaceColor: veriElevatedSurfaceColor(brightness),
+        borderColor: isDark ? Colors.white.withValues(alpha: 0.12) : veriLine,
+        foregroundColor: colorScheme.onSurface,
+        selectedColor: colorScheme.primary,
+        panelBorderRadius: BorderRadius.circular(veriRadiusXl),
+        itemBorderRadius: BorderRadius.circular(veriRadiusLg),
+        minWidth: 168,
+      ),
+    ],
     textTheme: baseTheme.textTheme.copyWith(
       displayLarge: baseTheme.textTheme.displayLarge?.copyWith(
         fontSize: 38,

@@ -201,12 +201,62 @@ void main() {
     controller.dispose();
   });
 
+  test('部分退款后按默认剩余金额保存聚合草稿成功', () async {
+    final controller = await makeController();
+    final bookId = controller.activeBook.id;
+    controller
+      ..addAccount(account('A', bookId, 1000))
+      ..addEntry(expense(bookId, amount: 250.89));
+
+    for (final amount in <double>[50, 50, 51, 51]) {
+      controller.addRefund(
+        expenseId: 'e1',
+        amount: amount,
+        accountId: 'A',
+        initiatedAt: DateTime(2026, 7, 4),
+        settledAt: DateTime(2026, 7, 5),
+      );
+    }
+
+    final remaining = controller.remainingRefundable('e1');
+    expect(remaining, 48.89);
+    final refunds = controller.refundsForEntry('e1');
+    final result = await controller.saveEntryAggregateDraftResult(
+      entry: controller.entries.firstWhere((entry) => entry.id == 'e1'),
+      isNew: false,
+      refunds: <LedgerEntry>[
+        ...refunds,
+        LedgerEntry(
+          id: 'refund-new',
+          bookId: bookId,
+          type: EntryType.refund,
+          amount: remaining,
+          accountAmount: remaining,
+          baseAmount: remaining,
+          categoryId: 'dining',
+          accountId: 'A',
+          note: '',
+          occurredAt: DateTime(2026, 7, 6),
+          refundOf: 'e1',
+          settledAt: DateTime(2026, 7, 6),
+        ),
+      ],
+    );
+
+    expect(result.isSuccess, isTrue);
+    expect(controller.refundsForEntry('e1').length, 5);
+    final saved = controller.entries.firstWhere((entry) => entry.id == 'e1');
+    expect(saved.refundedBaseAmount, 250.89);
+    expect(saved.netAmount, 0);
+    controller.dispose();
+  });
+
   test('applyImportEntries：带退款标量的导入交易当场自愈成退款条目', () async {
     final controller = await makeController();
     final bookId = controller.activeBook.id;
     controller.addAccount(account('A', bookId, 1000));
     // 模拟平台导入（如一木「退款」列）：一条带 refundedAmount 标量的支出。
-    controller.applyImportEntries(
+    await controller.applyImportEntries(
       entries: <LedgerEntry>[
         LedgerEntry(
           id: 'imp1',

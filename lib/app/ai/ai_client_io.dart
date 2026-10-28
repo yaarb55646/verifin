@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'ai_agent_message.dart';
 import 'ai_completion_event.dart';
@@ -12,6 +13,9 @@ export 'ai_error.dart' show AiException, AiErrorCode, aiErrorMessage;
 const Duration _defaultConnectTimeout = Duration(seconds: 20);
 const Duration _defaultResponseTimeout = Duration(seconds: 60);
 const Duration _defaultStreamIdleTimeout = Duration(seconds: 45);
+const Duration _defaultTotalTimeout = Duration(seconds: 120);
+const int _defaultMaxResponseBytes = 2 * 1024 * 1024;
+const int _defaultMaxStreamEvents = 10000;
 
 /// 发起一次非流式 OpenAI-compatible 补全，并保留文本、推理字段与 Tool Calls。
 Future<AiCompletionResult> aiAgentComplete({
@@ -21,9 +25,16 @@ Future<AiCompletionResult> aiAgentComplete({
   double temperature = 0,
   Duration connectionTimeout = _defaultConnectTimeout,
   Duration responseTimeout = _defaultResponseTimeout,
+  Duration totalTimeout = _defaultTotalTimeout,
+  int maxResponseBytes = _defaultMaxResponseBytes,
 }) async {
   _ensureConfigured(settings);
   final client = HttpClient()..connectionTimeout = connectionTimeout;
+  var totalExpired = false;
+  final totalTimer = Timer(totalTimeout, () {
+    totalExpired = true;
+    client.close(force: true);
+  });
   try {
     final response = await _post(
       client: client,
@@ -37,10 +48,11 @@ Future<AiCompletionResult> aiAgentComplete({
       ),
       responseTimeout: responseTimeout,
     );
-    final responseText = await response
-        .transform(utf8.decoder)
-        .join()
-        .timeout(responseTimeout);
+    final responseText = await _readBoundedBody(
+      response,
+      maxBytes: maxResponseBytes,
+      totalTimeout: totalTimeout,
+    );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw _statusException(
         response.statusCode,
@@ -50,8 +62,12 @@ Future<AiCompletionResult> aiAgentComplete({
     }
     return _parseCompletion(responseText);
   } catch (error) {
+    if (totalExpired) {
+      throw AiException(AiErrorCode.timeout);
+    }
     throw _mapTransportError(error);
   } finally {
+    totalTimer.cancel();
     client.close(force: true);
   }
 }
@@ -68,11 +84,19 @@ Stream<AiCompletionEvent> aiAgentStream({
   Duration connectionTimeout = _defaultConnectTimeout,
   Duration responseTimeout = _defaultResponseTimeout,
   Duration idleTimeout = _defaultStreamIdleTimeout,
+  Duration totalTimeout = _defaultTotalTimeout,
+  int maxResponseBytes = _defaultMaxResponseBytes,
+  int maxStreamEvents = _defaultMaxStreamEvents,
 }) async* {
   _ensureConfigured(settings);
   final client = HttpClient()..connectionTimeout = connectionTimeout;
   var sawDone = false;
   var sawFinish = false;
+  var totalExpired = false;
+  final totalTimer = Timer(totalTimeout, () {
+    totalExpired = true;
+    client.close(force: true);
+  });
   try {
     final response = await _post(
       client: client,
@@ -88,10 +112,11 @@ Stream<AiCompletionEvent> aiAgentStream({
       acceptEventStream: true,
     );
     if (response.statusCode >= HttpStatus.badRequest) {
-      final errorText = await response
-          .transform(utf8.decoder)
-          .join()
-          .timeout(responseTimeout);
+      final errorText = await _readBoundedBody(
+        response,
+        maxBytes: maxResponseBytes,
+        totalTimeout: totalTimeout,
+      );
       throw _statusException(
         response.statusCode,
         errorText,
@@ -99,7 +124,19 @@ Stream<AiCompletionEvent> aiAgentStream({
       );
     }
 
+    var responseBytes = 0;
+    var eventCount = 0;
     final lines = response
+        .map((chunk) {
+          responseBytes += chunk.length;
+          if (responseBytes > maxResponseBytes) {
+            throw AiException(
+              AiErrorCode.responseTooLarge,
+              detail: 'stream response too large',
+            );
+          }
+          return chunk;
+        })
         .timeout(idleTimeout)
         .transform(utf8.decoder)
         .transform(const LineSplitter());
@@ -107,13 +144,22 @@ Stream<AiCompletionEvent> aiAgentStream({
       if (!line.startsWith('data:')) continue;
       final data = line.substring(5).trim();
       if (data.isEmpty) continue;
+      eventCount += 1;
+      if (eventCount > maxStreamEvents) {
+        throw AiException(
+          AiErrorCode.responseTooLarge,
+          detail: 'too many stream events',
+        );
+      }
       if (data == '[DONE]') {
         sawDone = true;
         yield const AiStreamDone();
         break;
       }
       for (final event in _parseStreamPayload(data)) {
-        if (event is AiCompletionFinished) sawFinish = true;
+        if (event is AiCompletionFinished) {
+          sawFinish = true;
+        }
         yield event;
       }
     }
@@ -121,8 +167,12 @@ Stream<AiCompletionEvent> aiAgentStream({
       throw AiException(AiErrorCode.incompleteStream);
     }
   } catch (error) {
+    if (totalExpired) {
+      throw AiException(AiErrorCode.timeout);
+    }
     throw _mapTransportError(error);
   } finally {
+    totalTimer.cancel();
     client.close(force: true);
   }
 }
@@ -201,12 +251,17 @@ Future<HttpClientResponse> _post({
   required Duration responseTimeout,
   bool acceptEventStream = false,
 }) async {
-  final uri = Uri.parse(settings.chatCompletionsUrl);
+  final Uri uri;
+  try {
+    uri = Uri.parse(settings.chatCompletionsUrl);
+  } on FormatException {
+    throw AiException(AiErrorCode.badUrl);
+  }
   final request = await client.openUrl('POST', uri).timeout(responseTimeout);
-  request.headers.set(
-    HttpHeaders.authorizationHeader,
-    'Bearer ${settings.apiKey.trim()}',
-  );
+  final apiKey = settings.apiKey.trim();
+  if (apiKey.isNotEmpty) {
+    request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $apiKey');
+  }
   request.headers.contentType = ContentType.json;
   if (acceptEventStream) {
     request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
@@ -394,8 +449,34 @@ AiException _mapTransportError(Object error) {
   if (error is HttpException) {
     return AiException(AiErrorCode.network, detail: error.message);
   }
-  if (error is FormatException || error is ArgumentError) {
+  if (error is FormatException) {
+    return AiException(AiErrorCode.badResponse);
+  }
+  if (error is ArgumentError) {
     return AiException(AiErrorCode.badUrl);
   }
   return AiException(AiErrorCode.unknown, detail: '$error');
+}
+
+Future<String> _readBoundedBody(
+  HttpClientResponse response, {
+  required int maxBytes,
+  required Duration totalTimeout,
+}) async {
+  final bytes = BytesBuilder(copy: false);
+  var received = 0;
+  final read = () async {
+    await for (final chunk in response) {
+      received += chunk.length;
+      if (received > maxBytes) {
+        throw AiException(
+          AiErrorCode.responseTooLarge,
+          detail: 'response body too large',
+        );
+      }
+      bytes.add(chunk);
+    }
+    return utf8.decode(bytes.takeBytes());
+  }();
+  return read.timeout(totalTimeout);
 }

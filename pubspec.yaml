@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.20.3+173
+version: 1.20.13+183
 
 environment:
   sdk: ^3.12.2
@@ -85,6 +85,10 @@ dependencies:
   # 故本地 vendor 并只放宽 SDK 约束，见 third_party/jdenticon_dart/README.md。
   jdenticon_dart:
     path: third_party/jdenticon_dart
+  liquid_glass_widgets:
+    path: third_party/liquid_glass_widgets
+  # 锚点菜单统一使用外部组件库；应用只负责把设计令牌桥接到 ThemeExtension。
+  anchored_menu: ^0.1.3
 dev_dependencies:
   integration_test:
     sdk: flutter
@@ -118,10 +122,9 @@ flutter:
 
   assets:
     - assets/account_icons/
+    - assets/ai_providers/
+    - assets/credits/
     - assets/import_icons/
-
-  shaders:
-    - shaders/liquid_glass_lens.frag
 
   # To add assets to your application, add an assets section, like this:
   # assets:

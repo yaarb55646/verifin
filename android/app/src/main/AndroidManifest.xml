@@ -55,6 +55,12 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- All widget/share entry points carry routing state in Intent data
+                 and are handled explicitly by MainActivity. Do not let the
+                 Flutter embedding layer reinterpret that data as a named route. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -71,6 +77,11 @@
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
+            <!-- The widget setup URI is consumed natively by this Activity and
+                 home_widget; it is not a Flutter named route. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>

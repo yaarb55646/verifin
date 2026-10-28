@@ -10,7 +10,7 @@ void main() {
     var fired = 0;
     controller.onEntryAdded = () => fired++;
 
-    controller.importTransactionsFromCsv(
+    await controller.importTransactionsFromCsv(
       '日期,类型,金额,分类,账户,转入账户,备注\n2026-01-05,支出,23.5,餐饮,现金,,午饭',
     );
 
@@ -22,7 +22,7 @@ void main() {
   test('余额调整触发 onEntryAdded', () async {
     final controller = await makeController();
     // 先经导入建一个「现金」账户。
-    controller.importTransactionsFromCsv(
+    await controller.importTransactionsFromCsv(
       '日期,类型,金额,分类,账户,转入账户,备注\n2026-01-05,支出,10,餐饮,现金,,x',
     );
     final account = controller.accounts.firstWhere((a) => a.name == '现金');

@@ -12,6 +12,23 @@ import 'package:path/path.dart' as p;
 /// 清空该行的 `data_url`。
 typedef AttachmentMaterializer = Future<void> Function(String id);
 
+/// 附件 id 是文件名，不是任意路径。备份是外部输入，必须在进入文件 API
+/// 之前拒绝目录分隔符、`..`、绝对路径和过长的名称，避免把备份内容写到
+/// `attachments/` 之外。
+final RegExp _attachmentIdPattern = RegExp(
+  r'^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$',
+);
+
+bool isValidAttachmentId(String id) =>
+    id != '.' && id != '..' && _attachmentIdPattern.hasMatch(id);
+
+String requireValidAttachmentId(String id) {
+  if (!isValidAttachmentId(id)) {
+    throw const FormatException('附件 id 格式不正确');
+  }
+  return id;
+}
+
 /// 附件（票据图片）字节的唯一读写入口。
 ///
 /// 设计见 `docs/dev/attachment-storage-and-backup.md`：一张附件一个
@@ -243,7 +260,8 @@ class FileAttachmentStore implements AttachmentStore {
     return dir;
   }
 
-  String _pathFor(String id) => p.join(_root.path, id);
+  String _pathFor(String id) =>
+      p.join(_root.path, requireValidAttachmentId(id));
 
   Future<void> _ensureFile(String id) async {
     if (existsSync(id)) {

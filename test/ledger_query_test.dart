@@ -200,5 +200,32 @@ void main() {
       );
       expect(result.map((e) => e.id), <String>['hit']);
     });
+
+    test('bounded top-k matches full sorting for date and amount', () {
+      final entries = List<LedgerEntry>.generate(
+        200,
+        (index) => _entry(
+          id: 'e$index',
+          amount: (index * 37 % 211).toDouble(),
+          at: DateTime(2026, 1, 1).add(Duration(days: index % 30)),
+        ),
+      );
+      for (final sortBy in LedgerSortField.values) {
+        for (final descending in <bool>[true, false]) {
+          final full = queryLedgerEntries(
+            entries,
+            LedgerQuery(sortBy: sortBy, descending: descending),
+          );
+          final bounded = queryLedgerEntries(
+            entries,
+            LedgerQuery(sortBy: sortBy, descending: descending, limit: 7),
+          );
+          expect(
+            bounded.map((entry) => entry.id),
+            full.take(7).map((entry) => entry.id),
+          );
+        }
+      }
+    });
   });
 }

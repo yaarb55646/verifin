@@ -35,6 +35,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dbErrorDetail => 'Error details';
 
   @override
+  String get startupPreparingTitle => 'Preparing your ledger';
+
+  @override
+  String get startupPreparingBody =>
+      'Loading your data for the first time can take a moment.';
+
+  @override
+  String get startupStagePreferences => 'Reading local settings';
+
+  @override
+  String get startupStageDatabase => 'Opening the ledger database';
+
+  @override
+  String get startupStageController => 'Loading ledger data';
+
+  @override
+  String get startupStageRecurring => 'Posting due recurring entries';
+
+  @override
+  String get startupStageWarmUp => 'Preparing interface resources';
+
+  @override
+  String get startupStageReady => 'Almost ready';
+
+  @override
+  String startupElapsed(int seconds) {
+    return 'Waiting ${seconds}s';
+  }
+
+  @override
+  String get startupSlowTitle => 'Startup is slower than usual';
+
+  @override
+  String startupSlowBody(String stage) {
+    return 'Still working on: $stage. Your ledger data will not be changed. You can keep waiting or retry.';
+  }
+
+  @override
+  String get startupFailedTitle => 'Startup didn\'t finish';
+
+  @override
+  String startupFailedBody(String stage) {
+    return 'The \"$stage\" step didn\'t finish. Your ledger data is still on this device — please do not clear the app\'s data or uninstall it.';
+  }
+
+  @override
+  String get startupRetry => 'Retry';
+
+  @override
+  String get startupCopyDiagnostics => 'Copy diagnostics';
+
+  @override
+  String get startupDiagnosticsCopied => 'Copied';
+
+  @override
   String get tabHome => 'Home';
 
   @override
@@ -77,7 +132,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navigationStyleLiquidGlassDesc =>
-      'Floating capsule with a blurred glass surface and a sliding highlight';
+      'Floating capsule with live backdrop blur and refraction';
 
   @override
   String get quickEntry => 'Quick Entry';
@@ -783,6 +838,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String dateMonthDay(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat('MMM d', localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String dateYearMonthDay(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat(
+      'MMM d, yyyy',
+      localeName,
+    );
     final String dateString = dateDateFormat.format(date);
 
     return '$dateString';
@@ -1655,6 +1721,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Transfers need two different accounts; add a destination account first.';
 
   @override
+  String noAccountTransferCurrencyChangeTitle(String from, String to) {
+    return 'Destination currency changes from $from to $to';
+  }
+
+  @override
+  String noAccountTransferNoRateTitle(String from, String to) {
+    return 'Missing $from → $to rate';
+  }
+
+  @override
+  String noAccountTransferConvert(String amount) {
+    return 'Convert to $amount';
+  }
+
+  @override
+  String noAccountTransferReinterpret(String currency) {
+    return 'Keep the number and reinterpret it as $currency';
+  }
+
+  @override
   String get deleteEntryTitle => 'Delete this transaction?';
 
   @override
@@ -2352,6 +2438,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryNameLabel => 'Category name';
 
   @override
+  String get categoryNameDuplicate =>
+      'A category with this name already exists under the same parent';
+
+  @override
   String get viewCategoryEntries => 'View transactions';
 
   @override
@@ -2409,6 +2499,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get renameCategoryTitle => 'Rename category';
+
+  @override
+  String get tagNameDuplicate => 'A tag with this name already exists';
 
   @override
   String get pickIconTitle => 'Choose icon';
@@ -3093,14 +3186,135 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiNotConfigured => 'Not set';
 
   @override
+  String get aiProviderCurrent => 'Current provider';
+
+  @override
+  String get aiProviderPickerTitle => 'Choose AI provider';
+
+  @override
+  String get aiProviderPickerSubtitle =>
+      'The provider\'s fixed endpoint will be used';
+
+  @override
+  String get aiProviderChange => 'Change';
+
+  @override
+  String get aiProviderSearchHint => 'Search provider, description, or domain';
+
+  @override
+  String get aiProviderSearchEmpty => 'No provider found';
+
+  @override
+  String get aiProviderSearchEmptyDesc =>
+      'Try a vendor name, platform, or domain';
+
+  @override
+  String get aiProviderGroupAll => 'All';
+
+  @override
+  String get aiProviderGroupChinaOfficial => 'China official';
+
+  @override
+  String get aiProviderGroupGlobalOfficial => 'Global official';
+
+  @override
+  String get aiProviderGroupAggregator => 'Aggregators';
+
+  @override
+  String get aiProviderGroupLocal => 'Local';
+
+  @override
+  String get aiProviderGroupCustom => 'Custom';
+
+  @override
+  String get aiProviderDescDeepSeek =>
+      'DeepSeek official OpenAI-compatible endpoint';
+
+  @override
+  String get aiProviderDescVolcengine => 'Volcengine Ark model service';
+
+  @override
+  String get aiProviderDescKimi => 'Moonshot Kimi official endpoint';
+
+  @override
+  String get aiProviderDescZhipu => 'Zhipu GLM official endpoint';
+
+  @override
+  String get aiProviderDescDashscope =>
+      'Alibaba Cloud Bailian compatible endpoint';
+
+  @override
+  String get aiProviderDescOpenai => 'OpenAI official endpoint';
+
+  @override
+  String get aiProviderDescOpenrouter => 'Multi-model routing platform';
+
+  @override
+  String get aiProviderDescOllama => 'Local Ollama service';
+
+  @override
+  String get aiProviderDescCustom => 'Any OpenAI-compatible endpoint';
+
+  @override
+  String get aiProviderCustomBaseUrlHint =>
+      'Enter through /v1, or a full /chat/completions URL';
+
+  @override
+  String get aiProviderModelListUrlLabel => 'Model list URL (optional)';
+
+  @override
+  String get aiProviderModelListUrlHint =>
+      'Leave empty to derive it from the endpoint';
+
+  @override
+  String get aiProviderApiKeyLabel => 'API Key (optional)';
+
+  @override
+  String get aiProviderModelLabel => 'Model';
+
+  @override
+  String get aiProviderModelHint =>
+      'Fetch the model list or enter a model manually';
+
+  @override
+  String get aiProviderFetchModels => 'Fetch model list';
+
+  @override
+  String get aiProviderFetchingModels => 'Fetching model list…';
+
+  @override
+  String get aiProviderModelPickerTitle => 'Choose model';
+
+  @override
+  String get aiProviderModelSearchHint => 'Search model or vendor';
+
+  @override
+  String get aiProviderModelEmpty => 'No models available';
+
+  @override
+  String get aiProviderModelEmptyDesc =>
+      'Try another filter or enter a model ID manually';
+
+  @override
+  String get aiProviderModelOtherGroup => 'Other';
+
+  @override
+  String aiProviderModelFetchFailed(String message) {
+    return 'Could not fetch models: $message';
+  }
+
+  @override
+  String get aiProviderModelFetchEmpty =>
+      'Connected, but no models were returned';
+
+  @override
+  String get aiProviderMissingBaseUrl => 'Enter the provider endpoint first';
+
+  @override
   String get aiChatTitle => 'AI Assistant';
 
   @override
   String get aiChatClearHistory => 'Clear chat history';
-
-  @override
-  String get aiChatHistoryLocalOnly =>
-      'Chats stay on this device and are not included in backups';
 
   @override
   String get aiChatClearMessage =>
@@ -3110,8 +3324,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatClearConfirm => 'Clear';
 
   @override
+  String get aiChatChooseBook => 'Choose conversation ledger';
+
+  @override
+  String get aiChatClearCurrent => 'Clear chat';
+
+  @override
+  String get aiSendQuestion => 'Send';
+
+  @override
+  String get aiStopGenerating => 'Stop generating';
+
+  @override
+  String aiChatCurrentBook(String book) {
+    return 'Current ledger: $book';
+  }
+
+  @override
   String get aiChatUnconfiguredHint =>
       'Configure AI first to start asking about your finances';
+
+  @override
+  String get aiChatUnconfiguredTitle => 'Connect your AI';
 
   @override
   String get aiChatGoConfigure => 'Configure AI';
@@ -3141,6 +3375,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatNoMatchingTx => 'No matching transactions';
 
   @override
+  String get aiImageBlocked => 'Image not loaded for privacy';
+
+  @override
   String get aiClearConfig => 'Clear configuration';
 
   @override
@@ -3151,27 +3388,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiConfigCleared => 'Configuration cleared';
 
   @override
-  String get aiSettingsIntro =>
-      'Enter the request URL, API key and model of any OpenAI-compatible service. Your input is only sent to the service configured here; the config stays on this device and is not backed up.';
-
-  @override
   String get aiBaseUrlLabel => 'Request URL (base)';
 
   @override
   String get aiBaseUrlHint => 'e.g. https://api.openai.com/v1';
 
   @override
-  String get aiApiKeyLabel => 'API Key';
-
-  @override
-  String get aiModelLabel => 'Model';
-
-  @override
-  String get aiModelHint => 'e.g. gpt-4o-mini';
-
-  @override
-  String get aiFillAllFields =>
-      'Please fill in the request URL, API key and model';
+  String get aiFillAllFields => 'Choose a provider and enter a model';
 
   @override
   String get aiToolModeTitle => 'Tool calling protocol';
@@ -3224,10 +3447,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiActualProtocolAuto => 'Active protocol: automatic detection';
-
-  @override
-  String get aiCapabilityProbeNotice =>
-      'Capability detection sends a few small test requests without any financial data.';
 
   @override
   String get aiStepRunning => 'Running';
@@ -3354,10 +3573,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aiPrivacyNotice =>
       'AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.';
-
-  @override
-  String get aiOptionalNotice =>
-      'AI is optional — recording, reports and backups all work without it.';
 
   @override
   String get aiEntryTitle => 'AI entry';
@@ -4031,6 +4246,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appLogCopied => 'Copied to clipboard';
 
   @override
+  String get appLogCopyRecord => 'Copy this entry';
+
+  @override
+  String get appLogDetails => 'Technical details';
+
+  @override
   String get appLogClear => 'Clear logs';
 
   @override
@@ -4136,6 +4357,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiErrBadResponse => 'Could not parse the server response';
+
+  @override
+  String get aiErrResponseTooLarge =>
+      'The AI response was too large and has been stopped.';
+
+  @override
+  String get aiErrModelListUnsupported =>
+      'This provider does not expose a model list. Enter a model manually.';
 
   @override
   String get aiErrUpstream => 'The server returned an error';
@@ -4335,6 +4564,30 @@ class AppLocalizationsEn extends AppLocalizations {
       'The transaction amounts, currencies, or linked data are incomplete. Review them and try again.';
 
   @override
+  String get entrySaveStaleDraft =>
+      'This transaction was changed or deleted elsewhere. Go back and reopen it.';
+
+  @override
+  String get entrySaveInvalidRefund =>
+      'The refund data is incomplete. Check the refund amount and receiving account, then try again.';
+
+  @override
+  String get entrySaveRefundExceedsExpense =>
+      'Total refunds cannot exceed the original expense amount.';
+
+  @override
+  String get entrySaveInvalidAttachments =>
+      'The attachment data is invalid. Re-add the attachments and try again.';
+
+  @override
+  String get entrySaveInvalidRememberedRate =>
+      'The exchange rate is invalid. Check it or turn off Remember as rate for this date, then try again.';
+
+  @override
+  String get entrySaveInvalidScope =>
+      'The category or tag does not belong to the current ledger. Select it again.';
+
+  @override
   String get importValidationFailed =>
       'The imported amounts, currencies, or links are incomplete. No ledger data was written.';
 
@@ -4405,6 +4658,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exchangeRateStale => 'May be outdated';
+
+  @override
+  String get exchangeRateNotEffective => 'Not yet effective';
+
+  @override
+  String exchangeRateFutureCount(int count) {
+    return 'Plus $count future rate(s)';
+  }
 
   @override
   String get exchangeRateSourceManual => 'Manual';
@@ -4559,7 +4820,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assetTrendMissingRate =>
-      'Historical asset trend needs exchange rates. Add local rates for the affected dates to show it.';
+      'There is no exchange rate available for valuation yet. Set a rate for today or earlier to show the asset trend.';
+
+  @override
+  String assetTrendPartialMissing(String currencies, String months) {
+    return 'Some months are missing $currencies rates ($months); those months are not drawn. Add rates for those months or earlier to show them.';
+  }
+
+  @override
+  String get exchangeRateSetAction => 'Set rate';
 
   @override
   String baseCurrencyAmountLabel(String currency) {
@@ -4815,8 +5084,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String aiCardDebtLine(String name, String amount, String currency) {
-    return '$name owes $amount $currency';
+  String aiCardDebtLine(String name, String amount) {
+    return '$name owes $amount';
   }
 
   @override
@@ -4870,6 +5139,22 @@ class AppLocalizationsEn extends AppLocalizations {
   ) {
     return '$period budget $budget, spent $spent, remaining $remaining$daily. $attention';
   }
+
+  @override
+  String aiAnswerProvenanceQueried(int count) {
+    return 'Based on $count ledger queries';
+  }
+
+  @override
+  String get aiAnswerProvenanceNoQuery => 'No ledger data queried';
+
+  @override
+  String get aiAnswerProvenanceUnverified =>
+      'No ledger data was queried; do not rely on this for account facts';
+
+  @override
+  String get aiErrRequestTooLarge =>
+      'The input or request is too large. Shorten it and try again.';
 
   @override
   String get widgetPreviewFailed => 'Widget preview unavailable';

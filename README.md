@@ -4,33 +4,42 @@
 
 # Veri Fin
 
-**完全免费 · 数据自主 · 本地优先的 Android 记账应用**
+**完全免费 · 本地优先的 Android 记账应用**
 
-你的权威账本保存在自己的手机里——没有账号、没有自有服务器、没有广告，也不做统计遥测；只有你主动启用导出、WebDAV 备份或自配 AI 时，相关数据才会发送到你选择的目标。
+[官网](https://verifin.talyra42.top/) · [下载最新版](https://github.com/LumiDesk/verifin/releases) · [产品文档](docs/product/product.md) · [问题反馈](https://github.com/LumiDesk/verifin/issues)
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white)](https://dart.dev)
-[![Platform](https://img.shields.io/badge/平台-Android-3DDC84?logo=android&logoColor=white)](#)
-[![Release](https://img.shields.io/github/v/release/LumiDesk/verifin?label=上游版本&color=346edb)](https://github.com/LumiDesk/verifin/releases)
-[![Downloads](https://img.shields.io/github/downloads/LumiDesk/verifin/total?label=上游下载&color=3498db)](https://github.com/LumiDesk/verifin/releases)
-[![License](https://img.shields.io/badge/许可证-GPL--3.0--or--later-blue)](LICENSE)
-[![爱发电](https://img.shields.io/badge/爱发电-赞助支持-946ce6?logo=buymeacoffee&logoColor=white)](https://afdian.com/a/talyra42)
+[![官网](https://img.shields.io/badge/官网-verifin.talyra42.top-346edb?style=flat-square)](https://verifin.talyra42.top/)
+[![Release](https://img.shields.io/github/v/release/LumiDesk/verifin?style=flat-square&label=版本&color=346edb)](https://github.com/LumiDesk/verifin/releases)
+[![Stars](https://img.shields.io/github/stars/LumiDesk/verifin?style=flat-square&label=Stars&color=f59e0b)](https://github.com/LumiDesk/verifin/stargazers)
+[![Downloads](https://img.shields.io/github/downloads/LumiDesk/verifin/total?style=flat-square&label=下载&color=3498db)](https://github.com/LumiDesk/verifin/releases)
+[![Issues](https://img.shields.io/github/issues/LumiDesk/verifin?style=flat-square&label=Issues&color=64748b)](https://github.com/LumiDesk/verifin/issues)
+[![License](https://img.shields.io/badge/许可证-GPL--3.0--or--later-16a34a?style=flat-square)](LICENSE)
 
-[功能亮点](#-功能亮点) · [界面预览](#-界面预览) · [技术栈](#-技术栈) · [快速开始](#-快速开始) · [文档](#-文档)
+<br />
+
+![Android](https://img.shields.io/badge/Android-3DDC84?style=flat-square&logo=android&logoColor=white)
+![Flutter](https://img.shields.io/badge/Flutter-3.47.2-02569B?style=flat-square&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=flat-square&logo=dart&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
+
+<br />
+
+![本地优先](https://img.shields.io/badge/本地优先-346edb?style=flat-square)
+![无账号](https://img.shields.io/badge/无账号-16a34a?style=flat-square)
+![无广告与遥测](https://img.shields.io/badge/无广告%20·%20无遥测-64748b?style=flat-square)
+![可选 AI](https://img.shields.io/badge/可选%20AI-8b5cf6?style=flat-square)
+![多币种](https://img.shields.io/badge/多币种-f59e0b?style=flat-square)
+![加密备份](https://img.shields.io/badge/加密备份-0ea5e9?style=flat-square)
 
 </div>
 
 ---
 
-## 个人 fork
+> 账本是你的，数据也是。
 
-本仓库是 [yaarb55646/verifin](https://github.com/yaarb55646/verifin) 的个人分支，基于 [LumiDesk/verifin](https://github.com/LumiDesk/verifin) 的 `v1.20.1`，日常开发分支为 `mine`。保留上游版权与 GPL-3.0-or-later 许可证。
+Veri Fin 是一款仅面向 Android 的个人记账应用。没有账号、没有自有服务端、没有广告，也不接入行为遥测。账本保存在你的设备上；只有你主动使用导出、WebDAV 备份或 AI 功能时，相关数据才会发送到你选择的目标。
 
-本 fork 增加一句话记账、真实子分类匹配、记账页子分类常驻面板、看板分类占比与日常排行，以及自定义记账关键词。功能入口、SQLite v20 兼容约定、Windows 工具链和上游同步方法见 [个人分支维护手册](MY_FORK.md)。
-
-个人 APK 在 [Build APK (mine)](https://github.com/yaarb55646/verifin/actions/workflows/mine-build.yml) 手动构建，运行结束后从 Artifacts 下载；推送 `mine` 仅同步源码，不会自动生成 APK 或发布版本。应用内「检查更新」当前仍查询上游 Release，个人包通过手动安装更新。
-
-## 📱 界面预览
+## 界面预览
 
 <div align="center">
 
@@ -40,179 +49,84 @@
 
 </div>
 
-现有看板预览尚未包含新增分类占比与日常排行，截图状态见 [截图说明](docs/screenshots/README.md)。
+## 核心能力
 
-## ✨ 功能亮点
+- **快速记账**：支出、收入、转账，支持多级分类、多标签、图片附件、退款和周期记账。
+- **账本与资产**：多账本隔离、多币种账户、离线汇率、信用账户、净资产与余额趋势。
+- **预算与看板**：总预算、分类预算、按日预算、自定义预算周期，以及日常、月度、年度多维分析。
+- **可选 AI**：用自己的 OpenAI 兼容端点记账、查询账目或识别截图；AI 只生成草稿，不会静默写入。
+- **数据由你掌控**：账本保存在本地，支持加密备份、WebDAV、账单导入和本应用 CSV 导出。
+- **Android 原生体验**：桌面小组件、快捷磁贴、本地提醒、系统分享入口和应用锁。
 
-### 📒 记账
+完整功能、数据口径与当前边界见 [产品文档](docs/product/product.md)，逐项验收标准见 [验收清单](docs/product/acceptance-checklist.md)。
 
-- **一句话记账**：手动入口可输入「午餐10.25元」，在本机拆出金额和备注，并优先匹配当前账本里的分类名称（含新建的多级子分类，无需历史交易）；同名分类可写「餐饮/午餐」，确认后才保存。匹配遵循设置中的自动识别开关，手动选过的分类不再被覆盖。
-- **记账关键词**：在「分类管理 → 分类菜单 → 编辑 → 记账关键词」给分类添加常用叫法，例如将「包子」绑定到「餐饮」，之后「包子3元」便可自动预选餐饮；一句话确认页的备注下方也可关联关键词。支持子分类、重复词冲突提示，关键词随账本及备份保存。
-- 首页底栏的圆形记账按钮在手动模式下先打开一句话输入，可切换到数字键盘**快速记账**，支持支出 / 收入 / 转账三种类型；可选**「无账户」**只记金额、不计入任何账户余额；数字键盘支持**四则运算算式**（如 `500+800`），实时显示结果、算式不完整时提示；
-- **子分类常驻面板**：记账详情页在常用分类下显示当前父分类的直接子分类，点一下即可选中，也可现场新增（先确认名称再选内置图标或 emoji，取消不创建）；更深层分类仍通过多级选择器选择；
-- **默认付款账户**：在「我的 → 设置」或账户详情页把某账户设为默认，记账时（含 AI 未识别到账户时）自动预选它，每个账本各自设置；
-- **AI 对话记账**（可选）：把「记一笔」按钮设为 AI 模式，用一句话（如「昨天打车 32」）自动解析出类型 / 金额 / 分类 / 账户 / 备注草稿，确认后落账；也可设为**点击手动、长按 AI**，一个按钮两种入口；自带 API Key + 请求地址（OpenAI 兼容），配置只存本机；
-- **截图识账 / 分享识账**（可选，需先配置 AI）：把账单**截图「分享」给 Veri Fin**（或在 AI 记账弹层里选相册截图），文字识别在**本机离线完成、图片绝不上传**，识别文本由 AI 解析成草稿确认落账；账单**文本**同样可分享识别。Veri Fin 本体**不监听任何通知或屏幕**——Tasker 等自动化工具可经 Intent 接口把账单文本送进来（见 [`docs/product/automation.md`](docs/product/automation.md)）；
-- **多级分类**（任意层级树形结构）+ **多标签**（多对多，可筛选、可统计）；分类与标签**跟随账本**：每个账本各有自己的一套分类/标签，独立增删改排序；
-- 交易可附**图片票据**（拍照或相册；压缩后以独立文件存本地、数据库只留元数据，按需读取，随备份导出）；
-- **周期记账**（每天 / 周 / 月 / 年自动补记，如房租、工资）、**批量操作**（多选删除、改分类、同账户币种安全改账户；跨币种或无账户交易需逐笔编辑）；
-- **离线多币种记账**：每个账本设置本位币、每个账户设置账户币种；支出/收入保留原币、账户实际扣入账金额和冻结本位币金额，跨币转账保存两端真实金额。汇率按日期完全在本机手工维护，缺率时明确阻止猜测；金额单位可选「100 ¥」或「CNY 100」，单币种账本可隐藏重复单位；
-- **报销 / 退款冲抵**：记账时即可标记支出为待报销，回款按净额计入所有统计，交易列表可按报销状态（待报销 / 已报销）筛选与搜索；转账支持**手续费**。
+## 个人 fork
 
-### 💰 资产
+本仓库是 [yaarb55646/verifin](https://github.com/yaarb55646/verifin) 的个人分支，跟随上游 [LumiDesk/verifin](https://github.com/LumiDesk/verifin) 同步，日常开发分支为 `mine`。保留上游版权与 GPL-3.0-or-later 许可证。
 
-- 账户按类型或自定义分组展示，净资产卡片带趋势图、可换背景；账户类型含**信用账户**（花呗 / 白条等有额度、账单日、还款但无实体卡号的信用类账户）；
-- 账户余额始终显示账户原币；总资产和历史趋势按本地有效汇率折算为账本本位币，任一账户缺率时明确显示「汇率缺失」，不拿部分资产冒充总额；
-- 账户详情：余额趋势（日 / 月）、余额调整（可选是否计入收支）、账户报告；
-- **信用卡 / 信用账户**：账单日 / 还款日设置与还款倒计时提醒；设**信用额度**后展示已用 / 可用额度、使用进度条与本期账单；一键**还款**（金额预填欠款、扣款账户可选或「无账户」代还）；
-- **完整卡号**（信用卡 / 储蓄卡，选填）：可录入完整卡号并在详情页一键复制，后四位可跟随卡号自动填充；列表仍只显示后四位；
-- 银行 / 支付平台**品牌图标**自动匹配，支持隐藏账户与多账本隔离。
+在上游能力之上，本 fork 额外提供：一句话记账（文字输入拆出金额与备注，可切换到数字键盘）、按分类名称自动匹配自定义与多级子分类、记账页子分类常驻面板、看板分类占比与分类·标签排行，以及分类级自定义记账关键词（SQLite schema v20）。功能入口、数据兼容约定、工具链与上游同步方法见 [个人分支维护手册](MY_FORK.md)。
 
-### 📊 报表
+个人 APK 在 [Build APK (mine)](https://github.com/yaarb55646/verifin/actions/workflows/mine-build.yml) 手动构建，运行结束后从 Artifacts 下载；推送 `mine` 仅同步源码，不会自动生成 APK 或发布版本。应用内「检查更新」目前仍查询上游 Release，个人包通过手动安装更新。
 
-- **预算**：月度总预算、分类预算，以及**按日预算**（每日花销上限 + 今日进度）；预算支持**默认值（每月自动沿用，设一次不必逐月改）+ 单月覆盖**（个别月份可单独调整、一键恢复默认）；支持自定义**预算周期起始日**（如发薪日 22 日～次月 21 日为一期，每账本独立设置，默认自然月）；预算页拆分为「预算」总览（查看状态并管理所选月份/周期的覆盖）与「预算设置」（默认预算/按日上限/周期/分类默认预算集中配置）；
-- 看板：顶部按统计口径分「日常 / 月统计 / 年统计」三个 Tab，每个 Tab 各自可开关排序面板。日常＝近 7 日统计（近7日/本周 × 支出/收入 + 柱状图与总额日均）、资产汇总（环形图 + 图例，正/负资产可切，点中心切金额/占比）、近 7 日分类占比与分类·标签排行；月统计＝本月收支、预算执行、分类占比、分类·标签排行（可下钻到子分类与交易列表）、日趋势；年统计＝本年收支、收支统计、收支热力（按天着色的全年日历）、分类占比、排行。分类占比卡右上角切支出/收入，右下角可勾选「二级分类」「显示金额」；二级模式将深层分类归并到对应二级，直接记在顶级的金额独立保留，不重复计入父分类；月统计与年统计顶部有**期间栏**：`‹ 2026年9月 ›` 步进或点开弹层直接选年月（范围到首笔记账为止，不给未来），离开本期时可一键回「本月 / 今年」；
+## 技术栈
 
-- **AI 财务 Agent**（可选，需先配置 AI）：看板页「问 AI」进入聊天页，用自然语言问账目（「这个月花最多的是哪些分类」「最近三个月的大额支出」等）；Agent 自主调用只读工具查询你**当前账本**的真实数据，以柱状图 / 折线 / 可点击交易列表 + Markdown（含表格）流式作答，调用步骤可展开查看；支持原生 Tool Calls 并可自动降级到兼容模式。聊天记录只存本机、可清空，Agent 全程**只读**不改数据；
-- 全部图表走外部图表库（`fl_chart` 适配层，项目内不再自绘数据图表）且**可交互**：点击固定显示数据气泡、再点同一个点或点图表以外收起，左右滑动连续查看相邻数据（整片绘图区都能命中最近的横轴位置，且不会误切页面），预算趋势用预算 / 支出双柱对比，环形图点选分段。
-
-### 🔐 数据与安全
-
-- 账目数据只存本地 **SQLite**，进程被杀数据不丢；
-- Android 系统 Auto Backup 已显式关闭，账目和本机凭据不会绕过应用内备份设置进入系统云备份；换机请使用 Veri Fin 的导出/恢复或 WebDAV；
-- **只推荐用应用内的备份**（数据管理 → 立即备份 / 导出为文件）。**不建议使用系统备份、应用数据备份、换机搬家类工具或第三方备份 App** 备份/还原本应用数据：它们绕过本应用的备份格式与校验，容易搬出半截或损坏的文件，由此造成的损坏或丢失我们无能为力；系统备份的产物（如 `VeriFin(...).bak`）也不是本应用的备份，应用内无法导入；
-- 备份体系：手动 / 自动备份到本地目录（SAF）、**AES-GCM 加密**、**WebDAV 云备份**、zip 打包附件；打包、加密、写入、恢复全程流式并显示进度、可取消，附件再多也不会撑爆内存；
-- **账单导入**：平台优先（先选来源再选文件）导入**支付宝**（CSV）、**微信**（xlsx）、**薄荷记账**（CSV）、**一木记账**（.xls，账单与转账还款两个入口；账单还原一级 → 二级分类层级、导入逗号分隔的多标签与备注）、**钱迹**（完整明细 CSV，覆盖支出/收入/转账/还款/退款/报销：退款自动冲抵原支出；债务/借贷类记录不导入——本应用无债务功能）、**Tally 记账**（备份 zip，无损保留精确时间与收支/转账、二级分类，并一并导入各账户当前余额与类型、含无流水的账户）账单，以及本应用 **CSV 模板**；本应用 CSV 可导出/重新导入原币、账户币种、两端实际金额、本位币金额与派生汇率，外币缺率可在预览前手工补齐，导入汇率只有用户明确开启才保存。第三方软件与 CSV 模板各走独立解析入口；预览页可排除/编辑交易，并把待新建账户 / 分类 / 标签改名或映射到现有条目；
-- **应用锁**：6 位 PIN / 3×3 图案 + 生物解锁（密钥仅加盐哈希存本机，不保存任何生物特征数据）；启用后应用内容不可截屏、并从「最近任务」缩略图隐藏；
-- GitHub 自分发版支持应用内检查更新；APK 下载遇到锁屏断网、超时或网络切换时会保留进度并断点续传，完整后通过长度、摘要、包名和版本校验才打开系统安装器；
-- **备份范围**：JSON v4 备份包含账本本位币、账户币种、交易三层金额、周期汇率策略、本地汇率表、**按账本保存的分类与标签**及全部既有账目数据与偏好（含主题色、货币单位样式与单币种隐藏开关）；仍兼容 v1/v2/v3 旧备份——旧数字原样解释为待确认 CNY，旧备份里全局共享的分类/标签导入时按账本各展开一份，旧明文内嵌图片会流式转换导入。未加密备份为 zip，加密备份为流式加密容器（`.verifin`），两者都可导入旧格式。**不包含**机密凭证（应用锁、备份口令、WebDAV 与 AI 密钥）、设备本地设置（语言、导航样式、记账提醒、备份目录）和桌面小组件实例配置——换机后这些需重设（完整清单见 [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md)）；
-- 无账号、无自有服务器、无广告或统计遥测 SDK；隐私政策与用户协议应用内可查。
-
-### 🌍 体验
-
-- **中英双语**：跟随系统 / 简体中文 / English，即时切换；
-- 浅色 / 深色 / 跟随系统主题，紧凑型移动端工具风格；
-- Android **桌面小组件**提供快速记账、预算进度、收支趋势、净资产四个固定模板；每个实例各自选择账本与外观（跟随系统/浅色/深色），未配置时只显示一行「点击进入配置」，点一下即可完成设置。应用内预览与系统选择器预览都由桌面原生布局渲染。另有下拉快捷开关「快速记账」与每日**记账提醒**通知；
-- 新用户引导：建首个账户、设本月预算，几步上手。
-
-> 完整功能断言清单见 [`docs/product/acceptance-checklist.md`](docs/product/acceptance-checklist.md)。
-
-## 🛠 技术栈
-
-| 领域 | 方案 |
+| 模块 | 技术实现 |
 | --- | --- |
-| 框架 | Flutter 3 / Dart 3（仅 Android） |
-| 状态管理 | 单一 `ChangeNotifier` Controller + `InheritedNotifier` 注入，无第三方状态库 |
-| 数据存储 | `sqflite`（账目类，含版本迁移）+ `SharedPreferences`（偏好类） |
-| 国际化 | Flutter 官方 gen-l10n（ARB，中文模板 + 英文） |
-| 备份加密 | `cryptography`（纯 Dart AES-GCM + PBKDF2-SHA256） |
-| 云备份 | `dart:io HttpClient` 手写 WebDAV 客户端（PUT / GET / PROPFIND / MKCOL） |
-| 图表 | `fl_chart`（MIT），统一走 `lib/app/chart_painters.dart` 适配层：趋势 / 柱状（含分组双柱）/ 环形 / 预算进度环；纵轴刻度与参考线由适配层绘制以保证对齐，页面不直接依赖图表库 |
-| 平台能力 | `local_auth`（指纹解锁）、`flutter_local_notifications`（提醒）、`image_picker`（附件）、`home_widget` + Jetpack **Glance**（桌面小组件）、MethodChannel 桥（SAF / 磁贴 / 更新检查） |
-| 测试 | 按领域拆分的 widget / 单元测试（内存仓储）+ ffi 真实 SQLite、迁移矩阵、模型往返与仓储契约测试 |
-| CI / 发布 | GitHub Actions：PR / `main` 执行 format + analyze + test 并构建不交付的 debug APK 门禁；推 `vX.Y.Z` 标签构建 release APK/AAB 并创建 GitHub 预发布（真机验收后手动提升为正式版） |
+| 客户端 | Flutter 3.47.2、Dart 3，仅发布 Android |
+| 界面 | Material 3、`fl_chart`、`anchored_menu`，可选液态玻璃底栏 |
+| 数据 | SQLite（`sqflite`）、SharedPreferences、分层数据库迁移 |
+| 备份与安全 | AES-GCM + PBKDF2、流式 ZIP、WebDAV、Android SAF |
+| AI 与 OCR | OpenAI 兼容端点、原生 Tool Calls、端上 ML Kit OCR |
+| Android 集成 | Jetpack Glance 小组件、本地通知、快捷磁贴、MethodChannel |
 
-## 🚀 快速开始
+## 下载
 
-**个人 fork 用户**：使用 [Build APK (mine)](https://github.com/yaarb55646/verifin/actions/workflows/mine-build.yml) 的 Artifacts 安装包；本地验收构建方法见 [MY_FORK.md](MY_FORK.md)。[上游 Releases](https://github.com/LumiDesk/verifin/releases) 提供上游原版，不包含本 fork 的新增功能。
+可以从 [官网](https://verifin.talyra42.top/) 或 [GitHub Releases](https://github.com/LumiDesk/verifin/releases) 下载上游 Android 安装包。GitHub 分发版提供 `arm64-v8a` APK。
 
-**开发者**：
+本 fork 的新增功能只在个人构建中可用：[Build APK (mine)](https://github.com/yaarb55646/verifin/actions/workflows/mine-build.yml) 的 Artifacts 安装包，或按 [MY_FORK.md](MY_FORK.md) 在本地构建。上游 Releases 不包含这些功能。
+
+升级前请先在应用内导出备份，直接覆盖安装，不要卸载应用或清除应用数据。
+
+## 开发
 
 ```bash
-git -c http.sslBackend=openssl clone --branch mine https://github.com/yaarb55646/verifin.git
-cd verifin
-flutter pub get                      # 安装依赖（自动生成 l10n）
-flutter run -d <android-device-id> --flavor github  # Android 模拟器或真机预览
-flutter analyze && flutter test      # 静态检查 + 全部测试
+flutter pub get
+flutter run -d <android-device-id> --flavor diagnostic
+flutter analyze && flutter test
 ```
 
-真机调试、缺失工具自动安装和隔离验收见 [Android 开发说明](docs/dev/android-development.md)。
-界面只有一套已评审的排版（见 [统一设计规范](docs/design/design-system.md)），本地构建与发布包完全一致，不需要任何额外构建参数。
+开发环境使用 Flutter 3.47.2、JDK 17+（CI 固定 17）和 Android SDK（含 NDK 与 CMake）。日常调试必须使用独立数据目录的 `diagnostic` flavor；环境自检、真机验收和 release 检查见 [Android 开发](docs/dev/android-development.md)。个人 fork 的 Windows 工具链路径与个人构建命令见 [MY_FORK.md](MY_FORK.md)。
 
-Android 包名 `top.talyra42.verifin`。本地 APK 用于个人验收；正式发布仍由 GitHub CI 生成，须明确授权。
+正式 APK/AAB 由 CI 构建，本地 APK 不作为交付物。渠道差异、R8 和签名约束以 [技术决策](docs/dev/tech-decisions.md) 与工作流为准。
 
-## 📦 构建与发布
-
-- 个人分支使用 `.github/workflows/mine-build.yml` 手动构建，默认执行 format / analyze / test 后生成 release APK，Artifacts 保留 30 天；不会创建 GitHub Release 或修改版本号。`mine` 的普通 push 不触发该工作流。以下标签发布流程沿用上游约定。
-- 质量 CI（`.github/workflows/ci.yml`）在每个 PR 和每次 push 到 `main` 时执行格式检查、静态分析、全量测试、统一设计专项测试，并构建一个不交付的 `github` debug APK 作为 Kotlin / Manifest / 原生桥编译门禁。`integration_test/` 需要真实引擎，不在 CI 跑，按 [Android 开发](docs/dev/android-development.md) 在真机或本地模拟器手动执行。
-`flutter build apk --release --target-platform android-arm64 --flavor github` + `flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false` → 创建 GitHub **预发布**（APK 命名 `verifin-vX.Y.Z-arm64-短提交号.apk`，AAB 命名 `verifin-vX.Y.Z-短提交号.aab`；真机验收通过后由维护者手动提升为正式版与 Latest）。上游 APK 流程以 arm64 为目标，但本 fork 当前本地实测产物包含三种 ABI，应检查 APK 元数据，不能以命令参数或文件名保证单架构；AAB 由 Google Play 按设备分发。release 开启 R8 代码/资源裁剪，反射依赖点由 `android/app/proguard-rules.pro` 的 keep 规则保护。
-- **分发渠道 flavor（`github` / `play`）**：应用内自更新（下载 GitHub Release 安装包自动更新）只用于 GitHub 自分发的 `github` flavor；Google Play 政策禁止应用自下载 APK 更新，故 `play` flavor 移除 `REQUEST_INSTALL_PACKAGES` 权限并隐藏「检查更新」入口。**本地 Android 构建/运行需带 `--flavor github`。**
-- 发版前先提升并提交 `CHANGELOG.md` 的 `Unreleased`，确认位于 `main` 且工作树完全干净；随后运行 Dart 发布脚本（脚本会先校验本机 Flutter 版本与 CI 固定版本一致，不一致会直接失败）：
-
-  ```bash
-  dart run scripts/publish.dart patch   # Windows / macOS / Linux 通用；也支持 minor / major / 显式版本号
-  ```
-
-  脚本会更新版本号、提交、打标签并推送；推送标签触发 CI 构建 APK/AAB 并创建 GitHub **预发布**。
-- 真机验收通过后，在 GitHub 上把该 Release 提升为正式版并标记 Latest；**没被提升的预发布用 `dart run scripts/prune_prereleases.dart` 清理**（先 `--dry-run` 核对，默认保留 git 标签——标签是旧版本源码的唯一归档）。GitHub Releases 只保留正式版。
-- 仓库脚本都在 `scripts/` 下、用 Dart 编写（无需 bash/PowerShell）：`doctor.dart` 自检本机环境（Flutter 版本、Android SDK、JDK、adb、gh、工作树），`prune_prereleases.dart` 清理未提升的 GitHub 预发布，`clean.dart` 清理本地构建产物。
-- Release APK 使用项目内稳定 keystore（`android/app/verifin-release.jks`）签名，版本间可覆盖安装。
-
-## 📁 项目结构
-
-```text
-lib/
-├── main.dart            # 应用入口、根组件与生命周期编排
-├── pages/               # 页面模块（首页 / 资产 / 看板 / 我的 / 交易 / 预算…）
-├── app/                 # 模型、Controller、主题、图表、备份子系统、通用组件
-├── l10n/                # ARB 文案（zh 模板 + en）与生成的 AppLocalizations
-├── data/                # SQLite 数据层（建表迁移 + 仓储接口/实现）
-└── local_storage/       # 偏好类 KV 存储适配（SharedPreferences / 测试 stub）
-```
-
-## 📚 文档
+## 文档
 
 | 文档 | 内容 |
 | --- | --- |
-| [`MY_FORK.md`](MY_FORK.md) | 个人 fork 的功能、构建、验证与上游同步说明 |
-| [`docs/product/product.md`](docs/product/product.md) | 产品定位与数据策略 |
-| [`docs/design/ui-guidelines.md`](docs/design/ui-guidelines.md) | UI 规范（Header、弹窗、金额展示、图表交互） |
-| [`docs/product/acceptance-checklist.md`](docs/product/acceptance-checklist.md) | 功能验收清单 |
-| [`docs/product/automation.md`](docs/product/automation.md) | 自动化接入（Intent 接口，配 Tasker 示例） |
-| [`docs/dev/i18n-verification.md`](docs/dev/i18n-verification.md) | 多语言真机验证清单 |
-| [`docs/fixtures/sample-backup.json`](docs/fixtures/sample-backup.json) | 可导入的测试备份数据 |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | 贡献指南（上手路线 + 提交前检查清单） |
-| [`AGENTS.md`](AGENTS.md) | 贡献与 Agent 开发规范（含代码规范·组件化） |
-| [`docs/design/components.md`](docs/design/components.md) | 组件清单（写新组件前先查） |
-| [`docs/dev/tech-decisions.md`](docs/dev/tech-decisions.md) | 关键技术决策与选型理由 |
-| [`docs/dev/known-limitations.md`](docs/dev/known-limitations.md) | 已知限制与技术债台账 |
-| [`docs/dev/multi-currency.md`](docs/dev/multi-currency.md) | 多币种与离线汇率的口径与验收 |
-| [`docs/dev/feedback-system.md`](docs/dev/feedback-system.md) | 应用内轻提示组件、操作结果与队列规范 |
+| [产品文档](docs/product/product.md) | 产品定位、功能范围与当前边界 |
+| [验收清单](docs/product/acceptance-checklist.md) | 当前能力与 Android 验收项 |
+| [架构导览](docs/dev/architecture.md) | 分层、源码导航与文档权威顺序 |
+| [统一设计](docs/design/design-system.md) | 排版、材质、导航与交互规范 |
+| [组件注册表](docs/design/components.md) | 可复用组件、弹窗和纯函数入口 |
+| [技术决策](docs/dev/tech-decisions.md) | 数据口径、备份范围与关键技术取舍 |
+| [Android 开发](docs/dev/android-development.md) | 工具链、真机调试与交付检查 |
+| [贡献指南](CONTRIBUTING.md) | Issue 反馈与仓库维护约定 |
+| [个人分支维护手册](MY_FORK.md) | 个人 fork 的功能、构建、验证与上游同步 |
 
-## ❤️ 支持项目
-
-以下赞助说明与链接属于上游作者，本 fork 保留原项目说明。
-
-Veri Fin 是一款**完全免费、无广告、不商业化你数据**的应用，我不会为了「给赞助者奖励」而做会员特权或数据变现——那会违背这个项目的初衷。所以这里没有专属功能、没有解锁内容、没有实物，你赞助的就是这款干净的软件本身能继续活下去。
-
-如果它帮到了你，也认同「工具该服务用户、而不是收割用户」，欢迎请我喝杯咖啡 ☕，你的每一份支持都会变成 Veri Fin 的下一次更新。当然，继续免费用、点一颗 ⭐、提 Issue 反馈，同样是对我最好的支持。
-
-<a href="https://afdian.com/a/talyra42"><img src="https://img.shields.io/badge/在爱发电支持 Veri Fin-946ce6?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="在爱发电支持 Veri Fin" /></a>
-
-> 爱发电主页：https://afdian.com/a/talyra42
-
-通过爱发电支持的每一位，都记在应用内的「设置 → 关于 → 鸣谢」里——名单写在软件里，不联网拉取。
-
-## 📄 许可证
-
-Veri Fin 是自由软件，基于 **GNU 通用公共许可证 v3.0 或更高版本（GPL-3.0-or-later）** 发布，完整条款见 [`LICENSE`](LICENSE)。第三方组件保留各自许可证：应用依赖见 `pubspec.yaml`，本地 vendor 的源码在 `third_party/` 下各自附带上游 LICENSE 与差异说明（如 `third_party/jdenticon_dart` 为 MIT，与 GPL-3.0 兼容）。
-
-> Copyright (C) 2026 Talyra42
->
-> This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
->
-> This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
----
+## Star History
 
 <div align="center">
 
-如果这个项目对你有帮助，欢迎点一颗 ⭐，或到[爱发电](https://afdian.com/a/talyra42)请我喝杯咖啡 ☕
+<a href="https://star-history.com/#LumiDesk/verifin&Date">
+  <img src="https://api.star-history.com/svg?repos=LumiDesk/verifin&type=Date" alt="Veri Fin Star History" width="720" />
+</a>
 
 </div>
 
-开发界面前请阅读 [统一设计与交互规范](docs/design/design-system.md)。界面材质统一为不透明实色：卡片、导航、快捷按钮、菜单与弹层均无背景模糊、折射或渐变；底部导航另提供一个可选的「液态玻璃」样式（设置 → 外观 → 导航栏样式），是唯一例外。
+## 支持项目
 
-界面只有一个评审外观，本地与发布包一致，无需额外构建参数；Android 运行/构建指定 `--flavor github`。CI 与本地验收统一使用 Flutter **3.47.2**；真机命令见 [Android 开发与环境自动补齐](docs/dev/android-development.md)。正式更新仍须通过 CI 发版。
+Veri Fin 完全免费，也不通过广告或数据变现。如果它帮到了你，欢迎在 [爱发电](https://afdian.com/a/talyra42) 支持项目；点一个 Star 或提交 Issue，同样很有帮助。
 
-开发与评审仅使用 Android。规范入口为 [AGENTS.md](AGENTS.md)，架构导览见 [docs/dev/architecture.md](docs/dev/architecture.md)。
+## 许可证
+
+Veri Fin 基于 [GNU General Public License v3.0 or later](LICENSE) 发布。第三方组件和本地 vendor 源码保留各自的许可证。

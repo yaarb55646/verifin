@@ -17,6 +17,7 @@ import 'widget_projection.dart';
 int _dataRevision = 0;
 int _pushedRevision = -1;
 String? _pushedFingerprint;
+Future<void> _pushQueue = Future<void>.value();
 
 /// 标记账目类数据已变化（调用方负责 250ms 防抖）。
 void markWidgetDataChanged() => _dataRevision++;
@@ -26,6 +27,7 @@ void resetWidgetProjectionCache() {
   _dataRevision = 0;
   _pushedRevision = -1;
   _pushedFingerprint = null;
+  _pushQueue = Future<void>.value();
 }
 
 /// 把当前账本数据发布给桌面组件。
@@ -39,14 +41,29 @@ void resetWidgetProjectionCache() {
 Future<void> pushWidgetProjection(
   VeriFinController controller, {
   bool force = false,
+}) {
+  final request = _pushQueue.then(
+    (_) => _pushWidgetProjection(controller, force: force),
+  );
+  _pushQueue = request.catchError((Object error, StackTrace _) {});
+  return request;
+}
+
+Future<void> _pushWidgetProjection(
+  VeriFinController controller, {
+  required bool force,
 }) async {
   try {
     if (!force && _pushedRevision == _dataRevision) return;
+    // Capture the revision represented by this payload. If data changes while
+    // the platform writes are in flight, the next scheduled push must still
+    // run instead of being mistaken for already published data.
+    final revision = _dataRevision;
     final counts = await AppWidgetBridge.widgetInstanceCounts();
     if (!force && counts.isEmpty) return;
     final payload = _encodePayload(controller);
-    if (!force && payload.fingerprint == _pushedFingerprint) {
-      _pushedRevision = _dataRevision;
+    if (payload.fingerprint == _pushedFingerprint) {
+      _pushedRevision = revision;
       return;
     }
     await HomeWidget.saveWidgetData<String>(
@@ -77,7 +94,7 @@ Future<void> pushWidgetProjection(
         ], qualifiedAndroidName: template.providerComponent),
     ]);
     _pushedFingerprint = payload.fingerprint;
-    _pushedRevision = _dataRevision;
+    _pushedRevision = revision;
   } on MissingPluginException {
     // 桌面与纯 widget 测试环境没有 home_widget 通道，静默跳过。
   } on Object catch (error) {

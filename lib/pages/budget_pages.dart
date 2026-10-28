@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -485,7 +486,7 @@ class _BudgetOverviewPageState extends State<BudgetOverviewPage> {
             controller.clearCategoryBudgetOverride(_month, category.id),
       );
       rows.add(
-        VeriAnchoredMenuAnchor(
+        AnchoredMenuAnchor(
           entries: actionEntries,
           semanticLabel: category.label,
           builder: (context, openMenu, menuOpen) => _CategoryBudgetRow(

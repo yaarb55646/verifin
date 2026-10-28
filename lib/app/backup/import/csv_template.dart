@@ -26,6 +26,9 @@ const List<String> csvTemplateColumns = <String>[
   '汇率（1原币=X本位币）',
   '账户币种',
   '转入账户币种',
+  '记录编号',
+  '原支出编号',
+  '到账日期',
 ];
 
 /// 表头列名 → 列键的别名。CSV 模板列 + 可选的 子分类/标签/手续费/退款（规范中文列名）。
@@ -49,14 +52,19 @@ const Map<String, List<String>> _headerAliases = <String, List<String>>{
   'rateToBase': <String>['汇率（1原币=x本位币）'],
   'accountCurrency': <String>['账户币种'],
   'toAccountCurrency': <String>['转入账户币种'],
+  'recordId': <String>['记录编号'],
+  'refundOfRecordId': <String>['原支出编号'],
+  'settledAt': <String>['到账日期'],
 };
 
 /// CSV 模板内容（带表头与示例行），用户下载后填写再导入。
 String transactionCsvTemplate() {
   return '${csvTemplateColumns.join(',')}\n'
-      '2026-01-05,支出,23.50,餐饮,现金,,午饭,CNY,23.50,23.50,,,CNY,\n'
-      '2026-01-05,收入,100,工资,美元账户,,奖金,USD,100,720,,7.2,USD,\n'
-      '2026-01-06,转账,500,,现金,美元账户,换汇,CNY,500,0,70,,CNY,USD\n';
+      '2026-01-05,支出,23.50,餐饮,现金,,午饭,CNY,23.50,23.50,,,CNY,,expense-1,,\n'
+      '2026-01-05,收入,100,工资,美元账户,,奖金,USD,100,720,,7.2,USD,,,,\n'
+      '2026-01-06,转账,500,,现金,美元账户,换汇,CNY,500,0,70,,CNY,USD,,,\n'
+      '2026-01-06,退款,10,餐饮,现金,,部分退款,CNY,10,10,,,CNY,,'
+      'refund-1,expense-1,2026-01-06\n';
 }
 
 const List<String> transactionCsvExportColumns = <String>[
@@ -78,9 +86,14 @@ const List<String> transactionCsvExportColumns = <String>[
   '汇率（1原币=X本位币）',
   '账户币种',
   '转入账户币种',
+  '记录编号',
+  '原支出编号',
+  '到账日期',
 ];
 
-/// 导出可重新识别币种语义的交易 CSV。退款子条目折叠回原支出的退款列，避免重复；
+/// 导出可重新识别币种语义的交易 CSV。退款作为独立行紧跟原支出，通过
+/// `记录编号` / `原支出编号` 关联，并保留到账账户、到账日期与三层实际金额；
+/// 旧文件只有原支出上的 `退款` 汇总列时仍按旧口径合成为已到账退款。
 /// 完整备份/恢复仍以 JSON v2 为准。
 String transactionCsvExport({
   required List<LedgerEntry> entries,
@@ -97,6 +110,58 @@ String transactionCsvExport({
   };
   final tagsById = <String, Tag>{for (final tag in tags) tag.id: tag};
   final rows = <List<String>>[transactionCsvExportColumns];
+  final refundsByExpense = <String, List<LedgerEntry>>{};
+  for (final entry in entries.where(
+    (entry) => entry.type == EntryType.refund,
+  )) {
+    final parentId = entry.refundOf;
+    if (parentId == null || parentId.isEmpty) {
+      continue;
+    }
+    refundsByExpense.putIfAbsent(parentId, () => <LedgerEntry>[]).add(entry);
+  }
+  for (final refunds in refundsByExpense.values) {
+    refunds.sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
+  }
+
+  List<String> refundRow(LedgerEntry refund) {
+    final category = categoriesById[refund.categoryId];
+    final parent = category?.parentId == null
+        ? null
+        : categoriesById[category!.parentId];
+    final account = accountsById[refund.accountId];
+    return <String>[
+      _csvDate(refund.occurredAt),
+      '退款',
+      formatCurrencyNumber(refund.amount, refund.currencyCode),
+      parent?.label ?? category?.label ?? '',
+      parent == null ? '' : category?.label ?? '',
+      account?.name ?? '',
+      '',
+      refund.note,
+      '',
+      '',
+      refund.tagIds
+          .map((id) => tagsById[id]?.label)
+          .whereType<String>()
+          .join('，'),
+      refund.currencyCode,
+      account == null || refund.accountAmount == null
+          ? ''
+          : formatCurrencyNumber(refund.accountAmount!, account.currencyCode),
+      formatCurrencyNumber(refund.baseAmount, baseCurrencyCode),
+      '',
+      // 退款的本位币金额是实际到账事实，不反推汇率，避免导入时重算或生成候选汇率。
+      '',
+      account?.currencyCode ?? '',
+      '',
+      refund.id,
+      refund.refundOf ?? '',
+      refund.settledAt == null ? '' : _csvDate(refund.settledAt!),
+    ];
+  }
+
+  final exportedRefunds = <String>{};
   for (final entry in entries.where(
     (entry) => entry.type != EntryType.refund,
   )) {
@@ -104,8 +169,11 @@ String transactionCsvExport({
     final parent = category?.parentId == null
         ? null
         : categoriesById[category!.parentId];
+    final explicitRefunds = refundsByExpense[entry.id] ?? const <LedgerEntry>[];
     final refundedOriginal =
-        entry.type == EntryType.expense && entry.baseAmount > 0
+        explicitRefunds.isEmpty &&
+            entry.type == EntryType.expense &&
+            entry.baseAmount > 0
         ? normalizeCurrencyAmount(
             entry.refundedBaseAmount / entry.baseAmount * entry.amount,
             entry.currencyCode,
@@ -162,7 +230,23 @@ String transactionCsvExport({
       derivedRate == null ? '' : formatRateValueExact(derivedRate),
       accountsById[entry.accountId]?.currencyCode ?? '',
       accountsById[entry.toAccountId]?.currencyCode ?? '',
+      entry.id,
+      '',
+      '',
     ]);
+    for (final refund in explicitRefunds) {
+      rows.add(refundRow(refund));
+      exportedRefunds.add(refund.id);
+    }
+  }
+  // 防御性导出：正常数据里退款一定挂在本账本原支出上；若调用方传入孤立退款，
+  // 仍保留其原支出编号，让导入阶段明确报错而不是静默丢掉。
+  for (final refund in entries.where(
+    (entry) => entry.type == EntryType.refund,
+  )) {
+    if (exportedRefunds.add(refund.id)) {
+      rows.add(refundRow(refund));
+    }
   }
   return rows.map((row) => row.map(_csvCell).join(',')).join('\n');
 }
@@ -203,7 +287,8 @@ void validateCsvTemplateHeader(List<List<String>> rows) {
     throw FormatException(
       '表头包含非模板列：${unknown.join('、')}。'
       '请使用本应用「下载 CSV 模板」的表头（日期、类型、金额、分类、账户、转入账户、备注，'
-      '可选 子分类、标签、币种、账户金额、本位币金额、转入金额、汇率、账户币种），'
+      '可选 子分类、标签、币种、账户金额、本位币金额、转入金额、汇率、账户币种、'
+      '记录编号、原支出编号、到账日期），'
       '其他记账软件请用对应的导入入口',
     );
   }
@@ -325,6 +410,9 @@ ParsedImport parseCsvTemplateRows(List<List<String>> rows) {
       baseAmount: cell(row, 'baseAmount'),
       toAccountAmount: cell(row, 'toAccountAmount'),
       rateToBase: cell(row, 'rateToBase'),
+      recordId: cell(row, 'recordId'),
+      refundOfRecordId: cell(row, 'refundOfRecordId'),
+      settledAt: cell(row, 'settledAt'),
       tags: splitTagLabels(cell(row, 'tags')),
       sourceLine: line,
       onError: (message) =>

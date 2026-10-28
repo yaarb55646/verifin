@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../app/attachment_picker.dart';
 import '../app/attachments/attachment_store.dart';
-import '../app/common_widgets.dart';
 import '../app/models.dart';
 import '../l10n/app_localizations.dart';
 
@@ -87,16 +87,16 @@ class AttachmentsEditor extends StatelessWidget {
             itemBuilder: (context, index) {
               if (index == attachments.length) {
                 final l10n = AppLocalizations.of(context);
-                return VeriAnchoredMenuAnchor(
-                  entries: <VeriMenuEntry>[
-                    VeriMenuItem(
+                return AnchoredMenuAnchor(
+                  entries: <AnchoredMenuEntry>[
+                    AnchoredMenuItem(
                       id: 'attachment_camera',
                       icon: Icons.photo_camera_outlined,
                       title: l10n.attachTakePhoto,
                       onPressed: () =>
                           unawaited(_add(context, fromCamera: true)),
                     ),
-                    VeriMenuItem(
+                    AnchoredMenuItem(
                       id: 'attachment_gallery',
                       icon: Icons.photo_library_outlined,
                       title: l10n.attachFromGallery,

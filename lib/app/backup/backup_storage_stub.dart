@@ -79,6 +79,8 @@ Future<StreamedWriteReceipt?> saveCacheFileToDownloadsFromCache({
 
 Future<void> deleteCacheFile(String path) async {}
 
+Future<int?> availableBackupStorageBytes(String path) async => null;
+
 Future<String> hashFileSha256(String path) async {
   throw UnsupportedError('当前平台暂不支持文件哈希');
 }

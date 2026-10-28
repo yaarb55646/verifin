@@ -16,7 +16,10 @@ class AppWidgetBridge {
 
   static void clearRouteHandler() {
     _routeHandler = null;
+    _ensureInboundDispatcher();
   }
+
+  static bool get hasRouteHandler => _routeHandler != null;
 
   static Future<void> handleRoute(Map<String, Object?> args) async {
     await _routeHandler?.call(args);

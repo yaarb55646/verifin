@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
@@ -845,7 +846,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     required Widget Function(VoidCallback openMenu) builder,
   }) {
     final l10n = AppLocalizations.of(context);
-    return VeriAnchoredChoice<TransactionTimeFilter>(
+    return AnchoredMenuChoice<TransactionTimeFilter>(
       values: TransactionTimeFilter.values,
       selected: _timeFilter,
       idOf: (value) => 'transaction_time_${value.name}',
@@ -864,7 +865,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   Widget _buildSortOrderAnchor() {
     final l10n = AppLocalizations.of(context);
-    return VeriAnchoredChoice<TransactionSortOrder>(
+    return AnchoredMenuChoice<TransactionSortOrder>(
       values: TransactionSortOrder.values,
       selected: _sortOrder,
       idOf: (value) => 'transaction_sort_${value.name}',
@@ -1425,7 +1426,7 @@ class _TransactionSearchFilters extends StatelessWidget {
                     icon: tagSelected ? Icons.label : Icons.label_outline,
                     onTap: onPickTag,
                   ),
-                VeriAnchoredChoice<ReimbursementFilter>(
+                AnchoredMenuChoice<ReimbursementFilter>(
                   values: ReimbursementFilter.values,
                   selected: reimbursementFilter,
                   idOf: (value) => 'reimbursement_${value.name}',
@@ -1446,7 +1447,7 @@ class _TransactionSearchFilters extends StatelessWidget {
                     onTap: openMenu,
                   ),
                 ),
-                VeriAnchoredChoice<BudgetScopeFilter>(
+                AnchoredMenuChoice<BudgetScopeFilter>(
                   values: BudgetScopeFilter.values,
                   selected: budgetScopeFilter,
                   idOf: (value) => 'budget_scope_${value.name}',

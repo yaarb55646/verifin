@@ -273,4 +273,15 @@ class AppStorageBridge {
       return false;
     }
   }
+
+  /// 返回 [path] 所在文件系统的可用字节数；平台不支持时返回 null。
+  static Future<int?> availableBytes(String path) async {
+    try {
+      return await _channel.invokeMethod<int>('availableBytes', {'path': path});
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
 }

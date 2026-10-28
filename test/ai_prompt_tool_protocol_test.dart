@@ -1,6 +1,11 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/ai/ai_error.dart';
+import 'package:verifin/app/ai/ai_ledger_snapshot.dart';
 import 'package:verifin/app/ai/ai_prompt_tool_protocol.dart';
+import 'package:verifin/app/ai/ai_query_tool.dart';
+import 'package:verifin/l10n/app_localizations.dart';
 
 void main() {
   const tools = <String>{'summary', 'queryTransactions'};
@@ -66,6 +71,23 @@ void main() {
           AiErrorCode.badResponse,
         ),
       ),
+    );
+  });
+
+  test('system prompt follows the active UI language', () {
+    AiToolContext context(Locale locale) => AiToolContext(
+      ledger: AiLedgerSnapshot.forTesting(bookId: 'b', balanceOf: (_) => 0),
+      now: DateTime(2026, 10, 18),
+      l10n: lookupAppLocalizations(locale),
+    );
+
+    expect(
+      buildAgentSystemPrompt(context(const Locale('zh'))),
+      contains('简体中文 Markdown'),
+    );
+    expect(
+      buildAgentSystemPrompt(context(const Locale('en'))),
+      contains('English Markdown'),
     );
   });
 }

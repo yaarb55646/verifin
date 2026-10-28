@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
+import 'image_picker_cleanup_io.dart';
+
 /// Android/iOS 支持相机拍摄与相册选择图片附件。
 const bool attachmentPickingSupported = true;
 
@@ -19,9 +21,13 @@ Future<Uint8List?> pickAttachmentBytes({required bool fromCamera}) async {
   if (picked == null) {
     return null;
   }
-  final bytes = await picked.readAsBytes();
-  // 解码/缩放/编码是纯 CPU 重活，放到后台 isolate 避免掉帧。
-  return compute(_compressToJpeg, bytes);
+  try {
+    final bytes = await picked.readAsBytes();
+    // 解码/缩放/编码是纯 CPU 重活，放到后台 isolate 避免掉帧。
+    return await compute(_compressToJpeg, bytes);
+  } finally {
+    await discardImagePickerCopy(picked);
+  }
 }
 
 Uint8List? _compressToJpeg(Uint8List bytes) {

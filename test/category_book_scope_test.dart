@@ -92,7 +92,7 @@ void main() {
     );
 
     // 在旅行账本改名/换图标，不影响日常账本。
-    controller.renameCategory(diningInTravel.id, '美食');
+    await controller.renameCategory(diningInTravel.id, '美食');
     controller.updateCategoryIcon(diningInTravel.id, 'coffee');
     expect(_categoryIn(controller, travelBookId, 'dining').label, '美食');
     expect(_categoryIn(controller, defaultBookId, 'dining').label, '餐饮');
@@ -162,6 +162,58 @@ void main() {
     controller.dispose();
   });
 
+  test('同级分类重排只影响当前账本', () async {
+    final controller = await makeController();
+    final defaultBookId = controller.activeBook.id;
+    final defaultOrder = controller
+        .categoriesForBook(defaultBookId)
+        .where(
+          (category) =>
+              category.type == EntryType.expense && category.parentId == null,
+        )
+        .map((category) => category.id)
+        .toList();
+
+    controller.addLedgerBook('旅行');
+    final travelBookId = controller.activeBook.id;
+    final travelOrder = controller
+        .categoriesForBook(travelBookId)
+        .where(
+          (category) =>
+              category.type == EntryType.expense && category.parentId == null,
+        )
+        .map((category) => category.id)
+        .toList();
+    controller.switchLedgerBook(defaultBookId);
+
+    controller.reorderCategories(EntryType.expense, null, 0, 1);
+
+    final reorderedDefault = controller
+        .categoriesForBook(defaultBookId)
+        .where(
+          (category) =>
+              category.type == EntryType.expense && category.parentId == null,
+        )
+        .map((category) => category.id)
+        .toList();
+    expect(reorderedDefault.take(2), <String>[
+      defaultOrder[1],
+      defaultOrder[0],
+    ]);
+    expect(
+      controller
+          .categoriesForBook(travelBookId)
+          .where(
+            (category) =>
+                category.type == EntryType.expense && category.parentId == null,
+          )
+          .map((category) => category.id)
+          .toList(),
+      travelOrder,
+    );
+    controller.dispose();
+  });
+
   test('删除标签只摘掉本账本交易上的引用', () async {
     final controller = await makeController();
     final defaultBookId = controller.activeBook.id;
@@ -214,7 +266,7 @@ void main() {
     expect(controller.categoriesForBook(travelBookId), isNotEmpty);
     expect(controller.tagsForBook(travelBookId), isNotEmpty);
 
-    expect(controller.deleteLedgerBook(travelBookId), isTrue);
+    expect(await controller.deleteLedgerBook(travelBookId), isTrue);
     expect(controller.categoriesForBook(travelBookId), isEmpty);
     expect(controller.tagsForBook(travelBookId), isEmpty);
     // 默认账本的分类与标签保持原样。
@@ -319,7 +371,7 @@ void main() {
     source.addLedgerBook('旅行');
     final travelBookId = source.activeBook.id;
     final travelDining = source.categoryByKey(travelBookId, 'dining')!;
-    source.renameCategory(travelDining.id, '美食');
+    await source.renameCategory(travelDining.id, '美食');
     final backup = source.exportDataJson();
 
     final target = await createTestController(

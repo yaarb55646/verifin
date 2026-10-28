@@ -4,46 +4,58 @@ import 'ai_error.dart';
 
 /// 把一个完整 SSE round 的结构化增量归并为补全结果。
 AiCompletionResult collectNativeCompletion(Iterable<AiCompletionEvent> events) {
-  final content = StringBuffer();
-  final reasoning = StringBuffer();
-  final calls = <int, _ToolCallBuilder>{};
-  var finishReason = AiFinishReason.other;
-
+  final accumulator = AiNativeCompletionAccumulator();
   for (final event in events) {
+    accumulator.add(event);
+  }
+  return accumulator.build();
+}
+
+/// 增量归并一轮原生 SSE。Agent 可在正文增量到达时立即下发，同时继续累积
+/// Tool Call 分片与结束原因。
+class AiNativeCompletionAccumulator {
+  final StringBuffer _content = StringBuffer();
+  final StringBuffer _reasoning = StringBuffer();
+  final Map<int, _ToolCallBuilder> _calls = <int, _ToolCallBuilder>{};
+  AiFinishReason _finishReason = AiFinishReason.other;
+
+  void add(AiCompletionEvent event) {
     switch (event) {
       case AiContentDelta():
-        content.write(event.text);
+        _content.write(event.text);
       case AiReasoningDelta():
-        reasoning.write(event.text);
+        _reasoning.write(event.text);
       case AiToolCallDelta():
-        calls.putIfAbsent(event.index, _ToolCallBuilder.new).append(event);
+        _calls.putIfAbsent(event.index, _ToolCallBuilder.new).append(event);
       case AiCompletionFinished():
-        finishReason = event.reason;
+        _finishReason = event.reason;
       case AiStreamDone():
         break;
     }
   }
 
-  final toolCalls = <AiNativeToolCall>[];
-  for (final index in calls.keys.toList()..sort()) {
-    final call = calls[index]!.build();
-    if (call == null) {
-      throw AiException(
-        AiErrorCode.badResponse,
-        detail: 'incomplete tool call',
-      );
+  AiCompletionResult build() {
+    final toolCalls = <AiNativeToolCall>[];
+    for (final index in _calls.keys.toList()..sort()) {
+      final call = _calls[index]!.build();
+      if (call == null) {
+        throw AiException(
+          AiErrorCode.badResponse,
+          detail: 'incomplete tool call',
+        );
+      }
+      toolCalls.add(call);
     }
-    toolCalls.add(call);
+    if (_finishReason == AiFinishReason.toolCalls && toolCalls.isEmpty) {
+      throw AiException(AiErrorCode.badResponse, detail: 'missing tool call');
+    }
+    return AiCompletionResult(
+      content: _content.toString(),
+      reasoningContent: _reasoning.toString(),
+      toolCalls: toolCalls,
+      finishReason: _finishReason,
+    );
   }
-  if (finishReason == AiFinishReason.toolCalls && toolCalls.isEmpty) {
-    throw AiException(AiErrorCode.badResponse, detail: 'missing tool call');
-  }
-  return AiCompletionResult(
-    content: content.toString(),
-    reasoningContent: reasoning.toString(),
-    toolCalls: toolCalls,
-    finishReason: finishReason,
-  );
 }
 
 class _ToolCallBuilder {

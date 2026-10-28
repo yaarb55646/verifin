@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'image_picker_cleanup_io.dart';
+
 /// Android/iOS 支持端上离线 OCR（ML Kit 中文模型，兼识别拉丁字符）。
 /// 图片不出设备：识别只在本地进行，后续只把识别出的文本交给用户自配的 AI 端点。
 const bool screenshotRecognitionSupported = true;
@@ -14,6 +16,10 @@ Future<String?> pickScreenshotPath() async {
   final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
   return picked?.path;
 }
+
+/// 删除相册选择器留在应用缓存中的副本；用户相册原图不受影响。
+Future<void> discardPickedScreenshot(String? path) =>
+    discardImagePickerPath(path);
 
 /// 识别本地图片文件中的文字，按识别顺序拼接为多行文本。
 Future<String> recognizeTextFromPath(String path) async {

@@ -752,10 +752,25 @@ class SqliteLedgerRepository implements LedgerRepository {
     if (diff.fullReplace) {
       await txn.delete(table);
     }
-    final batch = txn.batch();
     for (final row in diff.upsert) {
-      batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
+      // 用主键 UPDATE 更新已有行，只有确实不存在时才 INSERT。不能使用
+      // INSERT OR REPLACE：它会把其它唯一索引冲突也当成“替换”，静默删除
+      // 同名的分类/标签行。
+      final updated = await txn.update(
+        table,
+        row,
+        where: 'id = ?',
+        whereArgs: <Object?>[row['id']],
+      );
+      if (updated == 0) {
+        await txn.insert(
+          table,
+          row,
+          conflictAlgorithm: ConflictAlgorithm.abort,
+        );
+      }
     }
+    final batch = txn.batch();
     for (final id in diff.deleteIds) {
       batch.delete(table, where: 'id = ?', whereArgs: <Object>[id]);
     }
@@ -797,7 +812,7 @@ class SqliteLedgerRepository implements LedgerRepository {
     await txn.delete(table);
     final batch = txn.batch();
     for (final row in rowList) {
-      batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(table, row, conflictAlgorithm: ConflictAlgorithm.abort);
     }
     await batch.commit(noResult: true);
   }

@@ -229,7 +229,7 @@ class _BudgetSettingsPageState extends State<BudgetSettingsPage> {
         }),
       );
       rows.add(
-        VeriAnchoredMenuAnchor(
+        AnchoredMenuAnchor(
           entries: actionEntries,
           semanticLabel: category.label,
           builder: (context, openMenu, menuOpen) => _CategoryBudgetRow(

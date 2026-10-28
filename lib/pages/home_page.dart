@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -971,8 +972,13 @@ class _IncomeExpenseStatsPageState extends State<IncomeExpenseStatsPage> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  VeriAnchoredChoice<EntryType>(
-                    values: EntryType.userSelectable,
+                  AnchoredMenuChoice<EntryType>(
+                    // 收支统计只展示收支口径；转账不是收入也不是支出，留在
+                    // 交易列表和转账详情里查看，不在这里与收支并列。
+                    values: const <EntryType>[
+                      EntryType.expense,
+                      EntryType.income,
+                    ],
                     selected: _type,
                     idOf: (value) => 'stats_type_${value.name}',
                     labelOf: (value) => value.label(l10n),

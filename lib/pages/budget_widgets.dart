@@ -810,22 +810,22 @@ class _CategoryBudgetRow extends StatelessWidget {
   }
 }
 
-List<VeriMenuEntry> _categoryBudgetActionEntries({
+List<AnchoredMenuEntry> _categoryBudgetActionEntries({
   required BuildContext context,
   required bool hasBudget,
   required VoidCallback onSet,
   required VoidCallback onClear,
 }) {
   final l10n = AppLocalizations.of(context);
-  return <VeriMenuEntry>[
-    VeriMenuItem(
+  return <AnchoredMenuEntry>[
+    AnchoredMenuItem(
       id: 'category_budget_set',
       icon: Icons.edit_outlined,
       title: l10n.setLabel,
       onPressed: onSet,
     ),
     if (hasBudget)
-      VeriMenuItem(
+      AnchoredMenuItem(
         id: 'category_budget_clear',
         icon: Icons.delete_outline,
         title: l10n.budgetClearAction,

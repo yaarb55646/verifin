@@ -208,6 +208,14 @@ Future<void> deleteCacheFile(String path) async {
   }
 }
 
+/// 备份解包前检查目标文件系统剩余空间；桌面端没有统一 API，返回 null 跳过预检。
+Future<int?> availableBackupStorageBytes(String path) async {
+  if (Platform.isAndroid) {
+    return AppStorageBridge.availableBytes(path);
+  }
+  return null;
+}
+
 /// 分块计算文件 SHA-256（写入校验与损坏检测用），内存与文件体积无关。
 Future<String> hashFileSha256(String path) async {
   final digest = await sha256.bind(File(path).openRead()).first;

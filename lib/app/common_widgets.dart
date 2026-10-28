@@ -13,6 +13,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../l10n/app_localizations.dart';
 import 'account_icon_assets.dart';
+import 'amount_format.dart';
 import 'app_theme.dart';
 import 'category_tree.dart';
 import 'credit_card.dart';
@@ -25,7 +26,6 @@ import 'models.dart';
 part 'common_widgets_display.dart';
 part 'common_widgets_forms.dart';
 part 'common_widgets_heatmap.dart';
-part 'common_widgets_menu.dart';
 part 'common_widgets_panels.dart';
 part 'common_widgets_scaffold.dart';
 part 'common_widgets_transactions.dart';

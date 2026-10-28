@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:verifin/app/app_lock.dart';
 import 'package:verifin/app/native_widget_preview.dart';
 import 'package:verifin/app/widgets/widget_catalog.dart';
 import 'package:verifin/app/widgets/widget_instance_config.dart';
 import 'package:verifin/pages/widget_configuration_page.dart';
+import 'package:verifin/pages/app_lock_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -17,10 +19,12 @@ void main() {
 
   final calls = <String>[];
   final saved = <String, String>{};
+  var bookReads = 0;
 
   void mockChannels({String books = booksJson, String? config}) {
     calls.clear();
     saved.clear();
+    bookReads = 0;
     if (config != null) saved['${widgetConfigPrefix}42'] = config;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(homeWidget, (call) async {
@@ -29,7 +33,10 @@ void main() {
               return '42';
             case 'getWidgetData':
               final key = (call.arguments as Map)['id'] as String;
-              if (key == widgetBooksKey) return books;
+              if (key == widgetBooksKey) {
+                bookReads += 1;
+                return books;
+              }
               return saved[key];
             case 'saveWidgetData':
               final args = call.arguments as Map;
@@ -164,5 +171,30 @@ void main() {
 
     expect(find.byKey(const Key('widget_save')), findsNothing);
     expect(find.textContaining('无法读取此小组件'), findsOneWidget);
+  });
+
+  testWidgets('启用应用锁时先验证，解锁前不读取账本', (tester) async {
+    mockChannels();
+    final lock = AppLockConfig.fromSecret(
+      kind: AppLockKind.pin,
+      secret: '123456',
+    );
+    await tester.pumpWidget(WidgetConfigurationApp(appLock: lock));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppLockScreen), findsOneWidget);
+    expect(find.byKey(const Key('widget_save')), findsNothing);
+    expect(find.byKey(const Key('app_lock_forgot')), findsNothing);
+    expect(bookReads, 0);
+
+    for (final digit in '123456'.split('')) {
+      await tester.tap(find.byKey(Key('pin_key_$digit')));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppLockScreen), findsNothing);
+    expect(find.byKey(const Key('widget_book')), findsOneWidget);
+    expect(bookReads, 1);
   });
 }

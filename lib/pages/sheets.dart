@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:month_picker_dialog/month_picker_dialog.dart' as month_picker;
 
 import '../app/app_theme.dart';
+import '../app/ai/ai_model_catalog.dart';
 import '../app/common_widgets.dart';
 import '../app/category_tree.dart';
 import '../app/currency_catalog.dart';
@@ -18,6 +19,8 @@ import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'account_icon_picker.dart';
+import 'ai_model_picker.dart';
+import 'ai_provider_picker.dart';
 
 /// 统一的底部弹层外壳：实色表面 + 顶部圆角 + 内置拖拽把手。
 Future<T?> showVeriModalSheet<T>({
@@ -1534,6 +1537,30 @@ Future<String?> showAccountIconSheet({
   required String selected,
 }) {
   return showAccountIconPickerSheet(context: context, selected: selected);
+}
+
+/// AI 渠道选择器稳定入口；具体宫格与搜索实现在 `ai_provider_picker.dart`。
+Future<String?> showAiProviderSelectionSheet({
+  required BuildContext context,
+  required String selected,
+}) {
+  return showAiProviderPickerSheet(
+    context: context,
+    selectedProviderId: selected,
+  );
+}
+
+/// AI 模型选择器稳定入口；具体搜索与分组实现在 `ai_model_picker.dart`。
+Future<String?> showAiModelSelectionSheet({
+  required BuildContext context,
+  required List<AiModelInfo> models,
+  required String selectedModel,
+}) {
+  return showAiModelPickerSheet(
+    context: context,
+    models: models,
+    selectedModel: selectedModel,
+  );
 }
 
 /// 分类图标常用 emoji 快选（覆盖餐饮/出行/居家/娱乐/人情/理财等常见分类）。

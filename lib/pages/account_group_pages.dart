@@ -157,7 +157,7 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
                                       sorting: true,
                                     );
                                   } else {
-                                    row = VeriAnchoredMenuAnchor(
+                                    row = AnchoredMenuAnchor(
                                       entries: _groupMenuEntries(
                                         group,
                                         accountCount,
@@ -294,17 +294,20 @@ class _AccountGroupsPageState extends State<AccountGroupsPage> {
     }
   }
 
-  List<VeriMenuEntry> _groupMenuEntries(AccountGroup group, int accountCount) {
+  List<AnchoredMenuEntry> _groupMenuEntries(
+    AccountGroup group,
+    int accountCount,
+  ) {
     final l10n = AppLocalizations.of(context);
-    return <VeriMenuEntry>[
-      VeriMenuItem(
+    return <AnchoredMenuEntry>[
+      AnchoredMenuItem(
         id: 'account_group_rename',
         icon: Icons.drive_file_rename_outline,
         title: l10n.commonRename,
         onPressed: () async => _showGroupNameDialog(context, groupId: group.id),
       ),
-      const VeriMenuDivider(),
-      VeriMenuItem(
+      const AnchoredMenuDivider(),
+      AnchoredMenuItem(
         id: 'account_group_delete',
         icon: Icons.delete_outline,
         title: l10n.commonDelete,

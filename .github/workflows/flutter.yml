@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   checks:
@@ -66,17 +66,44 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # 固定到真机验收过的引擎版本；两渠道都带 UNIFIED_DESIGN_PREVIEW，
-      # 保证发布包与已评审外观一致（该参数只控制布局密度，与材质无关）。
-      - name: Verify release design flows
+      # 发布包与已评审外观同源，不再需要额外构建参数；先跑设计契约测试。
+      - name: Verify design flows
         run: flutter test test/design_consistency_test.dart test/page_smoke_test.dart test/home_density_test.dart test/anchored_menu_test.dart test/material_stability_test.dart test/navigation_settings_test.dart
 
       - name: Build release APK (github flavor)
         # GitHub 自分发包：github flavor，保留应用内一键自更新（REQUEST_INSTALL_PACKAGES）。
-        # 只构建 arm64-v8a：2019 年后的安卓机几乎全是 arm64，一个包覆盖 99%+ 设备，
-        # 相比 universal（打包 armeabi-v7a/arm64/x86_64 三套原生库）体积约减半。
+        # --target-platform 只控制 Flutter 自身的 ABI；--split-per-abi 才会同时剔除
+        # 第三方 AAR（如 ML Kit）带入的 x86_64 / armeabi-v7a 原生库。
+        # ABI split 默认会改写 versionCode；这里关闭该偏移，保持与 Play AAB 一致，
+        # 避免 GitHub / Play 渠道切换时被系统判定为降级安装。
         # 极老的 32 位机型装不了；这条限制只记录在这里与 README，不再写进 Release 说明。
-        run: flutter build apk --release --target-platform android-arm64 --flavor github
+        env:
+          JAVA_TOOL_OPTIONS: -Dorg.gradle.project.force-version-code-ignoring-abi=true
+        run: flutter build apk --release --target-platform android-arm64 --split-per-abi --flavor github
+
+      - name: Verify release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-arm64-v8a-github-release.apk
+          test -f "$apk"
+          if unzip -l "$apk" | grep -Eq ' lib/(x86_64|armeabi-v7a)/'; then
+            echo "::error::Release APK contains non-arm64 native libraries"
+            exit 1
+          fi
+          if ! unzip -l "$apk" | grep -q ' lib/arm64-v8a/libflutter.so'; then
+            echo "::error::Release APK is missing arm64 Flutter native libraries"
+            exit 1
+          fi
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
+          aapt2="$(find "$sdk_root/build-tools" -name aapt2 -type f | sort -V | tail -n 1)"
+          test -n "$aapt2"
+          actual_version_code="$("$aapt2" dump badging "$apk" | sed -n "s/.*versionCode='\([0-9][0-9]*\)'.*/\1/p" | head -n 1)"
+          expected_version_code="$(awk -F+ '/^version: /{gsub(/[[:space:]]/, "", $2); print $2}' pubspec.yaml)"
+          if [ "$actual_version_code" != "$expected_version_code" ]; then
+            echo "::error::Release APK versionCode $actual_version_code does not match pubspec build number $expected_version_code"
+            exit 1
+          fi
 
       - name: Build release App Bundle (play flavor)
         # Google Play 上架用 AAB：play flavor 移除 REQUEST_INSTALL_PACKAGES（Play 政策禁止
@@ -90,7 +117,7 @@ jobs:
           mkdir -p release-artifacts
           short_sha="${GITHUB_SHA::7}"
           version_name="${GITHUB_REF_NAME}"
-          cp build/app/outputs/flutter-apk/app-github-release.apk "release-artifacts/verifin-${version_name}-arm64-${short_sha}.apk"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-github-release.apk "release-artifacts/verifin-${version_name}-arm64-${short_sha}.apk"
           cp build/app/outputs/bundle/playRelease/app-play-release.aab "release-artifacts/verifin-${version_name}-${short_sha}.aab"
 
       - name: Upload release artifacts
@@ -103,6 +130,9 @@ jobs:
     name: GitHub Release
     runs-on: ubuntu-latest
     needs: android
+    permissions:
+      # 只有创建 Release 的 job 需要写权限；构建与校验 job 保持只读。
+      contents: write
     steps:
       # 必须排在下载制品之前：actions/checkout 默认 clean=true，会删除工作区里
       # 未跟踪的文件。放在下载之后会把刚下下来的 APK/AAB 一起清掉，发布出一个

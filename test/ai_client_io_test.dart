@@ -222,6 +222,111 @@ void main() {
     );
   });
 
+  test('stream event limit stops oversized responses', () async {
+    final settings = await _serve((request) async {
+      await _requestJson(request);
+      request.response.headers.contentType = ContentType(
+        'text',
+        'event-stream',
+        charset: 'utf-8',
+      );
+      for (var index = 0; index < 3; index += 1) {
+        _sse(request.response, <String, Object?>{
+          'choices': <Object?>[
+            <String, Object?>{
+              'delta': <String, Object?>{'content': '$index'},
+            },
+          ],
+        });
+      }
+      _sse(request.response, '[DONE]');
+      await request.response.close();
+    });
+
+    await expectLater(
+      aiAgentStream(settings: settings, messages: messages, maxStreamEvents: 1),
+      emitsInOrder(<Object>[
+        isA<AiContentDelta>(),
+        emitsError(
+          isA<AiException>().having(
+            (error) => error.code,
+            'code',
+            AiErrorCode.responseTooLarge,
+          ),
+        ),
+      ]),
+    );
+  });
+
+  test('total stream timeout stops a keep-alive response', () async {
+    final settings = await _serve((request) async {
+      await _requestJson(request);
+      request.response.headers.contentType = ContentType(
+        'text',
+        'event-stream',
+        charset: 'utf-8',
+      );
+      for (var index = 0; index < 10; index += 1) {
+        request.response.write(': keep-alive\n\n');
+        await request.response.flush();
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      await request.response.close();
+    });
+
+    await expectLater(
+      aiAgentStream(
+        settings: settings,
+        messages: messages,
+        idleTimeout: const Duration(seconds: 1),
+        totalTimeout: const Duration(milliseconds: 25),
+      ),
+      emitsError(
+        isA<AiException>().having(
+          (error) => error.code,
+          'code',
+          AiErrorCode.timeout,
+        ),
+      ),
+    );
+  });
+
+  test('non-stream response body limit is enforced', () async {
+    final settings = await _serve((request) async {
+      await _requestJson(request);
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(
+        jsonEncode(<String, Object?>{
+          'choices': <Object?>[
+            <String, Object?>{
+              'message': <String, Object?>{
+                'role': 'assistant',
+                'content': 'a long enough answer',
+              },
+              'finish_reason': 'stop',
+            },
+          ],
+        }),
+      );
+      await request.response.close();
+    });
+
+    await expectLater(
+      aiAgentComplete(
+        settings: settings,
+        messages: messages,
+        maxResponseBytes: 16,
+      ),
+      throwsA(
+        isA<AiException>().having(
+          (error) => error.code,
+          'code',
+          AiErrorCode.responseTooLarge,
+        ),
+      ),
+    );
+  });
+
   test('non-stream completion parses native tool calls', () async {
     final settings = await _serve((request) async {
       await _requestJson(request);
@@ -292,4 +397,55 @@ void main() {
       ),
     );
   });
+
+  test('empty API key omits the Authorization header', () async {
+    final settings = await _serve((request) async {
+      await _requestJson(request);
+      expect(request.headers.value(HttpHeaders.authorizationHeader), isNull);
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(
+        jsonEncode(<String, Object?>{
+          'choices': <Object?>[
+            <String, Object?>{
+              'message': <String, Object?>{
+                'role': 'assistant',
+                'content': 'OK',
+              },
+              'finish_reason': 'stop',
+            },
+          ],
+        }),
+      );
+      await request.response.close();
+    });
+
+    final result = await aiAgentComplete(
+      settings: settings.copyWith(apiKey: ''),
+      messages: messages,
+    );
+    expect(result.content, 'OK');
+  });
+
+  test(
+    'invalid UTF-8 response maps to bad response instead of bad URL',
+    () async {
+      final settings = await _serve((request) async {
+        await _requestJson(request);
+        request.response.headers.contentType = ContentType.json;
+        request.response.add(const <int>[0xff, 0xfe, 0xfd]);
+        await request.response.close();
+      });
+
+      await expectLater(
+        aiAgentComplete(settings: settings, messages: messages),
+        throwsA(
+          isA<AiException>().having(
+            (error) => error.code,
+            'code',
+            AiErrorCode.badResponse,
+          ),
+        ),
+      );
+    },
+  );
 }

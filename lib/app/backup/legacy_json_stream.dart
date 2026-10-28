@@ -152,6 +152,7 @@ class _LegacyJsonRewriter {
       if (id == null || id.isEmpty) {
         throw const FormatException('备份文件格式不正确');
       }
+      requireValidAttachmentId(id);
       final comma = value.indexOf(',');
       final bytes = comma < 0
           ? null

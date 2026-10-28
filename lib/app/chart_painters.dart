@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -417,6 +417,7 @@ class InteractiveTrendChart extends StatefulWidget {
     super.key,
     required this.color,
     required this.values,
+    this.missingIndexes = const <int>{},
     this.xLabels = const <String>[],
     this.yLabels = const <String>[],
     this.labelColor,
@@ -427,6 +428,9 @@ class InteractiveTrendChart extends StatefulWidget {
 
   final Color color;
   final List<double> values;
+
+  /// 已知不可估值的插槽；这些位置绘制为断点，不连接、不显示气泡。
+  final Set<int> missingIndexes;
   final List<String> xLabels;
   final List<String> yLabels;
   final Color? labelColor;
@@ -445,12 +449,16 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
   @override
   void didUpdateWidget(covariant InteractiveTrendChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!listEquals(oldWidget.values, widget.values)) {
+    if (!listEquals(oldWidget.values, widget.values) ||
+        !setEquals(oldWidget.missingIndexes, widget.missingIndexes)) {
       _selectedIndex = null;
     }
   }
 
   void _select(int? index) {
+    if (index != null && widget.missingIndexes.contains(index)) {
+      index = null;
+    }
     if (index == _selectedIndex) {
       return;
     }
@@ -463,17 +471,34 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
     if (values.isEmpty) {
       return const SizedBox.shrink();
     }
-    final range = _yRange(values);
+    final presentValues = <double>[
+      for (var i = 0; i < values.length; i++)
+        if (!widget.missingIndexes.contains(i)) values[i],
+    ];
+    if (presentValues.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final range = _yRange(presentValues);
     final muted =
         widget.labelColor ??
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50);
     final lastIndex = values.length - 1;
-    final selected = _selectedIndex != null && _selectedIndex! <= lastIndex
+    final selected =
+        _selectedIndex != null &&
+            _selectedIndex! <= lastIndex &&
+            !widget.missingIndexes.contains(_selectedIndex)
         ? _selectedIndex
         : null;
+    // 折线本身在只有一个有效点、或两侧都被断点隔开时不产生可见笔画。
+    // 缺率月份存在时一并显示有效数据点，让用户能看到「哪些月份算出来了」。
+    final showDots =
+        widget.missingIndexes.isNotEmpty || presentValues.length <= 2;
     final barData = LineChartBarData(
       spots: <FlSpot>[
-        for (var i = 0; i < values.length; i++) FlSpot(i.toDouble(), values[i]),
+        for (var i = 0; i < values.length; i++)
+          widget.missingIndexes.contains(i)
+              ? FlSpot.nullSpot
+              : FlSpot(i.toDouble(), values[i]),
       ],
       color: widget.color,
       barWidth: 2.2,
@@ -482,7 +507,14 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
       preventCurveOverShooting: true,
       isStrokeCapRound: true,
       isStrokeJoinRound: true,
-      dotData: const FlDotData(show: false),
+      dotData: FlDotData(
+        show: showDots,
+        getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+          radius: 2.6,
+          color: widget.color,
+          strokeWidth: 0,
+        ),
+      ),
       // 气泡与指示线由适配层按当前选中项驱动：[LineTouchData.handleBuiltInTouches]
       // 自带的触摸只在长按时出现、抬手即消失，满足不了「点一下固定显示」。
       showingIndicators: selected == null ? const <int>[] : <int>[selected],
@@ -540,7 +572,9 @@ class _InteractiveTrendChartState extends State<InteractiveTrendChart> {
       container: true,
       label:
           widget.semanticsLabel ??
-          AppLocalizations.of(context).chartTrendSemantics(values.length),
+          AppLocalizations.of(
+            context,
+          ).chartTrendSemantics(presentValues.length),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final plotWidth = math.max(1.0, constraints.maxWidth - reserved);

@@ -146,6 +146,102 @@ abstract class AppLocalizations {
   /// **'错误详情'**
   String get dbErrorDetail;
 
+  /// 启动页标题：正常初始化中
+  ///
+  /// In zh, this message translates to:
+  /// **'正在准备账本'**
+  String get startupPreparingTitle;
+
+  /// 启动页正文：正常初始化中
+  ///
+  /// In zh, this message translates to:
+  /// **'首次载入数据可能需要一点时间，请稍候。'**
+  String get startupPreparingBody;
+
+  /// 启动阶段：读取偏好设置
+  ///
+  /// In zh, this message translates to:
+  /// **'读取本机设置'**
+  String get startupStagePreferences;
+
+  /// 启动阶段：打开 SQLite 数据库
+  ///
+  /// In zh, this message translates to:
+  /// **'打开账本数据库'**
+  String get startupStageDatabase;
+
+  /// 启动阶段：从数据库载入账目
+  ///
+  /// In zh, this message translates to:
+  /// **'载入账本数据'**
+  String get startupStageController;
+
+  /// 启动阶段：补记到期周期规则
+  ///
+  /// In zh, this message translates to:
+  /// **'补记周期账目'**
+  String get startupStageRecurring;
+
+  /// 启动阶段：可选的界面资源预热
+  ///
+  /// In zh, this message translates to:
+  /// **'准备界面资源'**
+  String get startupStageWarmUp;
+
+  /// 启动阶段：初始化完成
+  ///
+  /// In zh, this message translates to:
+  /// **'即将进入'**
+  String get startupStageReady;
+
+  /// 启动页已等待时长
+  ///
+  /// In zh, this message translates to:
+  /// **'已等待 {seconds} 秒'**
+  String startupElapsed(int seconds);
+
+  /// 启动阶段超过阈值仍未完成时的标题
+  ///
+  /// In zh, this message translates to:
+  /// **'启动比平时慢'**
+  String get startupSlowTitle;
+
+  /// 启动阶段超过阈值仍未完成时的正文
+  ///
+  /// In zh, this message translates to:
+  /// **'仍在进行：{stage}。你的账目数据不会被改动；可以继续等待，或重试一次。'**
+  String startupSlowBody(String stage);
+
+  /// 启动失败页标题（非数据库阶段）
+  ///
+  /// In zh, this message translates to:
+  /// **'启动没有完成'**
+  String get startupFailedTitle;
+
+  /// 启动失败页正文
+  ///
+  /// In zh, this message translates to:
+  /// **'在「{stage}」阶段没有完成。账目数据仍保存在本机，请不要清除应用数据或卸载应用。'**
+  String startupFailedBody(String stage);
+
+  /// 启动失败/过慢时重新初始化
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get startupRetry;
+
+  /// 复制启动阶段、耗时与错误，便于反馈
+  ///
+  /// In zh, this message translates to:
+  /// **'复制诊断信息'**
+  String get startupCopyDiagnostics;
+
+  /// 诊断信息复制成功
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制'**
+  String get startupDiagnosticsCopied;
+
   /// 底部导航:首页
   ///
   /// In zh, this message translates to:
@@ -227,7 +323,7 @@ abstract class AppLocalizations {
   /// 液态玻璃底栏样式说明
   ///
   /// In zh, this message translates to:
-  /// **'浮动胶囊，背景模糊并轻微折射，内容从玻璃下滚过'**
+  /// **'浮动胶囊，真实采样背景并折射，内容从玻璃下滚过'**
   String get navigationStyleLiquidGlassDesc;
 
   /// 快速记账入口(FAB 提示与数字键盘标题)
@@ -1561,6 +1657,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{date}'**
   String dateMonthDay(DateTime date);
+
+  /// 需要区分年份的完整日期
+  ///
+  /// In zh, this message translates to:
+  /// **'{date}'**
+  String dateYearMonthDay(DateTime date);
 
   /// 首页预算卡标题(某月预算)
   ///
@@ -3104,6 +3206,30 @@ abstract class AppLocalizations {
   /// **'转账需要两个不同的账户,请先添加转入账户。'**
   String get transferNeedsTwoAccounts;
 
+  /// No description provided for @noAccountTransferCurrencyChangeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'转入币种由 {from} 改为 {to}'**
+  String noAccountTransferCurrencyChangeTitle(String from, String to);
+
+  /// No description provided for @noAccountTransferNoRateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少 {from} → {to} 汇率'**
+  String noAccountTransferNoRateTitle(String from, String to);
+
+  /// No description provided for @noAccountTransferConvert.
+  ///
+  /// In zh, this message translates to:
+  /// **'按汇率换算为 {amount}'**
+  String noAccountTransferConvert(String amount);
+
+  /// No description provided for @noAccountTransferReinterpret.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留原金额数字，按 {currency} 重新解释'**
+  String noAccountTransferReinterpret(String currency);
+
   /// No description provided for @deleteEntryTitle.
   ///
   /// In zh, this message translates to:
@@ -4238,6 +4364,12 @@ abstract class AppLocalizations {
   /// **'分类名称'**
   String get categoryNameLabel;
 
+  /// No description provided for @categoryNameDuplicate.
+  ///
+  /// In zh, this message translates to:
+  /// **'同一父分类下已存在同名分类'**
+  String get categoryNameDuplicate;
+
   /// No description provided for @viewCategoryEntries.
   ///
   /// In zh, this message translates to:
@@ -4339,6 +4471,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'重命名分类'**
   String get renameCategoryTitle;
+
+  /// No description provided for @tagNameDuplicate.
+  ///
+  /// In zh, this message translates to:
+  /// **'已存在同名标签'**
+  String get tagNameDuplicate;
 
   /// No description provided for @pickIconTitle.
   ///
@@ -5576,6 +5714,234 @@ abstract class AppLocalizations {
   /// **'未配置'**
   String get aiNotConfigured;
 
+  /// No description provided for @aiProviderCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前渠道'**
+  String get aiProviderCurrent;
+
+  /// No description provided for @aiProviderPickerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择 AI 渠道'**
+  String get aiProviderPickerTitle;
+
+  /// No description provided for @aiProviderPickerSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择后自动使用该渠道的固定请求地址'**
+  String get aiProviderPickerSubtitle;
+
+  /// No description provided for @aiProviderChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'更换'**
+  String get aiProviderChange;
+
+  /// No description provided for @aiProviderSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索渠道名称、说明或域名'**
+  String get aiProviderSearchHint;
+
+  /// No description provided for @aiProviderSearchEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'未找到渠道'**
+  String get aiProviderSearchEmpty;
+
+  /// No description provided for @aiProviderSearchEmptyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试厂商名、模型平台或域名'**
+  String get aiProviderSearchEmptyDesc;
+
+  /// No description provided for @aiProviderGroupAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get aiProviderGroupAll;
+
+  /// No description provided for @aiProviderGroupChinaOfficial.
+  ///
+  /// In zh, this message translates to:
+  /// **'国内官方'**
+  String get aiProviderGroupChinaOfficial;
+
+  /// No description provided for @aiProviderGroupGlobalOfficial.
+  ///
+  /// In zh, this message translates to:
+  /// **'国际官方'**
+  String get aiProviderGroupGlobalOfficial;
+
+  /// No description provided for @aiProviderGroupAggregator.
+  ///
+  /// In zh, this message translates to:
+  /// **'聚合平台'**
+  String get aiProviderGroupAggregator;
+
+  /// No description provided for @aiProviderGroupLocal.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地服务'**
+  String get aiProviderGroupLocal;
+
+  /// No description provided for @aiProviderGroupCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义'**
+  String get aiProviderGroupCustom;
+
+  /// No description provided for @aiProviderDescDeepSeek.
+  ///
+  /// In zh, this message translates to:
+  /// **'DeepSeek 官方 OpenAI 兼容接口'**
+  String get aiProviderDescDeepSeek;
+
+  /// No description provided for @aiProviderDescVolcengine.
+  ///
+  /// In zh, this message translates to:
+  /// **'火山方舟模型服务'**
+  String get aiProviderDescVolcengine;
+
+  /// No description provided for @aiProviderDescKimi.
+  ///
+  /// In zh, this message translates to:
+  /// **'月之暗面 Kimi 官方接口'**
+  String get aiProviderDescKimi;
+
+  /// No description provided for @aiProviderDescZhipu.
+  ///
+  /// In zh, this message translates to:
+  /// **'智谱 GLM 官方接口'**
+  String get aiProviderDescZhipu;
+
+  /// No description provided for @aiProviderDescDashscope.
+  ///
+  /// In zh, this message translates to:
+  /// **'阿里云百炼兼容接口'**
+  String get aiProviderDescDashscope;
+
+  /// No description provided for @aiProviderDescOpenai.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenAI 官方接口'**
+  String get aiProviderDescOpenai;
+
+  /// No description provided for @aiProviderDescOpenrouter.
+  ///
+  /// In zh, this message translates to:
+  /// **'多模型聚合与路由平台'**
+  String get aiProviderDescOpenrouter;
+
+  /// No description provided for @aiProviderDescOllama.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地 Ollama 服务'**
+  String get aiProviderDescOllama;
+
+  /// No description provided for @aiProviderDescCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'任意 OpenAI 兼容端点'**
+  String get aiProviderDescCustom;
+
+  /// No description provided for @aiProviderCustomBaseUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'填写到 /v1，或完整 /chat/completions 地址'**
+  String get aiProviderCustomBaseUrlHint;
+
+  /// No description provided for @aiProviderModelListUrlLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型列表地址（可选）'**
+  String get aiProviderModelListUrlLabel;
+
+  /// No description provided for @aiProviderModelListUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'不填时按请求地址自动推导'**
+  String get aiProviderModelListUrlHint;
+
+  /// No description provided for @aiProviderApiKeyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'API Key（可选）'**
+  String get aiProviderApiKeyLabel;
+
+  /// No description provided for @aiProviderModelLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型'**
+  String get aiProviderModelLabel;
+
+  /// No description provided for @aiProviderModelHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'获取模型列表或手动填写'**
+  String get aiProviderModelHint;
+
+  /// No description provided for @aiProviderFetchModels.
+  ///
+  /// In zh, this message translates to:
+  /// **'获取模型列表'**
+  String get aiProviderFetchModels;
+
+  /// No description provided for @aiProviderFetchingModels.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在获取模型列表…'**
+  String get aiProviderFetchingModels;
+
+  /// No description provided for @aiProviderModelPickerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择模型'**
+  String get aiProviderModelPickerTitle;
+
+  /// No description provided for @aiProviderModelSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索模型或厂商'**
+  String get aiProviderModelSearchHint;
+
+  /// No description provided for @aiProviderModelEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有可用模型'**
+  String get aiProviderModelEmpty;
+
+  /// No description provided for @aiProviderModelEmptyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'换一种筛选，或返回手动填写模型 ID'**
+  String get aiProviderModelEmptyDesc;
+
+  /// No description provided for @aiProviderModelOtherGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get aiProviderModelOtherGroup;
+
+  /// No description provided for @aiProviderModelFetchFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型列表获取失败：{message}'**
+  String aiProviderModelFetchFailed(String message);
+
+  /// No description provided for @aiProviderModelFetchEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接成功，但没有获取到模型'**
+  String get aiProviderModelFetchEmpty;
+
+  /// No description provided for @aiProviderMissingBaseUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先填写渠道请求地址'**
+  String get aiProviderMissingBaseUrl;
+
   /// No description provided for @aiChatTitle.
   ///
   /// In zh, this message translates to:
@@ -5587,12 +5953,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'清空聊天记录'**
   String get aiChatClearHistory;
-
-  /// No description provided for @aiChatHistoryLocalOnly.
-  ///
-  /// In zh, this message translates to:
-  /// **'对话只存本机，不含在备份内'**
-  String get aiChatHistoryLocalOnly;
 
   /// No description provided for @aiChatClearMessage.
   ///
@@ -5606,11 +5966,47 @@ abstract class AppLocalizations {
   /// **'清空'**
   String get aiChatClearConfirm;
 
+  /// No description provided for @aiChatChooseBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择对话账本'**
+  String get aiChatChooseBook;
+
+  /// No description provided for @aiChatClearCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空对话'**
+  String get aiChatClearCurrent;
+
+  /// No description provided for @aiSendQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送'**
+  String get aiSendQuestion;
+
+  /// No description provided for @aiStopGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'停止生成'**
+  String get aiStopGenerating;
+
+  /// No description provided for @aiChatCurrentBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前账本：{book}'**
+  String aiChatCurrentBook(String book);
+
   /// No description provided for @aiChatUnconfiguredHint.
   ///
   /// In zh, this message translates to:
   /// **'先配置 AI，才能开始对话查询账目'**
   String get aiChatUnconfiguredHint;
+
+  /// No description provided for @aiChatUnconfiguredTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接你的 AI'**
+  String get aiChatUnconfiguredTitle;
 
   /// No description provided for @aiChatGoConfigure.
   ///
@@ -5660,6 +6056,12 @@ abstract class AppLocalizations {
   /// **'无匹配交易'**
   String get aiChatNoMatchingTx;
 
+  /// No description provided for @aiImageBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'出于隐私考虑，未加载图片'**
+  String get aiImageBlocked;
+
   /// No description provided for @aiClearConfig.
   ///
   /// In zh, this message translates to:
@@ -5678,12 +6080,6 @@ abstract class AppLocalizations {
   /// **'配置已清空'**
   String get aiConfigCleared;
 
-  /// No description provided for @aiSettingsIntro.
-  ///
-  /// In zh, this message translates to:
-  /// **'填写任意 OpenAI 兼容服务的请求地址、API Key 与模型。你的输入只会发送到这里配置的服务，配置只存本机、不进备份。'**
-  String get aiSettingsIntro;
-
   /// No description provided for @aiBaseUrlLabel.
   ///
   /// In zh, this message translates to:
@@ -5696,28 +6092,10 @@ abstract class AppLocalizations {
   /// **'如 https://api.openai.com/v1'**
   String get aiBaseUrlHint;
 
-  /// No description provided for @aiApiKeyLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'API Key'**
-  String get aiApiKeyLabel;
-
-  /// No description provided for @aiModelLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'模型'**
-  String get aiModelLabel;
-
-  /// No description provided for @aiModelHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'如 gpt-4o-mini'**
-  String get aiModelHint;
-
   /// No description provided for @aiFillAllFields.
   ///
   /// In zh, this message translates to:
-  /// **'请填写请求地址、API Key 与模型'**
+  /// **'请选择渠道并填写模型'**
   String get aiFillAllFields;
 
   /// No description provided for @aiToolModeTitle.
@@ -5815,12 +6193,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'实际协议：自动检测'**
   String get aiActualProtocolAuto;
-
-  /// No description provided for @aiCapabilityProbeNotice.
-  ///
-  /// In zh, this message translates to:
-  /// **'能力检测会发起少量测试请求，但不会发送任何账目数据。'**
-  String get aiCapabilityProbeNotice;
 
   /// No description provided for @aiStepRunning.
   ///
@@ -6049,12 +6421,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。'**
   String get aiPrivacyNotice;
-
-  /// No description provided for @aiOptionalNotice.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 是可选功能：不配置也能正常记账、看报表和备份。'**
-  String get aiOptionalNotice;
 
   /// No description provided for @aiEntryTitle.
   ///
@@ -7220,6 +7586,18 @@ abstract class AppLocalizations {
   /// **'已复制到剪贴板'**
   String get appLogCopied;
 
+  /// 复制单条日志（含堆栈）
+  ///
+  /// In zh, this message translates to:
+  /// **'复制这条'**
+  String get appLogCopyRecord;
+
+  /// 展开单条日志的堆栈
+  ///
+  /// In zh, this message translates to:
+  /// **'技术细节'**
+  String get appLogDetails;
+
   /// No description provided for @appLogClear.
   ///
   /// In zh, this message translates to:
@@ -7411,6 +7789,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'无法解析服务器响应'**
   String get aiErrBadResponse;
+
+  /// No description provided for @aiErrResponseTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 返回内容过长，已停止处理'**
+  String get aiErrResponseTooLarge;
+
+  /// No description provided for @aiErrModelListUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'该渠道不支持获取模型列表，请手动填写模型'**
+  String get aiErrModelListUnsupported;
 
   /// No description provided for @aiErrUpstream.
   ///
@@ -7712,6 +8102,42 @@ abstract class AppLocalizations {
   /// **'交易金额、币种或关联数据不完整，请检查后重试。'**
   String get entrySaveValidationFailed;
 
+  /// No description provided for @entrySaveStaleDraft.
+  ///
+  /// In zh, this message translates to:
+  /// **'这笔交易已在别处修改或删除，请返回后重新打开。'**
+  String get entrySaveStaleDraft;
+
+  /// No description provided for @entrySaveInvalidRefund.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款数据不完整，请检查退款金额和到账账户后重试。'**
+  String get entrySaveInvalidRefund;
+
+  /// No description provided for @entrySaveRefundExceedsExpense.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款总额不能超过原支出金额。'**
+  String get entrySaveRefundExceedsExpense;
+
+  /// No description provided for @entrySaveInvalidAttachments.
+  ///
+  /// In zh, this message translates to:
+  /// **'附件数据异常，请重新添加附件后重试。'**
+  String get entrySaveInvalidAttachments;
+
+  /// No description provided for @entrySaveInvalidRememberedRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'汇率无效，请检查汇率或取消“记住为当日汇率”后重试。'**
+  String get entrySaveInvalidRememberedRate;
+
+  /// No description provided for @entrySaveInvalidScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类或标签不属于当前账本，请重新选择。'**
+  String get entrySaveInvalidScope;
+
   /// No description provided for @importValidationFailed.
   ///
   /// In zh, this message translates to:
@@ -7819,6 +8245,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'可能已过期'**
   String get exchangeRateStale;
+
+  /// No description provided for @exchangeRateNotEffective.
+  ///
+  /// In zh, this message translates to:
+  /// **'未生效'**
+  String get exchangeRateNotEffective;
+
+  /// No description provided for @exchangeRateFutureCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'另有 {count} 条未生效'**
+  String exchangeRateFutureCount(int count);
 
   /// No description provided for @exchangeRateSourceManual.
   ///
@@ -8069,8 +8507,20 @@ abstract class AppLocalizations {
   /// No description provided for @assetTrendMissingRate.
   ///
   /// In zh, this message translates to:
-  /// **'历史资产走势缺少汇率，补齐相应日期的本地汇率后显示。'**
+  /// **'还没有可用于折算的历史汇率，设置今天或更早的汇率后显示资产走势。'**
   String get assetTrendMissingRate;
+
+  /// No description provided for @assetTrendPartialMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分月份缺少 {currencies} 汇率（{months}），这些月份未绘制；补上这些月份或更早的汇率后显示。'**
+  String assetTrendPartialMissing(String currencies, String months);
+
+  /// No description provided for @exchangeRateSetAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置汇率'**
+  String get exchangeRateSetAction;
 
   /// No description provided for @baseCurrencyAmountLabel.
   ///
@@ -8431,8 +8881,8 @@ abstract class AppLocalizations {
   /// No description provided for @aiCardDebtLine.
   ///
   /// In zh, this message translates to:
-  /// **'{name} 当前欠款 {amount} {currency}'**
-  String aiCardDebtLine(String name, String amount, String currency);
+  /// **'{name} 当前欠款 {amount}'**
+  String aiCardDebtLine(String name, String amount);
 
   /// No description provided for @aiCardAvailableLine.
   ///
@@ -8493,6 +8943,30 @@ abstract class AppLocalizations {
     String daily,
     String attention,
   );
+
+  /// No description provided for @aiAnswerProvenanceQueried.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于账本查询 · {count} 次'**
+  String aiAnswerProvenanceQueried(int count);
+
+  /// No description provided for @aiAnswerProvenanceNoQuery.
+  ///
+  /// In zh, this message translates to:
+  /// **'未查询账本'**
+  String get aiAnswerProvenanceNoQuery;
+
+  /// No description provided for @aiAnswerProvenanceUnverified.
+  ///
+  /// In zh, this message translates to:
+  /// **'未查询账本，请勿据此判断账目'**
+  String get aiAnswerProvenanceUnverified;
+
+  /// No description provided for @aiErrRequestTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入或请求内容过长，请精简后重试'**
+  String get aiErrRequestTooLarge;
 
   /// No description provided for @widgetPreviewFailed.
   ///

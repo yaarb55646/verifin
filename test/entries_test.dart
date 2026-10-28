@@ -33,14 +33,25 @@ void main() {
     await tester.tap(find.byType(FilterPill));
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey<String>('veri_menu_item_stats_type_income')),
+      find.byKey(
+        const ValueKey<String>('anchored_menu_item_stats_type_income'),
+      ),
       findsOneWidget,
     );
+    expect(
+      find.byKey(
+        const ValueKey<String>('anchored_menu_item_stats_type_transfer'),
+      ),
+      findsNothing,
+    );
+    expect(find.text('转账'), findsNothing);
     await tester.tap(find.text('收入').last);
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const ValueKey<String>('veri_menu_item_stats_type_income')),
+      find.byKey(
+        const ValueKey<String>('anchored_menu_item_stats_type_income'),
+      ),
       findsNothing,
     );
     expect(find.textContaining('收入'), findsWidgets);
@@ -61,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.byKey(
-        const ValueKey<String>('veri_menu_item_transaction_time_month'),
+        const ValueKey<String>('anchored_menu_item_transaction_time_month'),
       ),
       findsOneWidget,
     );

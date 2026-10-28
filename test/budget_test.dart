@@ -582,7 +582,7 @@ void main() {
       final controller = await makeController();
       controller.setDefaultMonthlyBudget(2000);
       controller.setDefaultCategoryBudget('dining', 500);
-      controller.resetAllData();
+      await controller.resetAllData();
       expect(controller.defaultMonthlyBudget, 0);
       expect(controller.defaultCategoryBudget('dining'), 0);
       controller.dispose();
@@ -699,7 +699,7 @@ void main() {
     test('初始化数据后回到自然月', () async {
       final controller = await makeController();
       controller.setBudgetCycleStartDay(22);
-      controller.resetAllData();
+      await controller.resetAllData();
       expect(controller.budgetCycleStartDay, 1);
       controller.dispose();
     });

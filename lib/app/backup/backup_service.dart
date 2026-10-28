@@ -210,11 +210,15 @@ class BackupService {
     required AttachmentStore sink,
     BackupProgressCallback? onProgress,
     bool Function()? isCancelled,
-  }) {
+  }) async {
     onProgress?.call(const BackupProgress(phase: BackupPhase.unpacking));
+    final availableBytes = await availableBackupStorageBytes(
+      File(cachePath).parent.path,
+    );
     return unpackBackupArchiveFile(
       archivePath: cachePath,
       sink: sink,
+      availableBytes: availableBytes,
       onProgress: (done, total) => onProgress?.call(
         BackupProgress(
           phase: BackupPhase.unpacking,
@@ -236,13 +240,19 @@ class BackupService {
     _throwIfCancelled(isCancelled);
     onProgress?.call(const BackupProgress(phase: BackupPhase.decrypting));
     final outputPath = restoreCachePath(cacheDirectory);
-    await decryptFileToFile(
-      encryptedPath: encryptedPath,
-      outputPath: outputPath,
-      passphrase: passphrase,
-    );
-    _throwIfCancelled(isCancelled);
-    return outputPath;
+    try {
+      await decryptFileToFile(
+        encryptedPath: encryptedPath,
+        outputPath: outputPath,
+        passphrase: passphrase,
+      );
+      _throwIfCancelled(isCancelled);
+      return outputPath;
+    } catch (_) {
+      await deleteCachePath(outputPath);
+      await deleteCachePath('$outputPath.partial');
+      rethrow;
+    }
   }
 
   /// 解密加密信封，返回明文导出 JSON。口令错误/密文损坏抛 [BackupCryptoException]。

@@ -29,6 +29,85 @@
   "@dbErrorDetail": {
     "description": "数据库打开失败错误页技术详情标题"
   },
+  "startupPreparingTitle": "正在准备账本",
+  "@startupPreparingTitle": {
+    "description": "启动页标题：正常初始化中"
+  },
+  "startupPreparingBody": "首次载入数据可能需要一点时间，请稍候。",
+  "@startupPreparingBody": {
+    "description": "启动页正文：正常初始化中"
+  },
+  "startupStagePreferences": "读取本机设置",
+  "@startupStagePreferences": {
+    "description": "启动阶段：读取偏好设置"
+  },
+  "startupStageDatabase": "打开账本数据库",
+  "@startupStageDatabase": {
+    "description": "启动阶段：打开 SQLite 数据库"
+  },
+  "startupStageController": "载入账本数据",
+  "@startupStageController": {
+    "description": "启动阶段：从数据库载入账目"
+  },
+  "startupStageRecurring": "补记周期账目",
+  "@startupStageRecurring": {
+    "description": "启动阶段：补记到期周期规则"
+  },
+  "startupStageWarmUp": "准备界面资源",
+  "@startupStageWarmUp": {
+    "description": "启动阶段：可选的界面资源预热"
+  },
+  "startupStageReady": "即将进入",
+  "@startupStageReady": {
+    "description": "启动阶段：初始化完成"
+  },
+  "startupElapsed": "已等待 {seconds} 秒",
+  "@startupElapsed": {
+    "description": "启动页已等待时长",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSlowTitle": "启动比平时慢",
+  "@startupSlowTitle": {
+    "description": "启动阶段超过阈值仍未完成时的标题"
+  },
+  "startupSlowBody": "仍在进行：{stage}。你的账目数据不会被改动；可以继续等待，或重试一次。",
+  "@startupSlowBody": {
+    "description": "启动阶段超过阈值仍未完成时的正文",
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "startupFailedTitle": "启动没有完成",
+  "@startupFailedTitle": {
+    "description": "启动失败页标题（非数据库阶段）"
+  },
+  "startupFailedBody": "在「{stage}」阶段没有完成。账目数据仍保存在本机，请不要清除应用数据或卸载应用。",
+  "@startupFailedBody": {
+    "description": "启动失败页正文",
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRetry": "重试",
+  "@startupRetry": {
+    "description": "启动失败/过慢时重新初始化"
+  },
+  "startupCopyDiagnostics": "复制诊断信息",
+  "@startupCopyDiagnostics": {
+    "description": "复制启动阶段、耗时与错误，便于反馈"
+  },
+  "startupDiagnosticsCopied": "已复制",
+  "@startupDiagnosticsCopied": {
+    "description": "诊断信息复制成功"
+  },
   "tabHome": "首页",
   "@tabHome": {
     "description": "底部导航:首页"
@@ -81,7 +160,7 @@
   "@navigationStyleLiquidGlassName": {
     "description": "液态玻璃底栏样式名称"
   },
-  "navigationStyleLiquidGlassDesc": "浮动胶囊，背景模糊并轻微折射，内容从玻璃下滚过",
+  "navigationStyleLiquidGlassDesc": "浮动胶囊，真实采样背景并折射，内容从玻璃下滚过",
   "@navigationStyleLiquidGlassDesc": {
     "description": "液态玻璃底栏样式说明"
   },
@@ -517,6 +596,17 @@
       "date": {
         "type": "DateTime",
         "format": "M月d日",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "dateYearMonthDay": "{date}",
+  "@dateYearMonthDay": {
+    "description": "需要区分年份的完整日期",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yyyy年M月d日",
         "isCustomDateFormat": "true"
       }
     }
@@ -1053,6 +1143,44 @@
   "pickTypeTitle": "选择类型",
   "noteEditTitle": "编辑备注",
   "transferNeedsTwoAccounts": "转账需要两个不同的账户,请先添加转入账户。",
+  "noAccountTransferCurrencyChangeTitle": "转入币种由 {from} 改为 {to}",
+  "@noAccountTransferCurrencyChangeTitle": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccountTransferNoRateTitle": "缺少 {from} → {to} 汇率",
+  "@noAccountTransferNoRateTitle": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccountTransferConvert": "按汇率换算为 {amount}",
+  "@noAccountTransferConvert": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccountTransferReinterpret": "保留原金额数字，按 {currency} 重新解释",
+  "@noAccountTransferReinterpret": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
   "deleteEntryTitle": "删除此交易？",
   "deleteEntryMessage": "删除后无法恢复，本地保存的这笔记录会被移除。",
   "todayLabel": "今天",
@@ -1614,6 +1742,7 @@
   "@categoryKeywordConflict": {"placeholders": {"keyword": {"type": "String"}, "category": {"type": "String"}}},
   "@categoryKeywordCount": {"placeholders": {"count": {"type": "int"}}},
   "categoryNameLabel": "分类名称",
+  "categoryNameDuplicate": "同一父分类下已存在同名分类",
   "viewCategoryEntries": "查看交易",
   "changeIcon": "更换图标",
   "addSubCategory": "新增子分类",
@@ -1668,6 +1797,7 @@
   },
   "mergeCategoryFailed": "无法合并该分类",
   "renameCategoryTitle": "重命名分类",
+  "tagNameDuplicate": "已存在同名标签",
   "pickIconTitle": "选择图标",
   "iconSectionBuiltin": "内置图标",
   "iconSectionEmoji": "Emoji",
@@ -2021,12 +2151,69 @@
   "aiSettingsTitle": "AI 设置",
   "aiConfigured": "已配置",
   "aiNotConfigured": "未配置",
+  "aiProviderCurrent": "当前渠道",
+  "aiProviderPickerTitle": "选择 AI 渠道",
+  "aiProviderPickerSubtitle": "选择后自动使用该渠道的固定请求地址",
+  "aiProviderChange": "更换",
+  "aiProviderSearchHint": "搜索渠道名称、说明或域名",
+  "aiProviderSearchEmpty": "未找到渠道",
+  "aiProviderSearchEmptyDesc": "试试厂商名、模型平台或域名",
+  "aiProviderGroupAll": "全部",
+  "aiProviderGroupChinaOfficial": "国内官方",
+  "aiProviderGroupGlobalOfficial": "国际官方",
+  "aiProviderGroupAggregator": "聚合平台",
+  "aiProviderGroupLocal": "本地服务",
+  "aiProviderGroupCustom": "自定义",
+  "aiProviderDescDeepSeek": "DeepSeek 官方 OpenAI 兼容接口",
+  "aiProviderDescVolcengine": "火山方舟模型服务",
+  "aiProviderDescKimi": "月之暗面 Kimi 官方接口",
+  "aiProviderDescZhipu": "智谱 GLM 官方接口",
+  "aiProviderDescDashscope": "阿里云百炼兼容接口",
+  "aiProviderDescOpenai": "OpenAI 官方接口",
+  "aiProviderDescOpenrouter": "多模型聚合与路由平台",
+  "aiProviderDescOllama": "本地 Ollama 服务",
+  "aiProviderDescCustom": "任意 OpenAI 兼容端点",
+  "aiProviderCustomBaseUrlHint": "填写到 /v1，或完整 /chat/completions 地址",
+  "aiProviderModelListUrlLabel": "模型列表地址（可选）",
+  "aiProviderModelListUrlHint": "不填时按请求地址自动推导",
+  "aiProviderApiKeyLabel": "API Key（可选）",
+  "aiProviderModelLabel": "模型",
+  "aiProviderModelHint": "获取模型列表或手动填写",
+  "aiProviderFetchModels": "获取模型列表",
+  "aiProviderFetchingModels": "正在获取模型列表…",
+  "aiProviderModelPickerTitle": "选择模型",
+  "aiProviderModelSearchHint": "搜索模型或厂商",
+  "aiProviderModelEmpty": "没有可用模型",
+  "aiProviderModelEmptyDesc": "换一种筛选，或返回手动填写模型 ID",
+  "aiProviderModelOtherGroup": "其他",
+  "aiProviderModelFetchFailed": "模型列表获取失败：{message}",
+  "@aiProviderModelFetchFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderModelFetchEmpty": "连接成功，但没有获取到模型",
+  "aiProviderMissingBaseUrl": "请先填写渠道请求地址",
   "aiChatTitle": "AI 财务助理",
   "aiChatClearHistory": "清空聊天记录",
-  "aiChatHistoryLocalOnly": "对话只存本机，不含在备份内",
   "aiChatClearMessage": "将删除当前所有对话，无法恢复。",
   "aiChatClearConfirm": "清空",
+  "aiChatChooseBook": "选择对话账本",
+  "aiChatClearCurrent": "清空对话",
+  "aiSendQuestion": "发送",
+  "aiStopGenerating": "停止生成",
+  "aiChatCurrentBook": "当前账本：{book}",
+  "@aiChatCurrentBook": {
+    "placeholders": {
+      "book": {
+        "type": "String"
+      }
+    }
+  },
   "aiChatUnconfiguredHint": "先配置 AI，才能开始对话查询账目",
+  "aiChatUnconfiguredTitle": "连接你的 AI",
   "aiChatGoConfigure": "去配置 AI",
   "aiChatEmptyTitle": "问问 AI 你的账目",
   "aiChatInputHint": "问问你的账目…",
@@ -2035,16 +2222,13 @@
   "aiChatHintMonthSummary": "本月收支情况怎么样？",
   "aiChatNoData": "暂无数据",
   "aiChatNoMatchingTx": "无匹配交易",
+  "aiImageBlocked": "出于隐私考虑，未加载图片",
   "aiClearConfig": "清空配置",
   "aiClearConfigMessage": "将清空请求地址、API Key 与模型。清空后需重新填写才能使用 AI 功能。",
   "aiConfigCleared": "配置已清空",
-  "aiSettingsIntro": "填写任意 OpenAI 兼容服务的请求地址、API Key 与模型。你的输入只会发送到这里配置的服务，配置只存本机、不进备份。",
   "aiBaseUrlLabel": "请求地址（Base URL）",
   "aiBaseUrlHint": "如 https://api.openai.com/v1",
-  "aiApiKeyLabel": "API Key",
-  "aiModelLabel": "模型",
-  "aiModelHint": "如 gpt-4o-mini",
-  "aiFillAllFields": "请填写请求地址、API Key 与模型",
+  "aiFillAllFields": "请选择渠道并填写模型",
   "aiToolModeTitle": "工具调用协议",
   "aiToolModeAuto": "自动（推荐）",
   "aiToolModeNative": "原生 Tool Calls",
@@ -2061,7 +2245,6 @@
   "aiActualProtocolNative": "实际协议：原生 Tool Calls",
   "aiActualProtocolPrompt": "实际协议：兼容模式",
   "aiActualProtocolAuto": "实际协议：自动检测",
-  "aiCapabilityProbeNotice": "能力检测会发起少量测试请求，但不会发送任何账目数据。",
   "aiStepRunning": "调用中",
   "aiStepSucceeded": "完成",
   "aiStepFailed": "失败",
@@ -2128,7 +2311,6 @@
   "aiTypeTransfer": "转账",
   "aiRetryAnswer": "重新回答",
   "aiPrivacyNotice": "AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。",
-  "aiOptionalNotice": "AI 是可选功能：不配置也能正常记账、看报表和备份。",
   "aiEntryTitle": "AI 记账",
   "aiEntryInputHint": "用一句话描述，例如「昨天打车 32」",
   "aiEntryParse": "解析",
@@ -2516,6 +2698,14 @@
   "appLogEmpty": "暂无日志记录",
   "appLogCopyAll": "复制全部",
   "appLogCopied": "已复制到剪贴板",
+  "appLogCopyRecord": "复制这条",
+  "@appLogCopyRecord": {
+    "description": "复制单条日志（含堆栈）"
+  },
+  "appLogDetails": "技术细节",
+  "@appLogDetails": {
+    "description": "展开单条日志的堆栈"
+  },
   "appLogClear": "清空日志",
   "appLogClearConfirm": "确定要清空全部日志吗？",
   "appLogCount": "共 {count} 条记录",
@@ -2555,6 +2745,8 @@
   "aiErrRateLimited": "请求过于频繁或额度不足",
   "aiErrServer": "服务器返回错误",
   "aiErrBadResponse": "无法解析服务器响应",
+  "aiErrResponseTooLarge": "AI 返回内容过长，已停止处理",
+  "aiErrModelListUnsupported": "该渠道不支持获取模型列表，请手动填写模型",
   "aiErrUpstream": "服务器返回错误",
   "aiErrUnknown": "请求失败",
   "budgetTitle": "预算",
@@ -2710,6 +2902,12 @@
   "accountCurrencyLocked": "账户已有余额、信用额度或交易记录，币种已锁定。",
   "entryCurrencyLockedByRefund": "交易已有退款，原币不可修改。请先处理关联退款。",
   "entrySaveValidationFailed": "交易金额、币种或关联数据不完整，请检查后重试。",
+  "entrySaveStaleDraft": "这笔交易已在别处修改或删除，请返回后重新打开。",
+  "entrySaveInvalidRefund": "退款数据不完整，请检查退款金额和到账账户后重试。",
+  "entrySaveRefundExceedsExpense": "退款总额不能超过原支出金额。",
+  "entrySaveInvalidAttachments": "附件数据异常，请重新添加附件后重试。",
+  "entrySaveInvalidRememberedRate": "汇率无效，请检查汇率或取消“记住为当日汇率”后重试。",
+  "entrySaveInvalidScope": "分类或标签不属于当前账本，请重新选择。",
   "importValidationFailed": "导入数据的金额、币种或关联关系不完整，未写入任何账目。",
   "entryConversionRateTrace": "使用 {date} 生效的本地汇率{status}",
   "@entryConversionRateTrace": {
@@ -2762,6 +2960,15 @@
     }
   },
   "exchangeRateStale": "可能已过期",
+  "exchangeRateNotEffective": "未生效",
+  "exchangeRateFutureCount": "另有 {count} 条未生效",
+  "@exchangeRateFutureCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "exchangeRateSourceManual": "手动维护",
   "exchangeRateSourceImported": "导入",
   "exchangeRateHistory": "{currency} 汇率历史",
@@ -2849,7 +3056,15 @@
   "@assetValuationMissingDesc": {
     "placeholders": {"currencies": {"type": "String"}}
   },
-  "assetTrendMissingRate": "历史资产走势缺少汇率，补齐相应日期的本地汇率后显示。",
+  "assetTrendMissingRate": "还没有可用于折算的历史汇率，设置今天或更早的汇率后显示资产走势。",
+  "assetTrendPartialMissing": "部分月份缺少 {currencies} 汇率（{months}），这些月份未绘制；补上这些月份或更早的汇率后显示。",
+  "@assetTrendPartialMissing": {
+    "placeholders": {
+      "currencies": {"type": "String"},
+      "months": {"type": "String"}
+    }
+  },
+  "exchangeRateSetAction": "设置汇率",
   "baseCurrencyAmountLabel": "本位币 {currency}",
   "@baseCurrencyAmountLabel": {
     "placeholders": {"currency": {"type": "String"}}
@@ -3038,12 +3253,11 @@
       "net": {"type": "String"}
     }
   },
-  "aiCardDebtLine": "{name} 当前欠款 {amount} {currency}",
+  "aiCardDebtLine": "{name} 当前欠款 {amount}",
   "@aiCardDebtLine": {
     "placeholders": {
       "name": {"type": "String"},
-      "amount": {"type": "String"},
-      "currency": {"type": "String"}
+      "amount": {"type": "String"}
     }
   },
   "aiCardAvailableLine": "，可用额度 {amount}",
@@ -3093,6 +3307,13 @@
       "attention": {"type": "String"}
     }
   },
+  "aiAnswerProvenanceQueried": "基于账本查询 · {count} 次",
+  "@aiAnswerProvenanceQueried": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "aiAnswerProvenanceNoQuery": "未查询账本",
+  "aiAnswerProvenanceUnverified": "未查询账本，请勿据此判断账目",
+  "aiErrRequestTooLarge": "输入或请求内容过长，请精简后重试",
   "widgetPreviewFailed": "小组件预览暂时不可用",
   "widgetConfigurationFailed": "无法读取此小组件，请返回桌面后重试。"
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_lock_session.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import 'app_lock_page.dart';
@@ -19,6 +20,7 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
   bool _locked = false;
   bool _initialized = false;
   VeriFinController? _controller;
+  final ValueNotifier<bool> _lockedListenable = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     if (!_initialized) {
       // 冷启动：已启用应用锁则初始锁定。
       _locked = _controller!.appLockEnabled;
+      _lockedListenable.value = _locked;
       _initialized = true;
     }
   }
@@ -40,6 +43,7 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _lockedListenable.dispose();
     super.dispose();
   }
 
@@ -53,6 +57,7 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       if (!_locked) {
+        _lockedListenable.value = true;
         setState(() => _locked = true);
       }
     }
@@ -62,30 +67,36 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final controller = VeriFinScope.of(context);
     final showLock = _locked && controller.appLockEnabled;
-    return Stack(
-      children: <Widget>[
-        // 半透明材质不能透出锁屏下方的账目；保留页面状态，但停止绘制、语义和焦点访问。
-        ExcludeFocus(
-          excluding: showLock,
-          child: Offstage(offstage: showLock, child: widget.child),
-        ),
-        if (showLock)
-          // 本门卫位于 `MaterialApp.builder`，即在根 Navigator 之上，自身没有
-          // Navigator/Overlay 祖先。锁屏里的确认框要走 Navigator，因此必须像
-          // PrivacyConsentGate / OnboardingGate 一样自带一个独立 Navigator；
-          // 这里根 Navigator 仍在树中，需用 `HeroControllerScope.none` 避免两个
-          // Navigator 共用同一个 HeroController。
-          HeroControllerScope.none(
-            child: Navigator(
-              key: const ValueKey('app_lock_gate'),
-              onGenerateRoute: (_) => MaterialPageRoute<void>(
-                builder: (_) => AppLockScreen(
-                  onUnlocked: () => setState(() => _locked = false),
+    return AppLockSessionScope(
+      locked: _lockedListenable,
+      child: Stack(
+        children: <Widget>[
+          // 半透明材质不能透出锁屏下方的账目；保留页面状态，但停止绘制、语义和焦点访问。
+          ExcludeFocus(
+            excluding: showLock,
+            child: Offstage(offstage: showLock, child: widget.child),
+          ),
+          if (showLock)
+            // 本门卫位于 `MaterialApp.builder`，即在根 Navigator 之上，自身没有
+            // Navigator/Overlay 祖先。锁屏里的确认框要走 Navigator，因此必须像
+            // PrivacyConsentGate / OnboardingGate 一样自带一个独立 Navigator；
+            // 这里根 Navigator 仍在树中，需用 `HeroControllerScope.none` 避免两个
+            // Navigator 共用同一个 HeroController。
+            HeroControllerScope.none(
+              child: Navigator(
+                key: const ValueKey('app_lock_gate'),
+                onGenerateRoute: (_) => MaterialPageRoute<void>(
+                  builder: (_) => AppLockScreen(
+                    onUnlocked: () {
+                      _lockedListenable.value = false;
+                      setState(() => _locked = false);
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

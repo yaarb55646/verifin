@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.StatFs
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.provider.Settings
@@ -45,10 +46,19 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingBackupFilePick: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        rememberQuickEntryIntent(intent)
-        rememberWidgetRouteIntent(intent)
-        rememberCaptureIntent(intent)
+        // 进程/Activity 恢复时 getIntent() 仍是「最后一次启动意图」，可能正是用户
+        // 已经消费过的组件快捷记账或分享采集。再次登记会把入口重放一遍（从图标
+        // 或最近任务回到应用时凭空弹出记账键盘、或重跑一次 OCR）。只有真正的新
+        // 启动才登记这些一次性入口。
+        if (savedInstanceState == null) {
+            rememberQuickEntryIntent(intent)
+            rememberWidgetRouteIntent(intent)
+            rememberCaptureIntent(intent)
+        }
         super.onCreate(savedInstanceState)
+        if (AppLockPreferences.isEnabled(this)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -124,6 +134,15 @@ class MainActivity : FlutterFragmentActivity() {
                     call.argument<String>("path") ?: "",
                     result,
                 )
+                "availableBytes" -> {
+                    val path = call.argument<String>("path") ?: ""
+                    val available = try {
+                        StatFs(File(path).absolutePath).availableBytes
+                    } catch (_: Exception) {
+                        null
+                    }
+                    result.success(available)
+                }
                 "listBackupFiles" -> listBackupFiles(
                     call.argument<String>("directoryUri") ?: "",
                     result,
@@ -146,18 +165,18 @@ class MainActivity : FlutterFragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.action == ACTION_QUICK_ENTRY) {
-            if (channel == null) {
-                pendingQuickEntryIntent = true
-            } else {
-                channel?.invokeMethod("openQuickEntry", null)
-            }
+            // Keep the event pending until Dart acknowledges it. The shell may
+            // not be mounted yet (consent/onboarding/app lock), in which case
+            // the inbound method call has no registered handler and must not
+            // consume the one-shot entry.
+            pendingQuickEntryIntent = true
+            channel?.invokeMethod("openQuickEntry", null)
         }
         if (isWidgetRouteIntent(intent)) {
             rememberWidgetRouteIntent(intent)
-            if (channel != null) {
-                channel?.invokeMethod("openWidgetRoute", pendingWidgetRoute)
-                pendingWidgetRoute = null
-            }
+            // Same one-shot rule as quick entry: only the Dart dispatcher that
+            // actually has a shell route handler consumes this value.
+            channel?.invokeMethod("openWidgetRoute", pendingWidgetRoute)
         }
         if (intent.action == ACTION_CAPTURE_IMAGE || intent.action == ACTION_CAPTURE_TEXT) {
             rememberCaptureIntent(intent)

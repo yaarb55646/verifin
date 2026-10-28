@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
@@ -12,6 +13,7 @@ import '../app/common_widgets.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/entry_currency_draft.dart';
+import '../app/entry_save_feedback.dart';
 import '../app/entry_subcategory_panel.dart';
 import '../app/feedback.dart';
 import '../app/model_lookup.dart';
@@ -1072,9 +1074,9 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                             ),
                           ),
                         if (!_isDraft)
-                          VeriAnchoredMenuAnchor(
-                            entries: <VeriMenuEntry>[
-                              VeriMenuItem(
+                          AnchoredMenuAnchor(
+                            entries: <AnchoredMenuEntry>[
+                              AnchoredMenuItem(
                                 id: 'entry_attachment_camera',
                                 icon: Icons.photo_camera_outlined,
                                 title: AppLocalizations.of(
@@ -1084,7 +1086,7 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
                                 onPressed: () =>
                                     unawaited(_addAttachment(fromCamera: true)),
                               ),
-                              VeriMenuItem(
+                              AnchoredMenuItem(
                                 id: 'entry_attachment_gallery',
                                 icon: Icons.photo_library_outlined,
                                 title: AppLocalizations.of(
@@ -2041,7 +2043,10 @@ class _EntryDetailPageState extends State<EntryDetailPage> {
       if (result is EntrySaveValidationFailure && mounted) {
         unawaited(
           VeriFeedbackHost.of(context).showMessage(
-            message: AppLocalizations.of(context).entrySaveValidationFailed,
+            message: entrySaveValidationMessage(
+              AppLocalizations.of(context),
+              result.code,
+            ),
             tone: VeriFeedbackTone.warning,
             duration: VeriFeedbackDuration.long,
           ),

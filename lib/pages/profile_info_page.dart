@@ -1,3 +1,4 @@
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/avatar_picker.dart';
@@ -112,7 +113,7 @@ class _ProfileInfoPageState extends State<ProfileInfoPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                VeriAnchoredChoice<ProfileGender>(
+                AnchoredMenuChoice<ProfileGender>(
                   key: const Key('profile_gender_choice'),
                   values: ProfileGender.values,
                   selected: _gender,

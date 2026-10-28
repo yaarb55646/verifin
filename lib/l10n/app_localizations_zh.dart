@@ -33,6 +33,60 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dbErrorDetail => '错误详情';
 
   @override
+  String get startupPreparingTitle => '正在准备账本';
+
+  @override
+  String get startupPreparingBody => '首次载入数据可能需要一点时间，请稍候。';
+
+  @override
+  String get startupStagePreferences => '读取本机设置';
+
+  @override
+  String get startupStageDatabase => '打开账本数据库';
+
+  @override
+  String get startupStageController => '载入账本数据';
+
+  @override
+  String get startupStageRecurring => '补记周期账目';
+
+  @override
+  String get startupStageWarmUp => '准备界面资源';
+
+  @override
+  String get startupStageReady => '即将进入';
+
+  @override
+  String startupElapsed(int seconds) {
+    return '已等待 $seconds 秒';
+  }
+
+  @override
+  String get startupSlowTitle => '启动比平时慢';
+
+  @override
+  String startupSlowBody(String stage) {
+    return '仍在进行：$stage。你的账目数据不会被改动；可以继续等待，或重试一次。';
+  }
+
+  @override
+  String get startupFailedTitle => '启动没有完成';
+
+  @override
+  String startupFailedBody(String stage) {
+    return '在「$stage」阶段没有完成。账目数据仍保存在本机，请不要清除应用数据或卸载应用。';
+  }
+
+  @override
+  String get startupRetry => '重试';
+
+  @override
+  String get startupCopyDiagnostics => '复制诊断信息';
+
+  @override
+  String get startupDiagnosticsCopied => '已复制';
+
+  @override
   String get tabHome => '首页';
 
   @override
@@ -72,7 +126,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navigationStyleLiquidGlassName => '液态玻璃';
 
   @override
-  String get navigationStyleLiquidGlassDesc => '浮动胶囊，背景模糊并轻微折射，内容从玻璃下滚过';
+  String get navigationStyleLiquidGlassDesc => '浮动胶囊，真实采样背景并折射，内容从玻璃下滚过';
 
   @override
   String get quickEntry => '快速记账';
@@ -760,6 +814,17 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String dateMonthDay(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat('M月d日', localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String dateYearMonthDay(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat(
+      'yyyy年M月d日',
+      localeName,
+    );
     final String dateString = dateDateFormat.format(date);
 
     return '$dateString';
@@ -1615,6 +1680,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transferNeedsTwoAccounts => '转账需要两个不同的账户,请先添加转入账户。';
 
   @override
+  String noAccountTransferCurrencyChangeTitle(String from, String to) {
+    return '转入币种由 $from 改为 $to';
+  }
+
+  @override
+  String noAccountTransferNoRateTitle(String from, String to) {
+    return '缺少 $from → $to 汇率';
+  }
+
+  @override
+  String noAccountTransferConvert(String amount) {
+    return '按汇率换算为 $amount';
+  }
+
+  @override
+  String noAccountTransferReinterpret(String currency) {
+    return '保留原金额数字，按 $currency 重新解释';
+  }
+
+  @override
   String get deleteEntryTitle => '删除此交易？';
 
   @override
@@ -2300,6 +2385,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get categoryNameLabel => '分类名称';
 
   @override
+  String get categoryNameDuplicate => '同一父分类下已存在同名分类';
+
+  @override
   String get viewCategoryEntries => '查看交易';
 
   @override
@@ -2357,6 +2445,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get renameCategoryTitle => '重命名分类';
+
+  @override
+  String get tagNameDuplicate => '已存在同名标签';
 
   @override
   String get pickIconTitle => '选择图标';
@@ -3027,13 +3118,126 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiNotConfigured => '未配置';
 
   @override
+  String get aiProviderCurrent => '当前渠道';
+
+  @override
+  String get aiProviderPickerTitle => '选择 AI 渠道';
+
+  @override
+  String get aiProviderPickerSubtitle => '选择后自动使用该渠道的固定请求地址';
+
+  @override
+  String get aiProviderChange => '更换';
+
+  @override
+  String get aiProviderSearchHint => '搜索渠道名称、说明或域名';
+
+  @override
+  String get aiProviderSearchEmpty => '未找到渠道';
+
+  @override
+  String get aiProviderSearchEmptyDesc => '试试厂商名、模型平台或域名';
+
+  @override
+  String get aiProviderGroupAll => '全部';
+
+  @override
+  String get aiProviderGroupChinaOfficial => '国内官方';
+
+  @override
+  String get aiProviderGroupGlobalOfficial => '国际官方';
+
+  @override
+  String get aiProviderGroupAggregator => '聚合平台';
+
+  @override
+  String get aiProviderGroupLocal => '本地服务';
+
+  @override
+  String get aiProviderGroupCustom => '自定义';
+
+  @override
+  String get aiProviderDescDeepSeek => 'DeepSeek 官方 OpenAI 兼容接口';
+
+  @override
+  String get aiProviderDescVolcengine => '火山方舟模型服务';
+
+  @override
+  String get aiProviderDescKimi => '月之暗面 Kimi 官方接口';
+
+  @override
+  String get aiProviderDescZhipu => '智谱 GLM 官方接口';
+
+  @override
+  String get aiProviderDescDashscope => '阿里云百炼兼容接口';
+
+  @override
+  String get aiProviderDescOpenai => 'OpenAI 官方接口';
+
+  @override
+  String get aiProviderDescOpenrouter => '多模型聚合与路由平台';
+
+  @override
+  String get aiProviderDescOllama => '本地 Ollama 服务';
+
+  @override
+  String get aiProviderDescCustom => '任意 OpenAI 兼容端点';
+
+  @override
+  String get aiProviderCustomBaseUrlHint => '填写到 /v1，或完整 /chat/completions 地址';
+
+  @override
+  String get aiProviderModelListUrlLabel => '模型列表地址（可选）';
+
+  @override
+  String get aiProviderModelListUrlHint => '不填时按请求地址自动推导';
+
+  @override
+  String get aiProviderApiKeyLabel => 'API Key（可选）';
+
+  @override
+  String get aiProviderModelLabel => '模型';
+
+  @override
+  String get aiProviderModelHint => '获取模型列表或手动填写';
+
+  @override
+  String get aiProviderFetchModels => '获取模型列表';
+
+  @override
+  String get aiProviderFetchingModels => '正在获取模型列表…';
+
+  @override
+  String get aiProviderModelPickerTitle => '选择模型';
+
+  @override
+  String get aiProviderModelSearchHint => '搜索模型或厂商';
+
+  @override
+  String get aiProviderModelEmpty => '没有可用模型';
+
+  @override
+  String get aiProviderModelEmptyDesc => '换一种筛选，或返回手动填写模型 ID';
+
+  @override
+  String get aiProviderModelOtherGroup => '其他';
+
+  @override
+  String aiProviderModelFetchFailed(String message) {
+    return '模型列表获取失败：$message';
+  }
+
+  @override
+  String get aiProviderModelFetchEmpty => '连接成功，但没有获取到模型';
+
+  @override
+  String get aiProviderMissingBaseUrl => '请先填写渠道请求地址';
+
+  @override
   String get aiChatTitle => 'AI 财务助理';
 
   @override
   String get aiChatClearHistory => '清空聊天记录';
-
-  @override
-  String get aiChatHistoryLocalOnly => '对话只存本机，不含在备份内';
 
   @override
   String get aiChatClearMessage => '将删除当前所有对话，无法恢复。';
@@ -3042,7 +3246,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatClearConfirm => '清空';
 
   @override
+  String get aiChatChooseBook => '选择对话账本';
+
+  @override
+  String get aiChatClearCurrent => '清空对话';
+
+  @override
+  String get aiSendQuestion => '发送';
+
+  @override
+  String get aiStopGenerating => '停止生成';
+
+  @override
+  String aiChatCurrentBook(String book) {
+    return '当前账本：$book';
+  }
+
+  @override
   String get aiChatUnconfiguredHint => '先配置 AI，才能开始对话查询账目';
+
+  @override
+  String get aiChatUnconfiguredTitle => '连接你的 AI';
 
   @override
   String get aiChatGoConfigure => '去配置 AI';
@@ -3069,6 +3293,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatNoMatchingTx => '无匹配交易';
 
   @override
+  String get aiImageBlocked => '出于隐私考虑，未加载图片';
+
+  @override
   String get aiClearConfig => '清空配置';
 
   @override
@@ -3078,26 +3305,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiConfigCleared => '配置已清空';
 
   @override
-  String get aiSettingsIntro =>
-      '填写任意 OpenAI 兼容服务的请求地址、API Key 与模型。你的输入只会发送到这里配置的服务，配置只存本机、不进备份。';
-
-  @override
   String get aiBaseUrlLabel => '请求地址（Base URL）';
 
   @override
   String get aiBaseUrlHint => '如 https://api.openai.com/v1';
 
   @override
-  String get aiApiKeyLabel => 'API Key';
-
-  @override
-  String get aiModelLabel => '模型';
-
-  @override
-  String get aiModelHint => '如 gpt-4o-mini';
-
-  @override
-  String get aiFillAllFields => '请填写请求地址、API Key 与模型';
+  String get aiFillAllFields => '请选择渠道并填写模型';
 
   @override
   String get aiToolModeTitle => '工具调用协议';
@@ -3146,9 +3360,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiActualProtocolAuto => '实际协议：自动检测';
-
-  @override
-  String get aiCapabilityProbeNotice => '能力检测会发起少量测试请求，但不会发送任何账目数据。';
 
   @override
   String get aiStepRunning => '调用中';
@@ -3272,9 +3483,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get aiPrivacyNotice =>
       'AI 功能会把你输入的文字，以及回答问题所需的只读账目查询摘要发送到你配置的第三方服务；配置和完整账目仍只存本机。';
-
-  @override
-  String get aiOptionalNotice => 'AI 是可选功能：不配置也能正常记账、看报表和备份。';
 
   @override
   String get aiEntryTitle => 'AI 记账';
@@ -3921,6 +4129,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appLogCopied => '已复制到剪贴板';
 
   @override
+  String get appLogCopyRecord => '复制这条';
+
+  @override
+  String get appLogDetails => '技术细节';
+
+  @override
   String get appLogClear => '清空日志';
 
   @override
@@ -4018,6 +4232,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiErrBadResponse => '无法解析服务器响应';
+
+  @override
+  String get aiErrResponseTooLarge => 'AI 返回内容过长，已停止处理';
+
+  @override
+  String get aiErrModelListUnsupported => '该渠道不支持获取模型列表，请手动填写模型';
 
   @override
   String get aiErrUpstream => '服务器返回错误';
@@ -4208,6 +4428,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get entrySaveValidationFailed => '交易金额、币种或关联数据不完整，请检查后重试。';
 
   @override
+  String get entrySaveStaleDraft => '这笔交易已在别处修改或删除，请返回后重新打开。';
+
+  @override
+  String get entrySaveInvalidRefund => '退款数据不完整，请检查退款金额和到账账户后重试。';
+
+  @override
+  String get entrySaveRefundExceedsExpense => '退款总额不能超过原支出金额。';
+
+  @override
+  String get entrySaveInvalidAttachments => '附件数据异常，请重新添加附件后重试。';
+
+  @override
+  String get entrySaveInvalidRememberedRate => '汇率无效，请检查汇率或取消“记住为当日汇率”后重试。';
+
+  @override
+  String get entrySaveInvalidScope => '分类或标签不属于当前账本，请重新选择。';
+
+  @override
   String get importValidationFailed => '导入数据的金额、币种或关联关系不完整，未写入任何账目。';
 
   @override
@@ -4276,6 +4514,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get exchangeRateStale => '可能已过期';
+
+  @override
+  String get exchangeRateNotEffective => '未生效';
+
+  @override
+  String exchangeRateFutureCount(int count) {
+    return '另有 $count 条未生效';
+  }
 
   @override
   String get exchangeRateSourceManual => '手动维护';
@@ -4423,7 +4669,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get assetTrendMissingRate => '历史资产走势缺少汇率，补齐相应日期的本地汇率后显示。';
+  String get assetTrendMissingRate => '还没有可用于折算的历史汇率，设置今天或更早的汇率后显示资产走势。';
+
+  @override
+  String assetTrendPartialMissing(String currencies, String months) {
+    return '部分月份缺少 $currencies 汇率（$months），这些月份未绘制；补上这些月份或更早的汇率后显示。';
+  }
+
+  @override
+  String get exchangeRateSetAction => '设置汇率';
 
   @override
   String baseCurrencyAmountLabel(String currency) {
@@ -4677,8 +4931,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String aiCardDebtLine(String name, String amount, String currency) {
-    return '$name 当前欠款 $amount $currency';
+  String aiCardDebtLine(String name, String amount) {
+    return '$name 当前欠款 $amount';
   }
 
   @override
@@ -4732,6 +4986,20 @@ class AppLocalizationsZh extends AppLocalizations {
   ) {
     return '$period 预算 $budget，已花 $spent，剩余 $remaining$daily。$attention';
   }
+
+  @override
+  String aiAnswerProvenanceQueried(int count) {
+    return '基于账本查询 · $count 次';
+  }
+
+  @override
+  String get aiAnswerProvenanceNoQuery => '未查询账本';
+
+  @override
+  String get aiAnswerProvenanceUnverified => '未查询账本，请勿据此判断账目';
+
+  @override
+  String get aiErrRequestTooLarge => '输入或请求内容过长，请精简后重试';
 
   @override
   String get widgetPreviewFailed => '小组件预览暂时不可用';

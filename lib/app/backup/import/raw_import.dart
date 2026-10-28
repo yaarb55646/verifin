@@ -36,6 +36,9 @@ class RawImportRecord {
     this.fee = 0,
     this.refunded = 0,
     this.tags = const <String>[],
+    this.recordId,
+    this.refundOfRecordId,
+    this.settledAt,
     this.sourceLine,
   });
 
@@ -85,6 +88,16 @@ class RawImportRecord {
   /// 标签名（未归一化；plan_builder 去重并解析成标签 id）。
   final List<String> tags;
 
+  /// 来源文件内的稳定行编号，仅用于同一文件内关联退款与原支出；
+  /// 不是最终 [LedgerEntry.id]，导入落库时仍会生成新 id。
+  final String? recordId;
+
+  /// 退款行指向的原支出 [recordId]；仅 [EntryType.refund] 使用。
+  final String? refundOfRecordId;
+
+  /// 退款到账日期；null 表示待到账。仅 [EntryType.refund] 使用。
+  final DateTime? settledAt;
+
   /// 源文件行号，供 CSV 模板逐行报错定位；二进制来源可为 null。
   final int? sourceLine;
 
@@ -110,6 +123,9 @@ class RawImportRecord {
       fee: fee,
       refunded: refunded,
       tags: tags,
+      recordId: recordId,
+      refundOfRecordId: refundOfRecordId,
+      settledAt: settledAt,
       sourceLine: sourceLine,
     );
   }
@@ -173,6 +189,9 @@ EntryType? parseImportType(String raw) {
     case 'transfer':
     case '转':
       return EntryType.transfer;
+    case '退款':
+    case 'refund':
+      return EntryType.refund;
   }
   return null;
 }
@@ -287,13 +306,16 @@ RawImportRecord? buildRecordFromStrings({
   String toAccountAmount = '',
   String baseAmount = '',
   String rateToBase = '',
+  String recordId = '',
+  String refundOfRecordId = '',
+  String settledAt = '',
   List<String> tags = const <String>[],
   int? sourceLine,
   void Function(String message)? onError,
 }) {
   final parsedType = parseImportType(type);
   if (parsedType == null) {
-    onError?.call('类型无法识别（应为 支出/收入/转账）');
+    onError?.call('类型无法识别（应为 支出/收入/转账/退款）');
     return null;
   }
   final parsedAmount = parseImportAmount(amount);
@@ -305,6 +327,14 @@ RawImportRecord? buildRecordFromStrings({
   if (parsedDate == null) {
     onError?.call('日期格式无效（应为 2026-01-05）');
     return null;
+  }
+  DateTime? parsedSettledAt;
+  if (settledAt.trim().isNotEmpty) {
+    parsedSettledAt = parseImportDate(settledAt);
+    if (parsedSettledAt == null) {
+      onError?.call('到账日期格式无效（应为 2026-01-05）');
+      return null;
+    }
   }
   return RawImportRecord(
     date: parsedDate,
@@ -333,6 +363,11 @@ RawImportRecord? buildRecordFromStrings({
     fee: parseImportFee(fee),
     refunded: parseImportFee(refunded),
     tags: tags,
+    recordId: recordId.trim().isEmpty ? null : recordId.trim(),
+    refundOfRecordId: refundOfRecordId.trim().isEmpty
+        ? null
+        : refundOfRecordId.trim(),
+    settledAt: parsedSettledAt,
     sourceLine: sourceLine,
   );
 }

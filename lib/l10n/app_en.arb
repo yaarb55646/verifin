@@ -8,6 +8,43 @@
   "dbErrorBody": "Your data is most likely still safe on this device. Please do not clear the app's data or uninstall the app.",
   "dbErrorHint": "If you just installed an older version, please reinstall the latest version and try again. If the problem persists, take a screenshot of this page to report it.",
   "dbErrorDetail": "Error details",
+  "startupPreparingTitle": "Preparing your ledger",
+  "startupPreparingBody": "Loading your data for the first time can take a moment.",
+  "startupStagePreferences": "Reading local settings",
+  "startupStageDatabase": "Opening the ledger database",
+  "startupStageController": "Loading ledger data",
+  "startupStageRecurring": "Posting due recurring entries",
+  "startupStageWarmUp": "Preparing interface resources",
+  "startupStageReady": "Almost ready",
+  "startupElapsed": "Waiting {seconds}s",
+  "@startupElapsed": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSlowTitle": "Startup is slower than usual",
+  "startupSlowBody": "Still working on: {stage}. Your ledger data will not be changed. You can keep waiting or retry.",
+  "@startupSlowBody": {
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "startupFailedTitle": "Startup didn't finish",
+  "startupFailedBody": "The \"{stage}\" step didn't finish. Your ledger data is still on this device — please do not clear the app's data or uninstall it.",
+  "@startupFailedBody": {
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRetry": "Retry",
+  "startupCopyDiagnostics": "Copy diagnostics",
+  "startupDiagnosticsCopied": "Copied",
   "tabHome": "Home",
   "tabAssets": "Assets",
   "tabReports": "Reports",
@@ -21,7 +58,7 @@
   "navigationStyleDockedName": "Docked bar",
   "navigationStyleDockedDesc": "Full-width opaque bar pinned to the bottom; icons sweep as you switch",
   "navigationStyleLiquidGlassName": "Liquid glass",
-  "navigationStyleLiquidGlassDesc": "Floating capsule with a blurred glass surface and a sliding highlight",
+  "navigationStyleLiquidGlassDesc": "Floating capsule with live backdrop blur and refraction",
   "quickEntry": "Quick Entry",
   "pressBackAgainToExit": "Press back again to exit",
   "settingsLanguage": "Language",
@@ -251,6 +288,16 @@
       "date": {
         "type": "DateTime",
         "format": "MMM d",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "dateYearMonthDay": "{date}",
+  "@dateYearMonthDay": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMM d, yyyy",
         "isCustomDateFormat": "true"
       }
     }
@@ -546,6 +593,44 @@
   "pickTypeTitle": "Choose type",
   "noteEditTitle": "Edit note",
   "transferNeedsTwoAccounts": "Transfers need two different accounts; add a destination account first.",
+  "noAccountTransferCurrencyChangeTitle": "Destination currency changes from {from} to {to}",
+  "@noAccountTransferCurrencyChangeTitle": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccountTransferNoRateTitle": "Missing {from} → {to} rate",
+  "@noAccountTransferNoRateTitle": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccountTransferConvert": "Convert to {amount}",
+  "@noAccountTransferConvert": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccountTransferReinterpret": "Keep the number and reinterpret it as {currency}",
+  "@noAccountTransferReinterpret": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
   "deleteEntryTitle": "Delete this transaction?",
   "deleteEntryMessage": "This cannot be undone; the locally saved record will be removed.",
   "todayLabel": "Today",
@@ -824,6 +909,7 @@
   "categoryKeywordConflict": "“{keyword}” is already linked to “{category}”",
   "categoryKeywordCount": "{count} keywords",
   "categoryNameLabel": "Category name",
+  "categoryNameDuplicate": "A category with this name already exists under the same parent",
   "viewCategoryEntries": "View transactions",
   "changeIcon": "Change icon",
   "addSubCategory": "New subcategory",
@@ -871,6 +957,7 @@
   },
   "mergeCategoryFailed": "Can't merge this category",
   "renameCategoryTitle": "Rename category",
+  "tagNameDuplicate": "A tag with this name already exists",
   "pickIconTitle": "Choose icon",
   "iconSectionBuiltin": "Built-in icons",
   "iconSectionEmoji": "Emoji",
@@ -1099,12 +1186,62 @@
   "aiSettingsTitle": "AI settings",
   "aiConfigured": "Configured",
   "aiNotConfigured": "Not set",
+  "aiProviderCurrent": "Current provider",
+  "aiProviderPickerTitle": "Choose AI provider",
+  "aiProviderPickerSubtitle": "The provider's fixed endpoint will be used",
+  "aiProviderChange": "Change",
+  "aiProviderSearchHint": "Search provider, description, or domain",
+  "aiProviderSearchEmpty": "No provider found",
+  "aiProviderSearchEmptyDesc": "Try a vendor name, platform, or domain",
+  "aiProviderGroupAll": "All",
+  "aiProviderGroupChinaOfficial": "China official",
+  "aiProviderGroupGlobalOfficial": "Global official",
+  "aiProviderGroupAggregator": "Aggregators",
+  "aiProviderGroupLocal": "Local",
+  "aiProviderGroupCustom": "Custom",
+  "aiProviderDescDeepSeek": "DeepSeek official OpenAI-compatible endpoint",
+  "aiProviderDescVolcengine": "Volcengine Ark model service",
+  "aiProviderDescKimi": "Moonshot Kimi official endpoint",
+  "aiProviderDescZhipu": "Zhipu GLM official endpoint",
+  "aiProviderDescDashscope": "Alibaba Cloud Bailian compatible endpoint",
+  "aiProviderDescOpenai": "OpenAI official endpoint",
+  "aiProviderDescOpenrouter": "Multi-model routing platform",
+  "aiProviderDescOllama": "Local Ollama service",
+  "aiProviderDescCustom": "Any OpenAI-compatible endpoint",
+  "aiProviderCustomBaseUrlHint": "Enter through /v1, or a full /chat/completions URL",
+  "aiProviderModelListUrlLabel": "Model list URL (optional)",
+  "aiProviderModelListUrlHint": "Leave empty to derive it from the endpoint",
+  "aiProviderApiKeyLabel": "API Key (optional)",
+  "aiProviderModelLabel": "Model",
+  "aiProviderModelHint": "Fetch the model list or enter a model manually",
+  "aiProviderFetchModels": "Fetch model list",
+  "aiProviderFetchingModels": "Fetching model list…",
+  "aiProviderModelPickerTitle": "Choose model",
+  "aiProviderModelSearchHint": "Search model or vendor",
+  "aiProviderModelEmpty": "No models available",
+  "aiProviderModelEmptyDesc": "Try another filter or enter a model ID manually",
+  "aiProviderModelOtherGroup": "Other",
+  "aiProviderModelFetchFailed": "Could not fetch models: {message}",
+  "@aiProviderModelFetchFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderModelFetchEmpty": "Connected, but no models were returned",
+  "aiProviderMissingBaseUrl": "Enter the provider endpoint first",
   "aiChatTitle": "AI Assistant",
   "aiChatClearHistory": "Clear chat history",
-  "aiChatHistoryLocalOnly": "Chats stay on this device and are not included in backups",
   "aiChatClearMessage": "This deletes the current conversation and cannot be undone.",
   "aiChatClearConfirm": "Clear",
+  "aiChatChooseBook": "Choose conversation ledger",
+  "aiChatClearCurrent": "Clear chat",
+  "aiSendQuestion": "Send",
+  "aiStopGenerating": "Stop generating",
+  "aiChatCurrentBook": "Current ledger: {book}",
   "aiChatUnconfiguredHint": "Configure AI first to start asking about your finances",
+  "aiChatUnconfiguredTitle": "Connect your AI",
   "aiChatGoConfigure": "Configure AI",
   "aiChatEmptyTitle": "Ask AI about your finances",
   "aiChatInputHint": "Ask about your finances…",
@@ -1113,16 +1250,13 @@
   "aiChatHintMonthSummary": "How's my income and spending this month?",
   "aiChatNoData": "No data",
   "aiChatNoMatchingTx": "No matching transactions",
+  "aiImageBlocked": "Image not loaded for privacy",
   "aiClearConfig": "Clear configuration",
   "aiClearConfigMessage": "This clears the base URL, API key and model. You'll need to re-enter them to use AI features.",
   "aiConfigCleared": "Configuration cleared",
-  "aiSettingsIntro": "Enter the request URL, API key and model of any OpenAI-compatible service. Your input is only sent to the service configured here; the config stays on this device and is not backed up.",
   "aiBaseUrlLabel": "Request URL (base)",
   "aiBaseUrlHint": "e.g. https://api.openai.com/v1",
-  "aiApiKeyLabel": "API Key",
-  "aiModelLabel": "Model",
-  "aiModelHint": "e.g. gpt-4o-mini",
-  "aiFillAllFields": "Please fill in the request URL, API key and model",
+  "aiFillAllFields": "Choose a provider and enter a model",
   "aiToolModeTitle": "Tool calling protocol",
   "aiToolModeAuto": "Auto (recommended)",
   "aiToolModeNative": "Native Tool Calls",
@@ -1139,7 +1273,6 @@
   "aiActualProtocolNative": "Active protocol: native Tool Calls",
   "aiActualProtocolPrompt": "Active protocol: compatibility mode",
   "aiActualProtocolAuto": "Active protocol: automatic detection",
-  "aiCapabilityProbeNotice": "Capability detection sends a few small test requests without any financial data.",
   "aiStepRunning": "Running",
   "aiStepSucceeded": "Done",
   "aiStepFailed": "Failed",
@@ -1178,7 +1311,6 @@
   "aiTypeTransfer": "Transfer",
   "aiRetryAnswer": "Answer again",
   "aiPrivacyNotice": "AI features send your text and the read-only financial summaries needed to answer your questions to your configured third-party service. The configuration and full ledger remain on this device.",
-  "aiOptionalNotice": "AI is optional — recording, reports and backups all work without it.",
   "aiEntryTitle": "AI entry",
   "aiEntryInputHint": "Describe it in one sentence, e.g. \"taxi 32 yesterday\"",
   "aiEntryParse": "Parse",
@@ -1465,6 +1597,8 @@
   "appLogEmpty": "No log records yet",
   "appLogCopyAll": "Copy all",
   "appLogCopied": "Copied to clipboard",
+  "appLogCopyRecord": "Copy this entry",
+  "appLogDetails": "Technical details",
   "appLogClear": "Clear logs",
   "appLogClearConfirm": "Clear all logs?",
   "appLogCount": "{count} records",
@@ -1504,6 +1638,8 @@
   "aiErrRateLimited": "Too many requests or insufficient quota",
   "aiErrServer": "The server returned an error",
   "aiErrBadResponse": "Could not parse the server response",
+  "aiErrResponseTooLarge": "The AI response was too large and has been stopped.",
+  "aiErrModelListUnsupported": "This provider does not expose a model list. Enter a model manually.",
   "aiErrUpstream": "The server returned an error",
   "aiErrUnknown": "Request failed",
   "budgetTitle": "Budget",
@@ -1659,6 +1795,12 @@
   "accountCurrencyLocked": "The account currency is locked because it has a balance, credit limit, or transaction history.",
   "entryCurrencyLockedByRefund": "The original currency is locked because this transaction has refunds. Resolve the linked refunds first.",
   "entrySaveValidationFailed": "The transaction amounts, currencies, or linked data are incomplete. Review them and try again.",
+  "entrySaveStaleDraft": "This transaction was changed or deleted elsewhere. Go back and reopen it.",
+  "entrySaveInvalidRefund": "The refund data is incomplete. Check the refund amount and receiving account, then try again.",
+  "entrySaveRefundExceedsExpense": "Total refunds cannot exceed the original expense amount.",
+  "entrySaveInvalidAttachments": "The attachment data is invalid. Re-add the attachments and try again.",
+  "entrySaveInvalidRememberedRate": "The exchange rate is invalid. Check it or turn off Remember as rate for this date, then try again.",
+  "entrySaveInvalidScope": "The category or tag does not belong to the current ledger. Select it again.",
   "importValidationFailed": "The imported amounts, currencies, or links are incomplete. No ledger data was written.",
   "entryConversionRateTrace": "Using local rates effective {date}{status}",
   "@entryConversionRateTrace": {
@@ -1711,6 +1853,15 @@
     }
   },
   "exchangeRateStale": "May be outdated",
+  "exchangeRateNotEffective": "Not yet effective",
+  "exchangeRateFutureCount": "Plus {count} future rate(s)",
+  "@exchangeRateFutureCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "exchangeRateSourceManual": "Manual",
   "exchangeRateSourceImported": "Imported",
   "exchangeRateHistory": "{currency} rate history",
@@ -1798,7 +1949,15 @@
   "@assetValuationMissingDesc": {
     "placeholders": {"currencies": {"type": "String"}}
   },
-  "assetTrendMissingRate": "Historical asset trend needs exchange rates. Add local rates for the affected dates to show it.",
+  "assetTrendMissingRate": "There is no exchange rate available for valuation yet. Set a rate for today or earlier to show the asset trend.",
+  "assetTrendPartialMissing": "Some months are missing {currencies} rates ({months}); those months are not drawn. Add rates for those months or earlier to show them.",
+  "@assetTrendPartialMissing": {
+    "placeholders": {
+      "currencies": {"type": "String"},
+      "months": {"type": "String"}
+    }
+  },
+  "exchangeRateSetAction": "Set rate",
   "baseCurrencyAmountLabel": "Base currency {currency}",
   "@baseCurrencyAmountLabel": {
     "placeholders": {"currency": {"type": "String"}}
@@ -1855,7 +2014,7 @@
   "aiTotalMissingRateLine": "Total unavailable, missing rates for {codes}",
   "aiMissingRatesNetWorth": "Some accounts are missing exchange rates ({codes}), so total assets and net assets can't be shown. Add them under {page}.",
   "aiNetWorthSummary": "Total assets {assets}, total liabilities {liabilities}, net assets {net}.",
-  "aiCardDebtLine": "{name} owes {amount} {currency}",
+  "aiCardDebtLine": "{name} owes {amount}",
   "aiCardAvailableLine": ", available {amount}",
   "aiCardBillLine": ", this cycle {amount}",
   "aiCardDueLine": ", due on day {day} ({due})",
@@ -1864,6 +2023,10 @@
   "aiBudgetAttentionRow": "{label} {spent}/{budget} ({status})",
   "aiDailyRemainingLine": ", {amount}/day remaining",
   "aiBudgetSummary": "{period} budget {budget}, spent {spent}, remaining {remaining}{daily}. {attention}",
+  "aiAnswerProvenanceQueried": "Based on {count} ledger queries",
+  "aiAnswerProvenanceNoQuery": "No ledger data queried",
+  "aiAnswerProvenanceUnverified": "No ledger data was queried; do not rely on this for account facts",
+  "aiErrRequestTooLarge": "The input or request is too large. Shorten it and try again.",
   "widgetPreviewFailed": "Widget preview unavailable",
   "widgetConfigurationFailed": "Could not load this widget. Return to the home screen and try again."
 }

@@ -20,7 +20,7 @@ void main() {
     controller.reorderTags(1, 0);
     expect(controller.tags.map((t) => t.label).toList(), <String>['旅行', '工作']);
 
-    controller.renameTag(a!, '上班');
+    await controller.renameTag(a!, '上班');
     expect(controller.tagById(a)!.label, '上班');
     controller.dispose();
   });

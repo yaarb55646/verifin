@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_lock.dart';
+import 'package:verifin/app/app_lock_session.dart';
 import 'package:verifin/app/veri_fin_scope.dart';
 import 'package:verifin/pages/app_lock_gate.dart';
 import 'package:verifin/local_storage/local_storage.dart';
@@ -41,6 +42,44 @@ void main() {
     await _enterPin(tester, '123456');
     expect(find.text('private-ledger-content'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
+
+  testWidgets('外部入口等待锁屏解除后才继续', (tester) async {
+    final controller = await makeController();
+    await controller.setAppLock(kind: AppLockKind.pin, secret: '123456');
+    late BuildContext childContext;
+    var resumed = false;
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: AppLockGate(
+            child: Builder(
+              builder: (context) {
+                childContext = context;
+                return const Scaffold(body: Text('locked-content'));
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final waiting = AppLockSessionScope.waitUntilUnlocked(childContext).then((
+      _,
+    ) {
+      resumed = true;
+    });
+    await tester.pump();
+    expect(AppLockSessionScope.isLocked(childContext), isTrue);
+    expect(resumed, isFalse);
+
+    await _enterPin(tester, '123456');
+    expect(AppLockSessionScope.isLocked(childContext), isFalse);
+    await waiting;
+    expect(resumed, isTrue);
     controller.dispose();
   });
 
@@ -100,6 +139,13 @@ void main() {
       const config = AppLockConfig.none();
       expect(config.enabled, isFalse);
       expect(config.verify('123456'), isFalse);
+    });
+
+    test('corrupt storage fails closed for standalone entry points', () {
+      final config = AppLockConfig.fromStorage('{not-json');
+      expect(config.enabled, isTrue);
+      expect(config.verify('123456'), isFalse);
+      expect(AppLockConfig.fromStorage(null).enabled, isFalse);
     });
   });
 
@@ -165,7 +211,7 @@ void main() {
     test('reset keeps the app lock configured', () async {
       final controller = await makeController();
       await controller.setAppLock(kind: AppLockKind.pin, secret: '135790');
-      controller.resetAllData();
+      await controller.resetAllData();
       expect(controller.appLockEnabled, isTrue);
       expect(controller.verifyAppLock('135790'), isTrue);
     });

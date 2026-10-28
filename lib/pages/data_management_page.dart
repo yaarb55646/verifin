@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -157,7 +158,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   VeriCard(
                     child: Column(
                       children: <Widget>[
-                        VeriAnchoredChoice<BackupFrequency>(
+                        AnchoredMenuChoice<BackupFrequency>(
                           values: BackupFrequency.values,
                           selected: _draftFrequency,
                           idOf: (value) => 'backup_frequency_${value.name}',
@@ -190,7 +191,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
                         if (_draftFrequency ==
                             BackupFrequency.everyNHours) ...<Widget>[
                           const Divider(),
-                          VeriAnchoredChoice<int>(
+                          AnchoredMenuChoice<int>(
                             values: _backupIntervalOptions,
                             selected:
                                 _backupIntervalOptions.contains(
@@ -222,7 +223,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
                           ),
                         ],
                         const Divider(),
-                        VeriAnchoredChoice<int>(
+                        AnchoredMenuChoice<int>(
                           values: _backupRetentionOptions,
                           selected:
                               _backupRetentionOptions.contains(_draftRetention)
@@ -1054,6 +1055,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
               controller.webdavConfig,
               prepared.filename,
               prepared.cachePath,
+              isCancelled: isCancelled,
             );
             controller.recordBackupTime(now);
             uploadedName = prepared.filename;
@@ -1194,6 +1196,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
               controller.webdavConfig,
               chosen.href,
               cachePath,
+              isCancelled: isCancelled,
             );
             if (!context.mounted) {
               return false;
@@ -1688,7 +1691,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
           !context.mounted) {
         return;
       }
-      final applied = controller.applyImportEntries(
+      final applied = await controller.applyImportEntries(
         entries: result.entries,
         candidateAccounts: result.candidateAccounts,
         candidateCategories: result.candidateCategories,
@@ -1908,7 +1911,21 @@ class _DataManagementPageState extends State<DataManagementPage> {
     if (!await confirmResetAllData(context) || !context.mounted) {
       return;
     }
-    controller.resetAllData();
+    final reset = await controller.resetAllData();
+    if (!context.mounted) {
+      return;
+    }
+    if (!reset) {
+      _notify(
+        context,
+        message: AppLocalizations.of(context).saveFailed,
+        tone: VeriFeedbackTone.error,
+        duration: VeriFeedbackDuration.long,
+        priority: VeriFeedbackPriority.high,
+        dedupeKey: 'reset-data',
+      );
+      return;
+    }
     _exitController.exit();
   }
 }

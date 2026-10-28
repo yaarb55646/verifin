@@ -23,12 +23,23 @@ Veri Fin 提供四个固定模板的 Android 桌面小组件：快速记账（`q
 
 - `lib/app/widgets/widget_catalog.dart`：唯一词表（模板 key、Provider 类名、外观枚举、应用内名称）。
 - `lib/app/widgets/widget_projection.dart`：纯函数投影与快照编码、快照结构版本 `widgetSnapshotVersion`。
-- `lib/app/widgets/widget_service.dart`：刷新管线（失效信号、三道闸门、写入与排程）。
+- `lib/app/widgets/widget_refresh_coordinator.dart`：刷新时机（数据变化防抖、启动/回前台立即推送、切后台冲刷）。
+- `lib/app/widgets/widget_service.dart`：投影发布管线（失效信号、三道闸门、串行写入与排程）。
 - `lib/app/widgets/widget_instance_config.dart`：实例配置与配置会话（读账本列表、保存并校验）。
 - `lib/app/native_widget_preview.dart` + `lib/app/platform_bridge_widget.dart`：应用内预览与通道。
 - 原生：`VeriFinWidget.kt`（Store、三态、渲染、图形、Provider）、`WidgetPreviewBridge.kt`
   （预览渲染、实例计数、打开应用）、`WidgetConfigurationActivity.kt`、`QuickWidgetContent.kt`
   （快速记账横条的 RemoteViews 叶子，TextView 自动缩放、保留完整金额）。
+
+启用应用锁时，独立 `WidgetConfigurationActivity` 先读取设备 KV 中的锁配置并显示同一套
+PIN/图案验证页，验证前不加载账本列表或真实预览；原生窗口同时设置 `FLAG_SECURE`。配置损坏时
+按锁定处理，可通过「打开 Veri Fin」回主应用处理。
+
+配置页的独立引擎**初始化必须有界**：偏好读取 5 秒、语言读取 3 秒超时；读不到偏好时显示一个
+可关闭的失败页（fail closed，不绕过应用锁展示账本名称或预览），而不是停在空白窗口。这个引擎的
+框架错误写入独立键 `verifin.logs.widget_config.v1`（与主引擎的 `verifin.logs.v1` 分开，避免两个
+引擎整表覆盖），主引擎下次启动时合并并去重、清掉该键。「恢复应用」时 `MainActivity` 只在
+`savedInstanceState == null` 才登记组件快捷记账/分享/磁贴 Intent，避免重放已经消费过的入口。
 
 ## 数据契约（home_widget 共享存储，设备本地、不进备份）
 
@@ -58,9 +69,14 @@ Veri Fin 提供四个固定模板的 Android 桌面小组件：快速记账（`q
 以及 data 里带实例 id（`Intent` 的 extras 不参与 `filterEquals`，只有 data 不同才能保证每个实例的
 `PendingIntent` 互不覆盖）。已配置组件的点击继续沿用 `verifin://widget/<id>/<route>?bookId=…` 路由。
 
+该自定义 URI **只由原生入口解析**：`MainActivity` 与 `WidgetConfigurationActivity` 都显式设置
+`flutter_deeplinking_enabled=false`，避免 Flutter 嵌入层把 `/id/route` 再推给没有命名路由的
+Navigator。主应用在隐私同意、新手引导或应用锁期间尚未挂载壳层时，磁贴与组件入口保持
+pending，等 Shell 的处理器就绪后再由 Dart 消费；不能“发出即清空”。
+
 ## 外观与金额口径
 
-- 外观是**实例级**设置：`system`（默认，跟随设备深色模式）/`light`/`dark`。设备级主题推送已删除。
+- 外观是**实例级**设置：`system`（默认，跟随设备深色模式）/`light`/`dark`。
 - 表面色与设计令牌镜像：浅色 `#FFFFFF` + 描边 `#E5E7EB`，深色 `#1A1F27` + 描边 `#30353D`。
 - 金额单位按**实例所属账本**判定：单币种账本 + 「单币种隐藏单位」时省略单位，多币种账本照常显示；
   不再读活动账本的全局闸门。
@@ -71,12 +87,27 @@ Veri Fin 提供四个固定模板的 Android 桌面小组件：快速记账（`q
   交易、账户、账本、汇率、预算、预算周期，以及语言偏好（桌面文案随语言）。
   **不挂在整个 `notifyListeners()` 上**——改主题、折叠分区这类无关变化不再重算。
   `test/widget_projection_signal_test.dart` 逐条走过这些入口，防止新增写入点漏通知。
+- **版本号在 `WidgetRefreshCoordinator.schedule()` 内部推进**（`markWidgetDataChanged()`）。
+  闸门①按「同一数据版本」跳过重复推送，所以「排一次防抖」与「推进版本」必须成对发生；
+  把它放在 `schedule` 里，接线处（`main.dart` 的数据变化与语言监听）只挂 `schedule` 就不会漏。
+  历史上版本推进只写在测试里，导致普通数据变化全部在闸门①被静默丢弃、组件只剩冷启动 /
+  回前台 / 切后台三次强制推送（表现为「记完账桌面数字不变，除非再打开一次应用」）；
+  `test/widget_refresh_wiring_test.dart` 按正式接法守住这条链路。
 - 三道闸门，按代价从低到高：①同一数据版本已推送过 → 直接返回；②桌面上没有任何实例
   （数据变更触发时）→ 连投影都不算；③推送内容与上次完全相同 → 不写共享存储、不刷 Provider、不排闹钟。
 - 冷启动与回前台强制推一次，保证用户之后新添加的实例第一次渲染就能读到数据。
+- 进入后台（`paused` / `hidden`）时立即取消 250ms 防抖，先刷盘挂起写入，再强制检查一次投影；
+  不依赖后台计时器在进程被缓存前恰好执行。即使桌面上暂时没有实例，这一步也准备最新快照，
+  供之后新增的组件直接读取；内容指纹不变时仍不重复写入。多次刷新进入同一串行队列，且在
+  推送开始时捕获数据版本，避免较旧的 payload 覆盖较新的快照。
+- **退出应用前同步冲刷**：根壳层连按返回退出时，`SystemNavigator.pop()` 会 finish Activity、
+  Flutter 引擎随之下线，挂在 `hidden` / `paused` 上的异步冲刷会被直接掐断。因此 Shell 在
+  关闭前经 `WidgetRefreshScope` 等一次 `WidgetRefreshCoordinator.flush()`（600ms 超时兜底，
+  超时仍退出，未完成的发布由下次冷启动补推）。`test/widget_exit_flush_test.dart` 断言
+  「冲刷完成前不关闭 Activity」与超时路径。
 - 投影是纯函数：一次遍历得到逐日支出与账户余额增量，净资产曲线按「期初余额 + 逐日前缀和」推进，
-  复杂度 `O(交易数 + 账户数 × 天数)`。护栏见 `test/widget_projection_perf_test.dart`
-  （20 账户 × 5000 笔，四模板合计上限 40 ms；旧实现同机 145 ms）。
+  复杂度 `O(交易数 + 账户数 × 天数)`。`test/widget_projection_perf_test.dart`
+  以 20 账户 × 5000 笔数据约束四模板合计投影时间不超过 40 ms。
 - 跨天：Flutter 每次推送用 `HomeWidget.scheduleWidgetUpdates` 重新安排下一次本地午夜，
   插件的 Receiver 负责闹钟、开机与应用更新后的重排；原生渲染按快照日期把「今日支出」直接归零。
 
@@ -111,3 +142,7 @@ Receiver 清理对应配置。
    「点击进入配置」。
 5. 桌面无实例时改账目：不产生 Provider 刷新与闹钟重排（`test/widget_service_test.dart` 的闸门用例）。
 6. 运行 `dart run scripts/widget_previews.dart`：仪器测试全绿并重导出 16 张预览图。
+7. 强停后从磁贴记账并立即离开：小组件在离开应用前完成刷新，不依赖下次回前台补推。两条退出路径都要验：
+   按 Home（切后台冲刷）与连按返回退出（`SystemNavigator.pop`，退出前同步冲刷）。
+8. 冷启动与运行中点击已配置组件、进入未配置组件的配置页、重新配置组件：均正常打开目标页面，
+   日志不出现 `onUnknownRoute` / `Null check operator used on a null value`。

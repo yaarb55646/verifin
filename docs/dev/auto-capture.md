@@ -7,6 +7,8 @@ Veri Fin 本体不监听任何通知或屏幕：不注册 `NotificationListenerS
 - 入口：系统分享 `image/*`；App 内 AI 记账弹层的「截图识账」（相册选图）。
 - 管线：本地 OCR（`google_mlkit_text_recognition`，中文模型，端上离线）→ 文本 → AI 解析（复用 AI 记账管线，`requestCapturedEntryDraft`，含无数字短路与文本截断）→ 草稿 → `EntryDetailPage` 确认。
 - 分享进来的图片不落库不留存；用户勾选「保存为附件」才随交易存 `attachments` 表。
+- App 内相册选图、拍照附件与头像读取完成后立即删除 `image_picker` 在应用缓存里的副本；
+  用户相册原文件不变。OCR 或解析失败同样在 `finally` 中清理。
 - 其他 App 分享的 `content://` 图片由原生层分块读取并累计大小，超过 25 MB 立即停止，不做全量 `readBytes()` 后再检查。
 - 条件导入两件套 `screenshot_recognizer_io.dart`（ML Kit）+ stub（测试宿主 `recognitionSupported=false`）。
 
@@ -14,6 +16,8 @@ Veri Fin 本体不监听任何通知或屏幕：不注册 `NotificationListenerS
 
 - 显式导出的 Intent：Action `top.talyra42.verifin.action.CAPTURE_TEXT`，Extra `text`，目标 `ShareReceiverActivity`；Tasker、MacroDroid 等自动化工具用它送入账单原文，解析交给用户配置的 AI。用户文档见 [automation.md](../product/automation.md)。
 - 安全边界：文本输入长度限制、简单频率限制；收到后只产草稿弹确认，绝不静默落账。
+- 应用锁启用时，分享/采集与小组件路由入口先等待锁屏解除，再消费原生队列中的内容；
+  锁屏期间不发起 OCR、AI 请求或切换账本。
 
 ## 共同约定
 

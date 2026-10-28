@@ -25,6 +25,14 @@ const _csv =
     '2026-02-01,支出,12.5,测试餐饮,测试钱包A,,午饭\n'
     '2026-02-02,支出,30,测试交通,测试钱包B,,打车\n';
 
+const _refundCsv =
+    '日期,类型,金额,分类,账户,转入账户,备注,币种,账户金额,本位币金额,'
+    '账户币种,记录编号,原支出编号,到账日期\n'
+    '2026-02-01,支出,100,测试餐饮,测试钱包A,,午饭,CNY,100,100,CNY,'
+    'expense-1,,\n'
+    '2026-02-05,退款,40,测试餐饮,测试钱包A,,部分退款,CNY,40,40,CNY,'
+    'refund-1,expense-1,2026-02-06\n';
+
 // 带「子分类」「标签」列的通用 CSV，验证层级分类与多标签落库（issue #11）。
 const _tagCsv =
     '日期,类型,金额,分类,子分类,账户,备注,标签\n'
@@ -111,7 +119,7 @@ void main() {
     test('金额或账户引用不合法时拒绝整批且不写入', () async {
       final controller = await makeController();
       final before = controller.entries.length;
-      final applied = controller.applyImportEntries(
+      final applied = await controller.applyImportEntries(
         entries: <LedgerEntry>[
           LedgerEntry(
             id: 'invalid-import',
@@ -141,7 +149,7 @@ void main() {
         ImportPlatform.csvTemplate,
         _csvBytes(_csv),
       );
-      controller.applyImportEntries(
+      await controller.applyImportEntries(
         entries: plan.entries,
         candidateAccounts: plan.newAccounts,
         candidateCategories: plan.newCategories,
@@ -164,7 +172,7 @@ void main() {
       // 只保留第一笔（引用 测试钱包A / 测试餐饮）。
       final kept = plan.entries.where((e) => e.accountId == walletAId).toList();
       expect(kept, hasLength(1));
-      controller.applyImportEntries(
+      await controller.applyImportEntries(
         entries: kept,
         candidateAccounts: plan.newAccounts,
         candidateCategories: plan.newCategories,
@@ -183,7 +191,7 @@ void main() {
         ImportPlatform.csvTemplate,
         _csvBytes(_tagCsv),
       );
-      controller.applyImportEntries(
+      await controller.applyImportEntries(
         entries: plan.entries,
         candidateAccounts: plan.newAccounts,
         candidateCategories: plan.newCategories,
@@ -225,7 +233,7 @@ void main() {
             ),
           )
           .toList();
-      controller.applyImportEntries(
+      await controller.applyImportEntries(
         entries: remapped,
         candidateAccounts: plan.newAccounts,
         candidateCategories: plan.newCategories,
@@ -245,7 +253,7 @@ void main() {
         ImportPlatform.csvTemplate,
         _csvBytes(csv),
       );
-      controller.applyImportEntries(
+      await controller.applyImportEntries(
         entries: plan.entries,
         candidateAccounts: plan.newAccounts,
         candidateCategories: plan.newCategories,
@@ -310,6 +318,33 @@ void main() {
       expect(holder.result, isNotNull);
       expect(holder.result!.entries, hasLength(1));
       expect(holder.result!.entries.single.note, '打车');
+    });
+
+    testWidgets('显式退款随原支出一起返回，不计入确认笔数', (tester) async {
+      final controller = await makeController();
+      final plan = controller.parsePlatformImport(
+        ImportPlatform.csvTemplate,
+        _csvBytes(_refundCsv),
+      );
+      final holder = await _openPreview(tester, controller, plan);
+
+      expect(find.text('确认导入（1）'), findsOneWidget);
+      await tester.tap(find.text('确认导入（1）'));
+      await tester.pumpAndSettle();
+
+      expect(holder.result, isNotNull);
+      expect(holder.result!.entries, hasLength(2));
+      final expense = holder.result!.entries.singleWhere(
+        (entry) => entry.type == EntryType.expense,
+      );
+      final refund = holder.result!.entries.singleWhere(
+        (entry) => entry.type == EntryType.refund,
+      );
+      expect(refund.refundOf, expense.id);
+      expect(refund.amount, 40);
+      expect(refund.accountAmount, 40);
+      expect(refund.baseAmount, 40);
+      expect(refund.settledAt, DateTime(2026, 2, 6));
     });
 
     testWidgets('纯账户导入：展示账户与余额，可用「账户」按钮确认', (tester) async {
@@ -499,7 +534,7 @@ void main() {
       );
 
       // 空交易 + 独立账户：applyImportEntries 仍创建账户。
-      controller.applyImportEntries(
+      await controller.applyImportEntries(
         entries: const <LedgerEntry>[],
         candidateAccounts: plan.newAccounts,
         candidateCategories: plan.newCategories,
@@ -523,7 +558,7 @@ void main() {
         candidateCategories: plan.newCategories,
         alwaysCreateAccountIds: plan.standaloneAccountIds,
       );
-      controller.applyImportEntries(
+      await controller.applyImportEntries(
         entries: result.entries,
         candidateAccounts: result.candidateAccounts,
         candidateCategories: result.candidateCategories,

@@ -1,23 +1,14 @@
-import 'dart:ui' show lerpDouble;
-
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../l10n/app_localizations.dart';
 import 'app_theme.dart';
-import 'liquid_glass_lens.dart';
-import 'liquid_glass_surface.dart';
 import 'root_navigation.dart';
 
-/// 液态玻璃底栏样式：浮动玻璃胶囊 + 拖动切换 + 透镜形变。
+/// 可选液态玻璃底栏：把应用的根导航契约适配到 `GlassTabBar.bottom`。
 ///
-/// 手感：按下即向目标项滑动、拖动跟手、松手吸附、拖动时高光方向随移动偏移。它是与
-/// 停靠底栏并列的可选样式，四个根目的地、切页状态机、返回键语义与记账按钮都不受影响。
-///
-/// 玻璃由两部分组成：
-/// - 面板：[VeriLiquidGlassSurface] 的背景模糊 + 中性填色 + 沿边缘方向高光；
-/// - 透镜：[VeriLiquidGlassLens] 对**导航自身内容**做放大折射，产生液体形变。
-///   折射只作用于导航自身图层，不折射页面背景——Flutter 的 `BackdropFilter`
-///   无法把模糊结果再交给着色器，强行折射背景会出现坐标错位伪影。
+/// 第三方玻璃实现只允许出现在这里，不能扩散到卡片、菜单、弹层或页面背景。
+/// 四个目的地、回调时机和 Shell 切页状态机仍由 [VeriRootNavigationSpec] 决定。
 class VeriLiquidGlassRootNavigationStyle implements VeriRootNavigationStyle {
   const VeriLiquidGlassRootNavigationStyle();
 
@@ -35,13 +26,6 @@ class VeriLiquidGlassRootNavigationStyle implements VeriRootNavigationStyle {
 
   /// 列表末项在避让之外额外保留的呼吸空间。
   static const double listBottomGap = 16;
-
-  /// 指示块相对胶囊的内缩距离。
-  static const double indicatorInset = 3;
-
-  /// 按下后滑向目标项、松手吸附与页面过渡共用的时间尺度。
-  static const Duration pressMoveDuration = Duration(milliseconds: 280);
-  static const Duration snapDuration = Duration(milliseconds: 240);
 
   static const VeriRootNavigationLayout _layout = VeriRootNavigationLayout(
     extendBody: true,
@@ -62,251 +46,67 @@ class VeriLiquidGlassRootNavigationStyle implements VeriRootNavigationStyle {
   @override
   VeriRootNavigationLayout get layout => _layout;
 
+  /// 页面切页弹簧与底栏玻璃动画共用的时间尺度。
+  ///
+  /// `GlassTabBar.bottom` 的指示器使用库内弹簧，库没有公开 `.bottom` 的弹簧参数；
+  /// 这里沿用原液态玻璃样式的时间尺度，避免 Shell 的切页动画先于或晚于底栏落位。
   @override
-  Duration get switchDuration => snapDuration;
+  Duration get switchDuration => const Duration(milliseconds: 240);
 
   @override
   Widget buildBar(BuildContext context, VeriRootNavigationSpec spec) =>
       VeriLiquidGlassRootNavigation(spec: spec);
 }
 
-/// 液态玻璃底栏的绘制实现。
+/// `GlassTabBar.bottom` 的根导航适配层。
 ///
-/// 选中态同时接受 [VeriRootNavigationSpec.currentIndex]（外部切页，如返回键与
-/// 小组件路由）与自身拖动；拖动只更新指示位置，松手才通过 `spec.onSelect`
-/// 交给 Shell，因此 Shell 的切页状态机不需要任何改动。
-class VeriLiquidGlassRootNavigation extends StatefulWidget {
+/// 预览场景把 [VeriRootNavigationSpec.onSelect] 设为 null；这里传入空回调以满足
+/// 库的必填参数，但预览外层会通过 `IgnorePointer` 阻止交互。
+class VeriLiquidGlassRootNavigation extends StatelessWidget {
   const VeriLiquidGlassRootNavigation({super.key, required this.spec});
 
   final VeriRootNavigationSpec spec;
 
-  @override
-  State<VeriLiquidGlassRootNavigation> createState() =>
-      _VeriLiquidGlassRootNavigationState();
-}
-
-class _VeriLiquidGlassRootNavigationState
-    extends State<VeriLiquidGlassRootNavigation>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _indicatorController;
-
-  /// 指示块位置，单位是「第几个目的地」，支持小数。
-  double _displayIndex = 0;
-  double _animationStart = 0;
-  double _animationEnd = 0;
-  bool _indicatorPressed = false;
-  bool _dragging = false;
-  bool _suppressNextDestinationTap = false;
-  int? _activePointer;
-  int? _pressedTargetIndex;
-  double? _pointerDownX;
-  double? _lastPointerX;
-  double _lightMotion = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    assert(widget.spec.destinations.isNotEmpty, '根导航至少要有一个目的地');
-    assert(
-      widget.spec.currentIndex >= 0 &&
-          widget.spec.currentIndex < widget.spec.destinations.length,
-      'currentIndex 越界',
-    );
-    _displayIndex = widget.spec.currentIndex.toDouble();
-    _animationStart = _displayIndex;
-    _animationEnd = _displayIndex;
-    _indicatorController =
-        AnimationController(
-          vsync: this,
-          duration: VeriLiquidGlassRootNavigationStyle.pressMoveDuration,
-        )..addListener(() {
-          final progress = Curves.easeOutCubic.transform(
-            _indicatorController.value,
-          );
-          setState(() {
-            _displayIndex = lerpDouble(
-              _animationStart,
-              _animationEnd,
-              progress,
-            )!;
-          });
-        });
-  }
-
-  @override
-  void didUpdateWidget(covariant VeriLiquidGlassRootNavigation oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.spec.currentIndex != widget.spec.currentIndex &&
-        _activePointer == null) {
-      _animateIndicatorTo(
-        widget.spec.currentIndex.toDouble(),
-        VeriLiquidGlassRootNavigationStyle.snapDuration,
+  /// 深色底栏的磨砂材质。
+  ///
+  /// `ios27Dark` 的 12% 白色 tint 会让底栏发灰发白，1.4 的饱和度还会
+  /// 放大后方页面的蓝色。这里压低白色 tint 与饱和度，仅保留轻量模糊，
+  /// 用很弱的黑色 backer 压住高光，同时维持玻璃边缘和选中态。
+  static final LiquidGlassSettings _darkSettings = LiquidGlassSettings.ios27Dark
+      .copyWith(
+        glassColor: const Color(0x00000000),
+        blur: 2,
+        frost: 4,
+        frostOpacity: 0.68,
+        frostClamp: -0.3,
+        saturation: 0.65,
+        bodyShade: 0.18,
+        backerColor: const Color(0x12000000),
       );
-    }
-  }
-
-  @override
-  void dispose() {
-    _indicatorController.dispose();
-    super.dispose();
-  }
-
-  void _animateIndicatorTo(double target, Duration duration) {
-    final count = widget.spec.destinations.length;
-    final clampedTarget = target.clamp(0.0, count - 1.0).toDouble();
-    _indicatorController.stop();
-    _animationStart = _displayIndex;
-    _animationEnd = clampedTarget;
-    if ((_animationStart - _animationEnd).abs() < 0.001) {
-      if (_displayIndex != clampedTarget) {
-        setState(() => _displayIndex = clampedTarget);
-      }
-      return;
-    }
-    _indicatorController.duration = duration;
-    _indicatorController.forward(from: 0);
-  }
-
-  void _handlePointerDown(PointerDownEvent event, double slotWidth) {
-    if (_activePointer != null) {
-      return;
-    }
-    final count = widget.spec.destinations.length;
-    final pressedIndex = (event.localPosition.dx / slotWidth).floor().clamp(
-      0,
-      count - 1,
-    );
-    setState(() {
-      _activePointer = event.pointer;
-      _pointerDownX = event.localPosition.dx;
-      _lastPointerX = event.localPosition.dx;
-      _lightMotion = 0;
-      _pressedTargetIndex = pressedIndex;
-      _dragging = false;
-      _indicatorPressed = true;
-    });
-    _animateIndicatorTo(
-      pressedIndex.toDouble(),
-      VeriLiquidGlassRootNavigationStyle.pressMoveDuration,
-    );
-  }
-
-  void _handlePointerMove(PointerMoveEvent event, double slotWidth) {
-    if (event.pointer != _activePointer ||
-        _pointerDownX == null ||
-        _pressedTargetIndex == null) {
-      return;
-    }
-    final movement =
-        event.localPosition.dx - (_lastPointerX ?? event.localPosition.dx);
-    _lastPointerX = event.localPosition.dx;
-    setState(
-      () => _lightMotion = (_lightMotion * 0.5 + movement / 12 * 0.5).clamp(
-        -1.0,
-        1.0,
-      ),
-    );
-    final delta = event.localPosition.dx - _pointerDownX!;
-    if (!_dragging && delta.abs() < 2) {
-      return;
-    }
-    final desiredIndex = (_pressedTargetIndex! + delta / slotWidth)
-        .clamp(0.0, widget.spec.destinations.length - 1.0)
-        .toDouble();
-    if (!_dragging) {
-      setState(() => _dragging = true);
-    }
-    if (_indicatorController.isAnimating) {
-      setState(() => _animationEnd = desiredIndex);
-    } else {
-      setState(() => _displayIndex = desiredIndex);
-    }
-  }
-
-  /// 松手：拖动时吸附到最近一项，纯点击时落到按下的那一项。
-  void _handlePointerUp(PointerUpEvent event) {
-    if (event.pointer != _activePointer) {
-      return;
-    }
-    final wasDragging = _dragging;
-    final pressedTargetIndex = _pressedTargetIndex;
-    final targetIndex = _displayIndex.round().clamp(
-      0,
-      widget.spec.destinations.length - 1,
-    );
-    setState(() {
-      _activePointer = null;
-      _pointerDownX = null;
-      _lastPointerX = null;
-      _lightMotion = 0;
-      _pressedTargetIndex = null;
-      _dragging = false;
-      _indicatorPressed = false;
-    });
-    if (wasDragging) {
-      _animateIndicatorTo(
-        targetIndex.toDouble(),
-        VeriLiquidGlassRootNavigationStyle.snapDuration,
-      );
-      _emitSelection(targetIndex);
-    } else if (pressedTargetIndex != null) {
-      // 指针事件已经处理了这次点击，抑制条目自身的 InkWell 回调。
-      _suppressNextDestinationTap = true;
-      _animateIndicatorTo(
-        pressedTargetIndex.toDouble(),
-        VeriLiquidGlassRootNavigationStyle.snapDuration,
-      );
-      _emitSelection(pressedTargetIndex);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _suppressNextDestinationTap = false;
-      });
-    }
-  }
-
-  void _handleDestinationTap(int index) {
-    if (_suppressNextDestinationTap) {
-      _suppressNextDestinationTap = false;
-      return;
-    }
-    _animateIndicatorTo(
-      index.toDouble(),
-      VeriLiquidGlassRootNavigationStyle.snapDuration,
-    );
-    _emitSelection(index);
-  }
-
-  void _handlePointerCancel(PointerCancelEvent event) {
-    if (event.pointer != _activePointer) {
-      return;
-    }
-    _indicatorController.stop();
-    setState(() {
-      _activePointer = null;
-      _pointerDownX = null;
-      _lastPointerX = null;
-      _lightMotion = 0;
-      _pressedTargetIndex = null;
-      _dragging = false;
-      _indicatorPressed = false;
-    });
-    _animateIndicatorTo(
-      widget.spec.currentIndex.toDouble(),
-      VeriLiquidGlassRootNavigationStyle.snapDuration,
-    );
-  }
-
-  void _emitSelection(int index) {
-    final onSelect = widget.spec.onSelect;
-    if (onSelect == null || index == widget.spec.currentIndex) {
-      return;
-    }
-    onSelect(index);
-  }
 
   @override
   Widget build(BuildContext context) {
-    final spec = widget.spec;
+    final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // 预览是静态的，不承载交互；premium 玻璃层的 shader 在父级滚动时
+    // 仍会沿用上一帧的位置。预览改用库的无 shader 降级路径，避免背景
+    // 面板在滚动时与图标分离。真实底栏仍使用 premium。
+    final isPreview = spec.onSelect == null;
+    final tabs = <GlassTab>[
+      for (var index = 0; index < spec.destinations.length; index++)
+        GlassTab(
+          // `GlassTab` 本身没有 key；把稳定 key 放在未选中图标上。库会同时绘制
+          // 未选中层和选中层，`activeIcon` 不重复挂 key，避免同一棵树出现重复 key。
+          icon: KeyedSubtree(
+            key: ValueKey<String>(spec.keyOf('nav_item_$index')),
+            child: Icon(spec.destinations[index].icon),
+          ),
+          activeIcon: Icon(spec.destinations[index].selectedIcon),
+          label: spec.destinations[index].label,
+          semanticLabel: spec.destinations[index].label,
+        ),
+    ];
+
     return SafeArea(
       key: ValueKey<String>(spec.keyOf('bottom_nav')),
       top: false,
@@ -314,149 +114,29 @@ class _VeriLiquidGlassRootNavigationState
       minimum: const EdgeInsets.only(
         bottom: VeriLiquidGlassRootNavigationStyle.bottomGap,
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: VeriLiquidGlassRootNavigationStyle.sideGap,
-        ),
-        child: SizedBox(
-          key: ValueKey<String>(spec.keyOf('nav_bar')),
-          height: VeriLiquidGlassRootNavigationStyle.barHeight,
-          // 导航在拖动时每帧重绘，单独成层后不让整屏跟着重绘。
-          child: RepaintBoundary(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final slotWidth =
-                    constraints.maxWidth / spec.destinations.length;
-                final selectedIndex = _displayIndex.round().clamp(
-                  0,
-                  spec.destinations.length - 1,
-                );
-                return Stack(
-                  clipBehavior: Clip.none,
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    Positioned.fill(
-                      child: VeriLiquidGlassSurface(
-                        radius: VeriLiquidGlassRootNavigationStyle.barHeight,
-                        grouped: false,
-                        tint: veriLiquidGlassTint(
-                          isDark ? Brightness.dark : Brightness.light,
-                        ),
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
-                    Positioned.fill(
-                      child: Listener(
-                        behavior: HitTestBehavior.opaque,
-                        onPointerDown: (event) =>
-                            _handlePointerDown(event, slotWidth),
-                        onPointerMove: (event) =>
-                            _handlePointerMove(event, slotWidth),
-                        onPointerUp: _handlePointerUp,
-                        onPointerCancel: _handlePointerCancel,
-                        child: VeriLiquidGlassLens(
-                          keyPrefix: spec.keyPrefix,
-                          target: Rect.fromLTWH(
-                            _displayIndex * slotWidth +
-                                VeriLiquidGlassRootNavigationStyle
-                                    .indicatorInset,
-                            VeriLiquidGlassRootNavigationStyle.indicatorInset,
-                            slotWidth -
-                                VeriLiquidGlassRootNavigationStyle
-                                        .indicatorInset *
-                                    2,
-                            constraints.maxHeight -
-                                VeriLiquidGlassRootNavigationStyle
-                                        .indicatorInset *
-                                    2,
-                          ),
-                          pressed: _indicatorPressed || _dragging,
-                          motion: _lightMotion,
-                          source: Row(
-                            children: <Widget>[
-                              for (
-                                var index = 0;
-                                index < spec.destinations.length;
-                                index++
-                              )
-                                Expanded(
-                                  key: ValueKey<String>(
-                                    spec.keyOf('nav_item_$index'),
-                                  ),
-                                  child: _LiquidGlassTab(
-                                    destination: spec.destinations[index],
-                                    selected: index == selectedIndex,
-                                    accent: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    enabled: spec.onSelect != null,
-                                    onTap: () => _handleDestinationTap(index),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LiquidGlassTab extends StatelessWidget {
-  const _LiquidGlassTab({
-    required this.destination,
-    required this.selected,
-    required this.accent,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final VeriNavigationDestination destination;
-  final bool selected;
-  final Color accent;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return MergeSemantics(
-      child: Semantics(
-        selected: selected,
-        child: InkWell(
-          onTap: enabled ? onTap : null,
-          splashFactory: NoSplash.splashFactory,
-          highlightColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(
-                selected ? destination.selectedIcon : destination.icon,
-                size: 24,
-                color: selected ? accent : veriNavigationUnselected,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                destination.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: selected ? accent : veriNavigationUnselected,
-                ),
-              ),
-            ],
-          ),
-        ),
+      child: GlassTabBar.bottom(
+        key: ValueKey<String>(spec.keyOf('nav_bar')),
+        tabs: tabs,
+        selectedIndex: spec.currentIndex,
+        onTabSelected: spec.onSelect ?? (_) {},
+        horizontalPadding: VeriLiquidGlassRootNavigationStyle.sideGap,
+        // 当前样式的几何是 60dp 胶囊 + 24dp 底部留白；库的 verticalPadding
+        // 会把自身高度算进 preferredSize，因此这里保持 0，由外层 SafeArea 提供留白。
+        verticalPadding: 0,
+        barHeight: VeriLiquidGlassRootNavigationStyle.barHeight,
+        iconSize: 24,
+        labelFontSize: 12,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        selectedIconColor: scheme.primary,
+        unselectedIconColor: veriNavigationUnselected,
+        selectedLabelColor: scheme.primary,
+        unselectedLabelColor: veriNavigationUnselected,
+        adaptiveBrightness: false,
+        // 浅色模式保持组件库默认材质；深色模式使用压暗、低白雾的磨砂材质。
+        settings: isDark ? _darkSettings : null,
+        indicatorColor: isDark ? Colors.white.withValues(alpha: 0.06) : null,
+        quality: isPreview ? GlassQuality.minimal : GlassQuality.premium,
+        backgroundQuality: isPreview ? GlassQuality.minimal : null,
       ),
     );
   }

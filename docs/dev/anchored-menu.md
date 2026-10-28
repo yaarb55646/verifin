@@ -1,8 +1,12 @@
-# 锚点菜单组件
+# 锚点菜单（anchored_menu）
 
-`VeriAnchoredMenuAnchor` 是 Veri Fin 的轻量上下文菜单入口。菜单贴近触发控件出现，支持图标、标题、副标题、分割线、选中/禁用状态、任意递归层级，以及从被点击行原位展开的容器变换。
+Veri Fin 的锚点菜单使用 pub.dev 外部组件库 [anchored_menu](https://pub.dev/packages/anchored_menu)，当前依赖为 `^0.1.3`，直接导入：
 
-实现位于 `lib/app/common_widgets_menu.dart`，经稳定入口 `lib/app/common_widgets.dart` 导出。页面不要直接导入 part 文件。
+```dart
+import 'package:anchored_menu/anchored_menu.dart';
+```
+
+项目不再维护本地菜单实现、part 文件或同名包装组件。页面直接使用外部 API；应用只负责把设计令牌桥接到外部库的 `AnchoredMenuThemeData`。
 
 ## 适用范围
 
@@ -22,271 +26,69 @@
 
 这些场景继续使用对应 Picker Sheet、普通 Sheet、Dialog 或全屏编辑页。
 
-## 公共 API
+## 应用侧 API
 
-### `VeriAnchoredMenuButton`
+外部库提供以下入口，页面按场景直接使用：
 
-Header 图标入口的快捷封装。
-
-| 参数 | 类型 | 默认值 | 作用 |
-|---|---|---:|---|
-| `icon` | `IconData` | 必填 | 触发按钮图标 |
-| `tooltip` | `String` | 必填 | Tooltip、弹层语义标签 |
-| `entries` | `List<VeriMenuEntry>` | 必填 | 根菜单内容 |
-| `width` | `double` | `224` | 根菜单宽度 |
-| `submenuWidth` | `double` | `232` | 未单独覆盖时的子菜单宽度 |
-
-### `VeriAnchoredMenuAnchor`
-
-任意触发器入口。`builder` 会获得 `openMenu` 与 `menuOpen`，调用方可据此改变按钮视觉状态。
-
-| 参数 | 类型 | 默认值 | 作用 |
-|---|---|---:|---|
-| `entries` | `List<VeriMenuEntry>` | 必填 | 根菜单内容 |
-| `builder` | `VeriMenuAnchorBuilder` | 必填 | 构造按钮或其他触发控件 |
-| `semanticLabel` | `String` | 必填 | 弹层语义标签 |
-| `width` | `double?` | `null` | 根菜单宽度；默认按当前根菜单内容自适应 |
-| `submenuWidth` | `double?` | `null` | 默认子菜单宽度；默认按当前子菜单内容自适应 |
-
-### `VeriAnchoredChoice<T>`
-
-短静态单选的受控适配层，底层仍使用 `VeriAnchoredMenuAnchor`。适合主题、语言、排序、筛选、重复频率等 2–8 项枚举；调用方只提供选项、当前值、稳定 id、文案和选择回调，并通过 `builder` 复用现有 `SettingsRow`、`FilterPill`、`SelectField` 或 `DetailInfoRow`。
-
-它有意不支持搜索、分区、动态增删和危险确认：账户、分类、货币、标签等长列表继续使用专用 Picker Sheet。
-
-| 参数 | 类型 | 默认值 | 作用 |
-|---|---|---:|---|
-| `values` | `List<T>` | 必填 | 静态候选值 |
-| `selected` | `T` | 必填 | 当前选中值 |
-| `idOf` | `String Function(T)` | 必填 | 菜单树内稳定唯一 id |
-| `labelOf` | `String Function(T)` | 必填 | 本地化主标题 |
-| `onSelected` | `ValueChanged<T>` | 必填 | 菜单关闭后更新页面草稿或筛选状态 |
-| `builder` | `VeriMenuAnchorBuilder` | 必填 | 构造原页面触发控件 |
-| `semanticLabel` | `String` | 必填 | 弹层语义标签 |
-| `iconOf` / `subtitleOf` / `enabledOf` | 可空回调 | `null` | 可选图标、副标题和禁用态 |
-| `width` | `double?` | `null` | 菜单宽度；默认按选项内容自适应 |
-
-### `VeriMenuItem`
-
-叶子操作或递进父项。
-
-| 参数 | 类型 | 默认值 | 作用 |
-|---|---|---:|---|
-| `id` | `String` | 必填 | 同一菜单树内稳定、唯一的动画标识 |
-| `title` | `String` | 必填 | 主标题 |
-| `icon` | `IconData?` | `null` | 当前项自己的图标 |
-| `subtitle` | `String?` | `null` | 当前值或补充说明 |
-| `selected` | `bool` | `false` | 使用主色文字与勾标记 |
-| `enabled` | `bool` | `true` | 是否可点击 |
-| `foregroundColor` | `Color?` | `null` | 语义颜色，如危险操作红色 |
-| `onPressed` | `VoidCallback?` | `null` | 叶子操作回调 |
-| `children` | `List<VeriMenuEntry>` | 空列表 | 非空时作为递进父项 |
-| `submenuWidth` | `double?` | `null` | 覆盖该项打开的子菜单宽度 |
-
-启用项应提供 `onPressed` 或非空 `children`。父项点击只进入下一级，不执行 `onPressed`。
-
-### `VeriMenuDivider`
-
-用于把相关操作分组。不要连续放置分割线，也不要放在菜单首尾。
-
-## 基础用法
-
-下例中的 `*Label` / `*Tooltip` 变量表示调用方已经通过 `AppLocalizations` 取得的本地化文案。
-
-```dart
-VeriHeader(
-  title: pageTitle,
-  actions: <Widget>[
-    VeriAnchoredMenuButton(
-      icon: Icons.more_vert_rounded,
-      tooltip: moreTooltip,
-      width: 220,
-      submenuWidth: 208,
-      entries: <VeriMenuEntry>[
-        VeriMenuItem(
-          id: 'view',
-          icon: Icons.grid_view_rounded,
-          title: viewLabel,
-          subtitle: currentViewLabel,
-          submenuWidth: 196,
-          children: <VeriMenuEntry>[
-            VeriMenuItem(
-              id: 'view-list',
-              title: listViewLabel,
-              selected: viewMode == ViewMode.list,
-              onPressed: () => setState(() => viewMode = ViewMode.list),
-            ),
-            VeriMenuItem(
-              id: 'view-card',
-              icon: Icons.grid_view_rounded,
-              title: cardViewLabel,
-              selected: viewMode == ViewMode.card,
-              onPressed: () => setState(() => viewMode = ViewMode.card),
-            ),
-          ],
-        ),
-        const VeriMenuDivider(),
-        VeriMenuItem(
-          id: 'settings',
-          icon: Icons.settings_rounded,
-          title: settingsLabel,
-          onPressed: openSettings,
-        ),
-      ],
-    ),
-  ],
-)
-```
-
-## 自定义触发器
-
-```dart
-VeriAnchoredMenuAnchor(
-  semanticLabel: filterLabel,
-  width: 204,
-  submenuWidth: 196,
-  entries: entries,
-  builder: (context, openMenu, menuOpen) => OutlinedButton.icon(
-    onPressed: openMenu,
-    icon: Icon(
-      menuOpen ? Icons.close_rounded : Icons.filter_list_rounded,
-    ),
-    label: Text(filterLabel),
-  ),
-)
-```
-
-调用方不得自行再包 `showMenu`、`OverlayEntry` 或 `showGeneralDialog`。定位、遮罩、返回和关闭由组件统一负责。
-
-## 多级菜单
-
-`children` 可以递归嵌套。组件没有写死二级上限；但产品设计上应保持路径可理解，通常不超过四级。
-
-```dart
-VeriMenuItem(
-  id: 'workspace',
-  icon: Icons.workspaces_rounded,
-  title: workspaceLabel,
-  children: <VeriMenuEntry>[
-    VeriMenuItem(
-      id: 'layout',
-      title: layoutLabel,
-      children: <VeriMenuEntry>[
-        VeriMenuItem(
-          id: 'card-style',
-          title: cardStyleLabel,
-          children: <VeriMenuEntry>[
-            VeriMenuItem(
-              id: 'compact-card',
-              title: compactCardLabel,
-              onPressed: selectCompactCard,
-            ),
-          ],
-        ),
-      ],
-    ),
-  ],
-)
-```
-
-每一级父项的 `id` 必须稳定。不要用本地化标题、列表索引或运行时随机值充当 id。
-
-## 宽度规则
-
-解析优先级：
-
-1. 当前父项的 `VeriMenuItem.submenuWidth`；
-2. Anchor/Button 的 `submenuWidth`；
-3. 组件默认值为 `null`，按当前子菜单内容自适应。
-
-根菜单只读取 Anchor/Button 的 `width`。宽度为 `null` 时，组件按最长标题/副标题、图标、选中标记和内边距计算；子菜单同理，且会把父项标题行纳入计算。显式宽度仍保持固定行为。所有宽度都会按弹层当前实际布局约束限制在屏幕可用范围内，安全下限为 `168`；窗口尺寸变化后不得继续使用旧 `MediaQuery` 尺寸把菜单定位到屏幕外。
-
-宽度以最短的不换行标题为依据，不应为了和其他页面相同而强行拉宽。标题与右侧箭头之间只保留必要弹性空间。
-
-## 图标与对齐
-
-图标占位按菜单项自身决定：
-
-- 当前项有 `icon` 才预留图标列；
-- 纯文本项直接从面板内容边距开始；
-- 同组标题或其他项有图标，不会让纯文本项缩进；
-- 标准 Material 图标直接传 `IconData`；分类和账户等领域图标仍应走领域组件，不要把领域模型塞进菜单模型。
-
-## 状态所有权
-
-菜单是受控展示组件：
-
-- `selected`、`subtitle`、`enabled` 由页面状态决定；
-- 叶子项选中后，菜单先完成关闭动画，再调用 `onPressed`；
-- 回调修改状态后，页面重建新的 `entries`；
-- 菜单自身不读取 Controller，也不持久化业务值。
-
-## 动画与层级不变量
-
-以下行为属于组件设计语言，修改时必须保留：
-
-- 子菜单从被点击行的累计实际位置展开；
-- 被点击行连续变为子菜单 Header，返回时反向收回；
-- 展开时宽度、高度、圆角和选项显隐共同过渡；
-- 完整祖先卡片栈始终保留，不能只绘制最近父层；
-- 每远离当前层一级，祖先卡片约缩小 3%，最低 88%；
-- 祖先表面逐级向黑色混合，保持完全不透明；
-- Android/系统返回只退一级，根层才关闭菜单；
-- 点击菜单外部关闭整棵菜单；
-- 根弹层打开/关闭使用平滑淡入与轻微缩放。
-
-子菜单前进时长为 280ms，返回为 260ms，根弹层过渡为 **220ms**（与 `design-system.md` 一致）。不要在页面调用点覆写动画。
-
-## 视觉令牌
-
-| 项目 | 当前规则 |
+| 名称 | 用途 |
 |---|---|
-| 根菜单默认宽度 | 按内容自适应 |
-| 子菜单默认宽度 | 按内容自适应 |
-| 最小安全宽度 | `168` |
-| 单行项最小高度 | `44` |
-| 带副标题项最小高度 | `52` |
+| `AnchoredMenuButton` | Header 图标触发器；`tooltip` 同时作为菜单语义标签 |
+| `AnchoredMenuAnchor` | 任意控件触发；`builder` 获得 `openMenu` 与 `menuOpen` |
+| `AnchoredMenuChoice<T>` | 2–8 项静态、受控单选的轻量适配层 |
+| `AnchoredMenuItem` | 叶子操作或递进父项，支持图标、副标题、选中、禁用、语义色、子菜单和稳定 `id` |
+| `AnchoredMenuDivider` | 相关操作之间的分割线 |
+| `AnchoredMenuEntry` | 菜单项和分割线的封闭基类 |
+| `AnchoredMenuAnchorBuilder` | 自定义触发器的构造签名 |
+
+页面必须使用这些入口，不得自行调用 `showMenu`、`OverlayEntry` 或 `showGeneralDialog`。静态短单选优先用 `AnchoredMenuChoice<T>`；动态、可搜索或需分区的列表仍使用专用 Sheet。
+
+## 应用主题桥接
+
+`buildVeriFinTheme()` 在 `lib/app/app_theme.dart` 中安装 `AnchoredMenuThemeData`，保持菜单与 Veri Fin 的表面材质一致：
+
+| 令牌 | 应用取值 |
+|---|---|
+| 面板表面 | `veriElevatedSurfaceColor(brightness)`，不透明实色 |
+| 描边 | 深色 `white @ 12%`；浅色 `veriLine` |
+| 前景 / 选中 | `colorScheme.onSurface` / `colorScheme.primary` |
 | 面板圆角 | `veriRadiusXl`（24） |
-| Hover 圆角 | `veriRadiusLg`（12） |
-| Hover 外边距 | 水平 8、垂直 3 |
-| 项目内容内边距 | 水平 12、垂直 6 |
-| 标题 | `titleSmall`（13px） |
-| 副标题 | `labelMedium`（11px） |
-| 选中颜色 | `Theme.of(context).colorScheme.primary` |
+| 行 Hover 圆角 | `veriRadiusLg`（16） |
+| 最小宽度 | `168` |
 
-## 可访问性与国际化
+菜单项标题和副标题沿用应用最终的 `titleSmall`（13px）与 `labelMedium`（11px）；外部库会在此基础上补齐字重。不要在页面调用点覆写颜色、圆角或字体。
 
-- `semanticLabel` 和按钮 `tooltip` 必须使用本地化文案；
-- 菜单项标题、副标题由调用方通过 `AppLocalizations` 提供；
-- 禁用与选中状态会写入 Semantics；
-- 单行项保持至少 44px 触控高度；
-- 标题和副标题在宽度受限时自然换行并保持左对齐；组件按实际文字样式测量宽度与行高，不能用横向省略号代替正常换行；
-- 不在组件内部硬编码业务文案。
+## 宽度与定位
 
-## 测试要求
+- 根菜单默认按内容自适应，最小 168dp；显式传入 `width` 时才固定宽度。
+- 子菜单宽度优先级：当前父项 `AnchoredMenuItem.submenuWidth` > Anchor/Button 的 `submenuWidth` > 内容自适应。
+- 所有宽度都会限制在弹层实际可用宽度内；窗口尺寸变化后重新按当前约束定位。
+- 空间足够时向下展开，否则向上展开；右缘贴近触发器，并避开屏幕左右安全边距；高度不足时菜单内部滚动。
+- 标题与副标题自然换行，不使用横向省略号；纯文本项不继承其他项的图标列。
 
-通用行为集中在 `test/anchored_menu_test.dart`，目前覆盖：
+## 状态与交互
 
-- 图标、标题、副标题、分割线和选中样式；
-- 宽度、边距、触控高度和圆角 Hover；
-- 纯文本项不继承其他项的图标占位；
-- 子菜单从点击行原位展开；
-- 根、默认子菜单和单项子菜单宽度覆盖；
-- 点击外部关闭、叶子回调和系统返回；
-- 窗口尺寸改变时按弹层实际约束定位，菜单不越出左右边缘；
-- 窄屏、英文长文案和大字号下标题换行后，菜单行高、滚动范围与递进菜单展开原点仍正确；
-- 四级路径、逐级返回和累计展开原点；
-- 四级状态保留四张卡片，祖先缩放按深度递增。
+- 菜单是受控展示组件；`selected`、`subtitle`、`enabled` 由页面状态决定，菜单不读取 Controller 或 KV。
+- 叶子项先完成关闭动画，再调用 `onPressed`；父项只进入下一级。
+- 子菜单从被点击行的累计实际位置展开，完整祖先卡片栈始终保留；每一级轻微缩小并向黑色混合，表面保持不透明。
+- Android/系统返回只退一级，根层再关闭；点击菜单外部关闭整棵菜单。
+- 根弹层 220ms 淡入/缩放，子菜单前进 280ms、返回 260ms；系统减少动态效果时使用静态过渡。
+- 外部库提供方向键、Enter、Space、Escape 导航和 RTL 布局；应用不重复实现键盘或方向逻辑。
+- 菜单项的稳定 key 默认使用前缀 `anchored`：`anchored_menu_item_<id>`、`anchored_menu_layer_<index>`。测试按这些 key 定位；如将来需要别的命名空间，显式传 `keyPrefix` 并同步测试。
 
-修复交互或视觉缺陷时，必须补能在修复前失败的断言。页面接入还应覆盖该页面的业务回调和状态更新。
+## 测试
+
+- `test/anchored_menu_test.dart`：在应用主题下覆盖菜单渲染、宽度、子菜单、返回、外部点击、动画和四级祖先栈。
+- `test/anchored_menu_theme_test.dart`：断言浅深色主题都把表面、描边、选中色、圆角与最小宽度桥接给外部库。
+- 页面业务回调由对应页面测试覆盖，例如 `test/accounts_assets_test.dart` 的资产操作菜单与嵌套显示设置。
+
+升级 `anchored_menu` 时先阅读其 changelog，复跑以上测试，并在模拟器/真机检查资产加号菜单、二级菜单和系统返回。
 
 ## 维护检查清单
 
-- 新增菜单前是否确认它比 Sheet/Dialog 更合适？
-- id 是否稳定且在树内唯一？
-- 用户可见文案是否已完成中英文 ARB？
-- 纯文本和图标项是否各自对齐？
-- 宽度是否只够内容使用，没有留下大段空白？
-- 深层菜单是否保留全部祖先层并可逐级返回？
-- 叶子回调是否只更新页面状态或执行明确操作？
-- 是否运行 `flutter analyze` 和相关 Widget 测试？
+- 新增菜单前确认它比 Sheet/Dialog 更合适；
+- 页面是否直接导入 `package:anchored_menu/anchored_menu.dart`；
+- `id` 是否稳定且在树内唯一；
+- 用户可见文案是否完成中英文 ARB；
+- 是否只通过应用主题桥接视觉令牌，没有在页面覆盖样式；
+- 深层菜单是否保留全部祖先层并可逐级返回；
+- 是否运行 `flutter analyze`、相关 Widget 测试和全量测试。

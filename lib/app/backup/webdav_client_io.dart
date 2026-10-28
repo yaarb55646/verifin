@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'backup_progress.dart';
 import 'webdav_config.dart';
 
 /// WebDAV 操作异常，面向用户可读。
@@ -51,6 +52,9 @@ Future<HttpClientRequest> _open(
 }
 
 Never _fail(Object error) {
+  if (error is BackupCancelledException) {
+    throw error;
+  }
   if (error is WebdavException) {
     throw error;
   }
@@ -64,6 +68,12 @@ Never _fail(Object error) {
     throw const WebdavException('HTTPS 握手失败，请检查服务器证书');
   }
   throw WebdavException('WebDAV 请求失败：$error');
+}
+
+void _throwIfCancelled(bool Function()? isCancelled) {
+  if (isCancelled?.call() ?? false) {
+    throw const BackupCancelledException();
+  }
 }
 
 String _statusMessage(int status) {
@@ -94,17 +104,25 @@ Uri _resolveHref(WebdavConfig config, String href) {
   return base.resolve(href);
 }
 
-Future<void> _ensureCollection(HttpClient client, WebdavConfig config) async {
+Future<void> _ensureCollection(
+  HttpClient client,
+  WebdavConfig config, {
+  required Duration responseTimeout,
+  bool Function()? isCancelled,
+}) async {
   try {
+    _throwIfCancelled(isCancelled);
     final request = await _open(
       client,
       'MKCOL',
       _collectionUri(config),
       config,
     );
-    final response = await request.close().timeout(_responseTimeout);
+    final response = await request.close().timeout(responseTimeout);
     await response.drain<void>();
     // 201 创建成功；405/301 通常表示已存在，忽略。
+  } on BackupCancelledException {
+    rethrow;
   } catch (_) {
     // 目录创建失败不阻断上传（多数服务器目录已存在）。
   }
@@ -223,18 +241,28 @@ Future<void> webdavDelete(WebdavConfig config, String href) async {
 Future<void> webdavUploadFile(
   WebdavConfig config,
   String filename,
-  String cachePath,
-) async {
+  String cachePath, {
+  bool Function()? isCancelled,
+  Duration responseTimeout = _responseTimeout,
+}) async {
+  _throwIfCancelled(isCancelled);
   final client = _newClient();
   try {
-    await _ensureCollection(client, config);
+    await _ensureCollection(
+      client,
+      config,
+      responseTimeout: responseTimeout,
+      isCancelled: isCancelled,
+    );
+    _throwIfCancelled(isCancelled);
     final target = Uri.parse(joinWebdavUrl(config.url, filename));
     final request = await _open(client, 'PUT', target, config);
     request.headers.contentType = ContentType('application', 'octet-stream');
     request.headers.contentLength = await File(cachePath).length();
-    await request.addStream(File(cachePath).openRead());
-    final response = await request.close();
-    await response.drain<void>();
+    await request.addStream(_cancellableFileChunks(cachePath, isCancelled));
+    _throwIfCancelled(isCancelled);
+    final response = await request.close().timeout(responseTimeout);
+    await response.drain<void>().timeout(responseTimeout);
     if (response.statusCode >= 400) {
       throw WebdavException(_statusMessage(response.statusCode));
     }
@@ -250,9 +278,14 @@ Future<void> webdavUploadFile(
 Future<void> webdavDownloadToFile(
   WebdavConfig config,
   String href,
-  String cachePath,
-) async {
+  String cachePath, {
+  bool Function()? isCancelled,
+  Duration responseTimeout = _responseTimeout,
+}) async {
+  _throwIfCancelled(isCancelled);
   final client = _newClient();
+  final target = File(cachePath);
+  var wroteTarget = false;
   try {
     final request = await _open(
       client,
@@ -260,19 +293,43 @@ Future<void> webdavDownloadToFile(
       _resolveHref(config, href),
       config,
     );
-    final response = await request.close().timeout(_responseTimeout);
+    final response = await request.close().timeout(responseTimeout);
     if (response.statusCode >= 400) {
       throw WebdavException(_statusMessage(response.statusCode));
     }
-    final sink = File(cachePath).openWrite();
+    final sink = target.openWrite();
+    wroteTarget = true;
     try {
-      await response.pipe(sink);
+      await for (final chunk in response.timeout(responseTimeout)) {
+        _throwIfCancelled(isCancelled);
+        sink.add(chunk);
+      }
+      await sink.flush();
     } finally {
       await sink.close();
     }
   } catch (error) {
+    if (wroteTarget) {
+      try {
+        if (await target.exists()) {
+          await target.delete();
+        }
+      } catch (_) {
+        // 清理失败不覆盖原始传输错误；残留文件位于应用缓存目录。
+      }
+    }
     _fail(error);
   } finally {
     client.close(force: true);
+  }
+}
+
+Stream<List<int>> _cancellableFileChunks(
+  String path,
+  bool Function()? isCancelled,
+) async* {
+  await for (final chunk in File(path).openRead()) {
+    _throwIfCancelled(isCancelled);
+    yield chunk;
   }
 }

@@ -115,6 +115,29 @@ void main() {
     });
   });
 
+  test('剩余空间不足时在写附件前拒绝解包', () async {
+    await withTempDir((dir) async {
+      final store = await storeWithImage();
+      final archivePath = '$dir/backup.zip';
+      await packBackupArchiveToFile(
+        exportJson: buildExportJson(withAttachments: true),
+        store: store,
+        outputPath: archivePath,
+      );
+      final sink = InMemoryAttachmentStore();
+
+      await expectLater(
+        unpackBackupArchiveFile(
+          archivePath: archivePath,
+          sink: sink,
+          availableBytes: 1,
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      expect(sink.existsSync('att-1'), isFalse);
+    });
+  });
+
   test('zip 明显小于内嵌 base64 的等价 JSON（附件不再膨胀）', () async {
     await withTempDir((dir) async {
       final store = await storeWithImage();

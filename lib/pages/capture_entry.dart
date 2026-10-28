@@ -135,19 +135,24 @@ Future<void> startScreenshotEntry(
     }
   }
 
-  final draft = await _runCaptureParse(context, () async {
-    final ocrText = sharedImageBytes != null
-        ? await recognizeTextFromBytes(sharedImageBytes)
-        : await recognizeTextFromPath(imagePath!);
-    if (ocrText.trim().isEmpty) {
-      throw _CaptureNoTextException();
-    }
-    return requestCapturedEntryDraft(
-      settings: controller.aiSettings,
-      capturedText: ocrText,
-      context: buildAiEntryContext(controller),
-    );
-  });
+  AiEntryDraft? draft;
+  try {
+    draft = await _runCaptureParse(context, () async {
+      final ocrText = sharedImageBytes != null
+          ? await recognizeTextFromBytes(sharedImageBytes)
+          : await recognizeTextFromPath(imagePath!);
+      if (ocrText.trim().isEmpty) {
+        throw _CaptureNoTextException();
+      }
+      return requestCapturedEntryDraft(
+        settings: controller.aiSettings,
+        capturedText: ocrText,
+        context: buildAiEntryContext(controller),
+      );
+    });
+  } finally {
+    await discardPickedScreenshot(imagePath);
+  }
   if (draft == null || !context.mounted) {
     return;
   }

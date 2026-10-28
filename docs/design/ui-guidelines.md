@@ -13,7 +13,9 @@
 
 四个根页面使用同一条底部导航，样式经 `VeriRootNavigationStyle` 注册、由 `VeriRootNavigationHost` 渲染。当前默认样式是**停靠式**：整宽、不透明、贴底，条目由自有的 `VeriBottomBar` 绘制（未选中线框图标、选中填充图标，中文标签常显）。选中项用 `colorScheme.primary`（默认 Veri Royal）强调，底栏表面和未选中项保持中性，不给整条导航背景染色。
 
-第二个已注册样式是**液态玻璃**（`root_navigation_liquid_glass.dart` + `liquid_glass_surface.dart` + `liquid_glass_lens.dart`）：浮动胶囊（高 60、左右 12、底部留白 24）+ 背景模糊 + 沿边方向高光，透镜只在拖动/按压时对导航自身内容做形变。它声明 `extendBody: true`，页面内容从胶囊下方滚过；按下即滑向目标、拖动跟手、松手吸附最近一项，纯点击与拖动都会把目标交给 Shell。`ImageFilter.shader` 只在 Impeller 下可用，不可用时自动降级为不含折射的玻璃面板，条目、标签与读屏语义不受影响。玻璃实现必须留在该样式自己的文件与着色器内，其他样式与界面不得引用。
+第二个已注册样式是**液态玻璃**，由本地 vendor 的 `third_party/liquid_glass_widgets` 中的 `GlassTabBar.bottom` 实现，应用侧只在 `root_navigation_liquid_glass.dart` 做适配：浮动胶囊（高 60、左右 12、底部留白 24）会对底栏后面的页面内容做真实背景采样、模糊与折射；按下、拖动、松手吸附和指示器动画都由该组件处理。它声明 `extendBody: true`，页面内容从胶囊下方滚过；着色器不可用时库自行降级，条目、标签与读屏语义不受影响。其他样式与界面不得直接引用该第三方包。
+
+> 样式选择页的液态玻璃预览使用组件库的无 shader `minimal` 路径，避免父级滚动时 premium shader 沿用旧位置；真实根导航仍使用 premium。
 
 **记账按钮与导航栏无关**：它是右下角的独立浮动圆角方形，只在首页显示，由 Shell 自己渲染；样式不参与，也不得占用它的区域（内容延伸到栏背后时，Shell 按样式声明的 `occupiedHeight` 把按钮抬到栏上方）。
 
@@ -25,7 +27,7 @@
 
 导航触发 PageView 跨页动画时，Shell 只认最终目的地，不得用 `onPageChanged` 途经的中间页覆盖导航状态；用户直接左右滑动 PageView 时才逐页同步。否则跨页动画会被中间页重启，看起来像选中态从原 Tab 重新出发。
 
-新增或替换导航样式的硬约束：样式只声明几何事实（`extendBody`、`occupiedHeight`、`listBottomGap`，避让高度由 `contentBottomPadding` 统一推导）与选中动效时长，并实现一个只吃纯数据 `spec` 的 `buildBar`（不接触 Controller/KV/Navigator，样式选择页预览因此复用同一实现）。四个根目的地、切页状态机、返回键与小组件路由在所有样式下完全一致；选中态取 `colorScheme.primary`；尊重系统安全区下限；用 `Semantics(selected:)` 上报选中态；每个样式产出 `<前缀>_bottom_nav` / `<前缀>_nav_bar` / `<前缀>_nav_item_<下标>` 稳定 key；切页动画被用户交互打断时按页面实际落点对齐底栏。新增样式须同时加 `NavigationStylePreference` 枚举值与注册项（测试断言两者一一对应），并通过契约测试：非玻璃样式不出现 `BackdropFilter`、玻璃样式覆盖无着色器降级、360dp 与 393×852 不溢出、避让值与实际占用高度自洽、切换样式后当前 Tab 与 `PageController` 状态不丢、记账按钮在任一样式下不与导航栏重叠且仍只在首页显示。
+新增或替换导航样式的硬约束：样式只声明几何事实（`extendBody`、`occupiedHeight`、`listBottomGap`，避让高度由 `contentBottomPadding` 统一推导）与选中动效时长，并实现一个只吃纯数据 `spec` 的 `buildBar`（不接触 Controller/KV/Navigator，样式选择页预览因此复用同一实现）。四个根目的地、切页状态机、返回键与小组件路由在所有样式下完全一致；选中态取 `colorScheme.primary`；尊重系统安全区下限；用 `Semantics(selected:)` 上报选中态；每个样式产出 `<前缀>_bottom_nav` / `<前缀>_nav_bar` / `<前缀>_nav_item_<下标>` 稳定 key；切页动画被用户交互打断时按页面实际落点对齐底栏。新增样式须同时加 `NavigationStylePreference` 枚举值与注册项（测试断言两者一一对应），并通过契约测试：非玻璃样式不出现玻璃组件或模糊、玻璃样式覆盖无着色器降级、360dp 与 393×852 不溢出、避让值与实际占用高度自洽、切换样式后当前 Tab 与 `PageController` 状态不丢、记账按钮在任一样式下不与导航栏重叠且仍只在首页显示。
 
 ## 顶部 Header 与页面骨架
 **副标题放什么**：`subtitle` 只承载与标题互补的上下文——账本名、账户名/类型、日期或统计区间。要带「单位：x」时必须经 `currencyUnitSubtitle(l10n, prefix, code)` 拼接，不要在调用点手写 `'$prefix · 单位：¥'`。该 helper 在隐藏单位时只返回前缀；没有前缀时返回 `null`，`subtitle` 为 `null` 时整行不渲染，所以直接把返回值交过去即可，不要传空串、也不要留下只剩「·」的残句。完整口径（含卡片角标、AI 结果卡与豁免清单）见 [设计与交互规范](design-system.md) 的「货币单位的显示口径」。
@@ -92,7 +94,7 @@ SafeArea(child: VeriPage(child: Column(children: [
 应用图标源文件位于 `assets/brand/verifin_icon.svg`，当前使用 tessera 风格的浅色圆角底和三层半透明色块。Android launcher 图标应从同一源文件生成，避免不同尺寸出现不一致的图标风格。
 
 ## 选择器
-项目内 2–8 项、静态、受控且无需搜索/分区的短单选默认使用 `VeriAnchoredChoice<T>`，贴近 `SettingsRow`、`FilterPill`、`SelectField` 或 `DetailInfoRow` 展开；动态、较长或需要分区的简单列表继续使用底部弹出的 `showOptionSheet`，账户、分类、货币、标签等领域选择使用各自的 `show*PickerSheet`。除非选项需要持续可见且高频切换，否则不要新增页面内分段按钮；连续输入与系统日期时间继续使用专用控件。
+项目内 2–8 项、静态、受控且无需搜索/分区的短单选默认使用外部库的 `AnchoredMenuChoice<T>`，贴近 `SettingsRow`、`FilterPill`、`SelectField` 或 `DetailInfoRow` 展开；动态、较长或需要分区的简单列表继续使用底部弹出的 `showOptionSheet`，账户、分类、货币、标签等领域选择使用各自的 `show*PickerSheet`。除非选项需要持续可见且高频切换，否则不要新增页面内分段按钮；连续输入与系统日期时间继续使用专用控件。
 
 底部选择器标题保持简短，选项使用 44px 以上触控高度，当前选项显示蓝色弱背景和对勾。资产页右上角操作、账本/分类/标签/汇率历史行操作，以及设置、备份、AI、周期规则、交易筛选、收支统计、账户/交易编辑、个人资料、附件来源和资产显示设置里的短选择使用锚点菜单；资产背景的在线预设通过同一卡片的递进子菜单选择。动态长列表、标签分区筛选、账单日/周期起始日、导入映射和安全确认不得为了形式统一而迁移。
 
@@ -113,11 +115,11 @@ SafeArea(child: VeriPage(child: Column(children: [
 
 ### 锚点菜单
 
-与当前页面上下文强相关、选项数量较少的显示方式、排序、筛选和更多操作，可使用 `VeriAnchoredMenuAnchor` / `VeriAnchoredMenuButton` 贴近触发器展示；静态受控单选优先使用其轻量适配层 `VeriAnchoredChoice<T>`。菜单项支持图标、标题、副标题、分割线和选中/禁用状态；存在下一级时，右侧用箭头提示，点击后以更高层圆角卡片覆盖原卡片并保留可见层级边缘，系统返回优先退回上一级。点击菜单外部关闭整个菜单。
+与当前页面上下文强相关、选项数量较少的显示方式、排序、筛选和更多操作，可使用 `package:anchored_menu` 的 `AnchoredMenuAnchor` / `AnchoredMenuButton` 贴近触发器展示；静态受控单选优先使用其轻量适配层 `AnchoredMenuChoice<T>`。菜单项支持图标、标题、副标题、分割线和选中/禁用状态；存在下一级时，右侧用箭头提示，点击后以更高层圆角卡片覆盖原卡片并保留可见层级边缘，系统返回优先退回上一级。点击菜单外部关闭整个菜单。
 
 菜单只承载轻量操作和少量枚举选项；账户、分类、长列表、搜索、连续输入、危险确认及需要完整草稿保存的设置仍使用各自 Sheet、Dialog 或全屏编辑页。菜单文案与状态由调用方提供，组件不得依赖具体业务 Controller。
 
-菜单保持紧凑：根菜单默认宽度 224、子菜单默认宽度 232，调用方可分别通过 `width` / `submenuWidth` 配置，单个父项还能用 `VeriMenuItem.submenuWidth` 覆盖自己的子菜单宽度；允许收窄到 168。主标题使用项目 `titleSmall`（13px），副标题使用 `labelMedium`（11px），单行操作的实际触控高度不低于 44px。Web/桌面 Hover 必须是与面板四边留出一致间距的圆角矩形，不能把整行铺成横条。
+菜单保持紧凑：默认按内容自适应，最小宽度 168；确需固定宽度时才通过 `width` / `submenuWidth` 配置，单个父项还能用 `AnchoredMenuItem.submenuWidth` 覆盖自己的子菜单宽度。主标题使用项目 `titleSmall`（13px），副标题使用 `labelMedium`（11px），单行操作的实际触控高度不低于 44px。Web/桌面 Hover 必须是与面板四边留出一致间距的圆角矩形，不能把整行铺成横条。视觉令牌由 `app_theme.dart` 的 `AnchoredMenuThemeData` 统一提供，页面不要覆写样式。
 
 图标占位按菜单项自身决定：有图标的项才预留图标列，纯文本项直接从统一内容左边距开始，不得因为同组标题或其他项带图标就人为缩进。
 
@@ -201,7 +203,7 @@ Toast。提示宽度根据正文、重复计数和操作文字的实际排版自
 
 所有数据图表都必须支持交互，后续新增图表同样遵守。数据图表一律走 `lib/app/chart_painters.dart` 适配层（内部使用 `fl_chart`），**页面不得直接 import 图表库，也不得新增自绘数据图表**：
 
-- `InteractiveTrendChart`：折线趋势，平滑曲线 + 曲线下方渐隐填充，只有曲线没有节点圆点；
+- `InteractiveTrendChart`：折线趋势，平滑曲线 + 曲线下方渐隐填充；默认只有曲线，缺率断点或有效点不超过 2 个时用少量小圆点标出可估值位置；
 - `InteractiveBarChart`：柱状；单序列传 `values`，多序列传 `series`（同一插槽内并排成组，用于预算 vs 支出的双柱比较）；
 - `VeriDonutChart`：环形分段；`VeriBudgetRing`：预算/额度进度环。
 

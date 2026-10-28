@@ -184,6 +184,33 @@ void main() {
     expect(find.textContaining('应用不会联网'), findsNothing);
   });
 
+  testWidgets('汇率管理页列出仅被周期规则使用的币种', (tester) async {
+    final controller = await makeController();
+    final incomeCategory = controller.categories.firstWhere(
+      (category) => category.type == EntryType.income,
+    );
+    final rule = RecurringRule(
+      id: 'eur-rule',
+      bookId: controller.activeBook.id,
+      type: EntryType.income,
+      amount: 10,
+      currencyCode: 'EUR',
+      baseAmount: 78,
+      ratePolicy: RecurringRatePolicy.latestAvailable,
+      categoryId: incomeCategory.id,
+      accountId: '',
+      note: '',
+      frequency: RecurringFrequency.monthly,
+      startDate: DateTime(2030, 1, 1),
+      nextRunDate: DateTime(2030, 1, 1),
+    );
+    expect(await controller.saveRecurringRuleDraft(rule, isNew: true), isTrue);
+
+    await pumpPage(tester, controller, const CurrencyRatesPage());
+
+    expect(find.byKey(const Key('currency_rate_EUR')), findsOneWidget);
+  });
+
   testWidgets('汇率历史行使用锚点菜单提供编辑和删除', (tester) async {
     final controller = await makeController();
     await controller.saveExchangeRateDraft(
@@ -202,6 +229,63 @@ void main() {
 
     expect(find.text('编辑'), findsOneWidget);
     expect(find.text('删除'), findsOneWidget);
+  });
+
+  testWidgets('汇率历史显示年份和来源，手工编辑后来源变为手动', (tester) async {
+    final controller = await makeController();
+    final effectiveDate = DateTime.now().subtract(const Duration(days: 400));
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: effectiveDate,
+      rateToBase: 7,
+      source: ExchangeRateSource.imported,
+    );
+    await pumpPage(tester, controller, const CurrencyRatesPage());
+
+    expect(find.textContaining('${effectiveDate.year}年'), findsOneWidget);
+    expect(find.textContaining('导入 · 可能已过期'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('currency_rate_USD')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('${effectiveDate.year}年'), findsOneWidget);
+    expect(find.textContaining('导入'), findsOneWidget);
+    expect(find.textContaining('可能已过期'), findsNothing);
+
+    await tester.tap(find.text('1 USD = 7 CNY'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('number_pad_ok')));
+    await tester.pumpAndSettle();
+
+    expect(controller.exchangeRates.single.source, ExchangeRateSource.manual);
+    expect(find.textContaining('手动维护'), findsOneWidget);
+  });
+
+  testWidgets('未来汇率不冒充当前有效汇率', (tester) async {
+    final controller = await makeController();
+    final currentDate = DateTime.now();
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: currentDate,
+      rateToBase: 7,
+    );
+    await controller.saveExchangeRateDraft(
+      currencyCode: 'USD',
+      effectiveDate: currentDate.add(const Duration(days: 10)),
+      rateToBase: 7.2,
+    );
+    await pumpPage(tester, controller, const CurrencyRatesPage());
+
+    expect(find.text('1 USD = 7 CNY'), findsOneWidget);
+    expect(find.text('1 USD = 7.2 CNY'), findsNothing);
+    expect(find.textContaining('另有 1 条未生效'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('currency_rate_USD')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 USD = 7.2 CNY'), findsOneWidget);
+    expect(find.textContaining('未生效'), findsWidgets);
   });
 
   testWidgets('旧账本从货币页完成一次性无换算重解释', (tester) async {

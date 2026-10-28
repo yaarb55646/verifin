@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
@@ -156,7 +157,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                       }),
                 sorting: true,
               )
-            : VeriAnchoredMenuAnchor(
+            : AnchoredMenuAnchor(
                 entries: _categoryMenuEntries(category),
                 semanticLabel: category.label,
                 builder: (context, openMenu, menuOpen) => _CategoryManageRow(
@@ -317,12 +318,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     }
   }
 
-  List<VeriMenuEntry> _categoryMenuEntries(Category category) {
+  List<AnchoredMenuEntry> _categoryMenuEntries(Category category) {
     // 系统分类（余额调整）可改名、换图标，但不能移动、合并、删除。
     final protected = category.isBalanceAdjust;
     final l10n = AppLocalizations.of(context);
-    return <VeriMenuEntry>[
-      VeriMenuItem(
+    return <AnchoredMenuEntry>[
+      AnchoredMenuItem(
         id: 'category_view_entries',
         icon: Icons.receipt_long_outlined,
         title: l10n.viewCategoryEntries,
@@ -335,13 +336,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
           );
         },
       ),
-      VeriMenuItem(
+      AnchoredMenuItem(
         id: 'category_edit',
         icon: Icons.edit_outlined,
         title: l10n.commonEdit,
-        children: <VeriMenuEntry>[
+        children: <AnchoredMenuEntry>[
           if (!protected && category.type != EntryType.transfer)
-            VeriMenuItem(
+            AnchoredMenuItem(
               id: 'category_keywords',
               icon: Icons.label_outline,
               title: l10n.categoryKeywordsTitle,
@@ -352,33 +353,33 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                 );
               },
             ),
-          VeriMenuItem(
+          AnchoredMenuItem(
             id: 'category_rename',
             icon: Icons.drive_file_rename_outline,
             title: l10n.commonRename,
             onPressed: () async => _renameCategory(category),
           ),
-          VeriMenuItem(
+          AnchoredMenuItem(
             id: 'category_icon',
             icon: Icons.palette_outlined,
             title: l10n.changeIcon,
             onPressed: () async => _changeCategoryIcon(category),
           ),
-          VeriMenuItem(
+          AnchoredMenuItem(
             id: 'category_add_sub',
             icon: Icons.create_new_folder_outlined,
             title: l10n.addSubCategory,
             onPressed: () async => _createCategory(parent: category),
           ),
           if (!protected)
-            VeriMenuItem(
+            AnchoredMenuItem(
               id: 'category_move',
               icon: Icons.drive_file_move_outline,
               title: l10n.moveTo,
               onPressed: () async => _moveCategory(category),
             ),
           if (!protected)
-            VeriMenuItem(
+            AnchoredMenuItem(
               id: 'category_merge',
               icon: Icons.merge_type_rounded,
               title: l10n.mergeCategory,
@@ -386,9 +387,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
             ),
         ],
       ),
-      if (!protected) const VeriMenuDivider(),
+      if (!protected) const AnchoredMenuDivider(),
       if (!protected)
-        VeriMenuItem(
+        AnchoredMenuItem(
           id: 'category_delete',
           icon: Icons.delete_outline,
           title: l10n.deleteCategory,
@@ -523,7 +524,18 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     if (!mounted || label == null) {
       return;
     }
-    VeriFinScope.of(context).renameCategory(category.id, label);
+    final controller = VeriFinScope.of(context);
+    final l10n = AppLocalizations.of(context);
+    final result = await controller.renameCategory(category.id, label);
+    if (!mounted || result != RenameResult.duplicate) {
+      return;
+    }
+    unawaited(
+      VeriFeedbackHost.of(context).showMessage(
+        message: l10n.categoryNameDuplicate,
+        tone: VeriFeedbackTone.warning,
+      ),
+    );
   }
 
   Future<void> _changeCategoryIcon(Category category) async {

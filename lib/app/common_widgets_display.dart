@@ -34,12 +34,14 @@ class FilterPill extends StatelessWidget {
     this.icon,
     this.onTap,
     this.showChevron = true,
+    this.flexibleLabel = false,
   });
 
   final String label;
   final IconData? icon;
   final VoidCallback? onTap;
   final bool showChevron;
+  final bool flexibleLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -66,17 +68,32 @@ class FilterPill extends StatelessWidget {
                 Icon(icon, size: 16),
                 const SizedBox(width: 5),
               ],
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.78),
+              if (flexibleLabel)
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.78),
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.78),
+                  ),
                 ),
-              ),
               if (showChevron) ...<Widget>[
                 const SizedBox(width: 4),
                 const Icon(Icons.keyboard_arrow_down, size: 16),
@@ -219,16 +236,26 @@ String? currencyUnitSubtitle(
 
 /// 聚合卡片/页面使用的轻量金额单位提示，避免在每个数字旁重复堆叠货币标识。
 class MoneyUnitLabel extends StatelessWidget {
-  const MoneyUnitLabel({super.key, required this.currencyCode, this.color});
+  const MoneyUnitLabel({
+    super.key,
+    required this.currencyCode,
+    this.color,
+    this.display,
+  });
 
   final String currencyCode;
   final Color? color;
+  final MoneyCodeDisplay? display;
 
   @override
   Widget build(BuildContext context) {
     // 单币种账本按偏好隐藏单位时整块不渲染：聚合卡片里的数字本身已经不带单位，
     // 只在卡片角落留一句「单位：¥」是纯噪声（空态卡片里连数字都没有，更明显）。
-    final unit = optionalCurrencyUnit(currencyCode);
+    final unit = display == null
+        ? optionalCurrencyUnit(currencyCode)
+        : display == MoneyCodeDisplay.none
+        ? null
+        : displayCurrencyUnit(currencyCode);
     if (unit == null) return const SizedBox.shrink();
     final foreground =
         color ??

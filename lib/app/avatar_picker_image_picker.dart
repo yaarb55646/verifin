@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
+import 'image_picker_cleanup_io.dart';
+
 Future<String?> pickRawImageDataUrl() async {
   // 限制取图尺寸,避免原图(可达几十 MP)解码时内存峰值过高;
   // 裁剪目标最大只有 1200x760。
@@ -16,9 +18,13 @@ Future<String?> pickRawImageDataUrl() async {
   if (picked == null) {
     return null;
   }
-  final bytes = await picked.readAsBytes();
-  final mimeType = picked.mimeType ?? _mimeTypeForPath(picked.path);
-  return 'data:$mimeType;base64,${base64Encode(bytes)}';
+  try {
+    final bytes = await picked.readAsBytes();
+    final mimeType = picked.mimeType ?? _mimeTypeForPath(picked.path);
+    return 'data:$mimeType;base64,${base64Encode(bytes)}';
+  } finally {
+    await discardImagePickerCopy(picked);
+  }
 }
 
 Future<String?> cropImageDataUrl({

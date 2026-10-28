@@ -45,10 +45,11 @@ class _AiAgentStepViewState extends State<AiAgentStepView> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(
-          alpha: 0.45,
+        color: theme.colorScheme.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(veriRadiusMd),
+          side: BorderSide(color: theme.colorScheme.outlineVariant),
         ),
-        borderRadius: BorderRadius.circular(veriRadiusMd),
         child: InkWell(
           borderRadius: BorderRadius.circular(veriRadiusMd),
           onTap: hasDetail && !isRunning

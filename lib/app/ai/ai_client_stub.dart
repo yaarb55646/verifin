@@ -12,6 +12,8 @@ Future<AiCompletionResult> aiAgentComplete({
   double temperature = 0,
   Duration connectionTimeout = const Duration(seconds: 20),
   Duration responseTimeout = const Duration(seconds: 60),
+  Duration totalTimeout = const Duration(seconds: 120),
+  int maxResponseBytes = 2 * 1024 * 1024,
 }) async {
   throw AiException(AiErrorCode.notSupported);
 }
@@ -24,6 +26,9 @@ Stream<AiCompletionEvent> aiAgentStream({
   Duration connectionTimeout = const Duration(seconds: 20),
   Duration responseTimeout = const Duration(seconds: 60),
   Duration idleTimeout = const Duration(seconds: 45),
+  Duration totalTimeout = const Duration(seconds: 120),
+  int maxResponseBytes = 2 * 1024 * 1024,
+  int maxStreamEvents = 10000,
 }) async* {
   throw AiException(AiErrorCode.notSupported);
 }

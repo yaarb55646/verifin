@@ -87,7 +87,7 @@ class _AddAccountPageState extends State<AddAccountPage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  VeriAnchoredChoice<AccountType>(
+                  AnchoredMenuChoice<AccountType>(
                     key: const Key('add_account_type_choice'),
                     values: AccountType.values,
                     selected: _type,

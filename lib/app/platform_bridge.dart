@@ -31,7 +31,15 @@ const MethodChannel _channel = MethodChannel('verifin/app');
 void _ensureInboundDispatcher() {
   _channel.setMethodCallHandler((call) async {
     if (call.method == 'openQuickEntry') {
-      await _quickEntryHandler?.call();
+      final handler = _quickEntryHandler;
+      if (handler == null) {
+        // Native keeps the pending flag until Shell mounts and consumes it.
+        return;
+      }
+      // Consume before opening the UI so a process restart while the editor is
+      // open cannot replay the same quick-entry intent on next launch.
+      await AppCaptureBridge.consumeInitialQuickEntryIntent();
+      await handler();
       return;
     }
     if (call.method == 'openSharedCapture') {
@@ -51,7 +59,15 @@ void _ensureInboundDispatcher() {
       final args = Map<String, Object?>.from(
         call.arguments as Map<dynamic, dynamic>? ?? <dynamic, dynamic>{},
       );
-      await AppWidgetBridge.handleRoute(args);
+      if (!AppWidgetBridge.hasRouteHandler) {
+        // Native keeps the pending route until Shell consumes it after the
+        // consent/onboarding/app-lock gates become ready.
+        return;
+      }
+      // Use the natively stored value as the single source of truth and clear
+      // it atomically before navigating, avoiding duplicate route delivery.
+      final route = await AppWidgetBridge.consumeInitialRoute() ?? args;
+      await AppWidgetBridge.handleRoute(route);
     }
   });
 }

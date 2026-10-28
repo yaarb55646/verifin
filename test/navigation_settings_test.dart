@@ -484,7 +484,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.byKey(
-        const ValueKey<String>('veri_menu_item_settings_locale_system'),
+        const ValueKey<String>('anchored_menu_item_settings_locale_system'),
       ),
       findsOneWidget,
     );

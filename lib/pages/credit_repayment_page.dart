@@ -7,6 +7,7 @@ import '../app/credit_card.dart';
 import '../app/currency_catalog.dart';
 import '../app/currency_math.dart';
 import '../app/entry_currency_draft.dart';
+import '../app/entry_save_feedback.dart';
 import '../app/feedback.dart';
 import '../app/models.dart';
 import '../app/veri_fin_controller.dart';
@@ -413,7 +414,10 @@ class _CreditRepaymentPageState extends State<CreditRepaymentPage> {
       if (mounted && result is EntrySaveValidationFailure) {
         unawaited(
           VeriFeedbackHost.of(context).showMessage(
-            message: AppLocalizations.of(context).entrySaveValidationFailed,
+            message: entrySaveValidationMessage(
+              AppLocalizations.of(context),
+              result.code,
+            ),
             tone: VeriFeedbackTone.warning,
             duration: VeriFeedbackDuration.long,
           ),

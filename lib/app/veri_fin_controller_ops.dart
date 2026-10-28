@@ -1,5 +1,7 @@
 part of 'veri_fin_controller.dart';
 
+final RegExp _budgetMonthKeyPattern = RegExp(r'^\d{4}-\d{2}$');
+
 /// 控制器的「领域操作」层：交易/账户/分组/账本/分类/标签/预算/偏好/备份/
 /// 导入导出等所有对外方法。字段与持久化在 [_ControllerState]。
 mixin _ControllerOps on ChangeNotifier, _ControllerState {
@@ -66,6 +68,18 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   List<ExchangeRate> get exchangeRates =>
       _exchangeRatesView ??= List<ExchangeRate>.unmodifiable(
         _exchangeRates.where((rate) => rate.bookId == _activeBookId).toList()
+          ..sort((a, b) {
+            final byCode = a.currencyCode.compareTo(b.currencyCode);
+            if (byCode != 0) return byCode;
+            final byDate = b.effectiveDate.compareTo(a.effectiveDate);
+            return byDate != 0 ? byDate : b.id.compareTo(a.id);
+          }),
+      );
+
+  /// 某账本的汇率（只读，按币种与生效日倒序）。
+  List<ExchangeRate> exchangeRatesForBook(String bookId) =>
+      List<ExchangeRate>.unmodifiable(
+        _exchangeRates.where((rate) => rate.bookId == bookId).toList()
           ..sort((a, b) {
             final byCode = a.currencyCode.compareTo(b.currencyCode);
             if (byCode != 0) return byCode;
@@ -173,6 +187,90 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _accounts.where((account) => account.bookId == _activeBookId),
   );
 
+  /// 某账本的账户（只读，供 AI 对话等跨账本读取入口使用）。
+  List<Account> accountsForBook(String bookId) => List<Account>.unmodifiable(
+    _accounts.where((account) => account.bookId == bookId),
+  );
+
+  /// 某账本应使用的金额单位显示口径（AI 对话等非活动账本结果使用）。
+  MoneyCodeDisplay moneyCodeDisplayForBook(String bookId) {
+    final book = ledgerBooks.where((item) => item.id == bookId).firstOrNull;
+    if (book == null) return amount_format.activeMoneyCodeDisplay;
+    final multiple = bookUsesMultipleCurrencies(
+      bookId: bookId,
+      baseCurrencyCode: book.baseCurrencyCode,
+      accounts: accountsForBook(bookId),
+      entries: entriesForBook(bookId),
+      rules: _recurringRules.where((rule) => rule.bookId == bookId),
+      rates: exchangeRatesForBook(bookId),
+    );
+    return amount_format.hideUnitInSingleCurrency && !multiple
+        ? MoneyCodeDisplay.none
+        : amount_format.preferredMoneyCodeDisplay;
+  }
+
+  /// 构建一次 AI turn 使用的冻结账本快照。
+  ///
+  /// 余额与预算在这里一次求值；之后的工具执行和结果展示不得再读取 Controller。
+  AiLedgerSnapshot aiLedgerSnapshotForBook(String bookId, {DateTime? now}) {
+    final book = ledgerBooks.where((item) => item.id == bookId).firstOrNull;
+    if (book == null) {
+      throw ArgumentError.value(bookId, 'bookId', '未知账本');
+    }
+    final accounts = accountsForBook(bookId);
+    final startDay = clampBudgetCycleStartDay(
+      _budgetCycleStartDays[bookId] ?? naturalMonthStartDay,
+    );
+    final prefix = '$bookId:';
+    var defaultMonthlyBudget = 0.0;
+    final monthlyBudgetByMonth = <String, double>{};
+    for (final entry in _monthlyBudgets.entries) {
+      if (!entry.key.startsWith(prefix)) continue;
+      final suffix = entry.key.substring(prefix.length);
+      if (suffix == _budgetDefaultMonthSegment) {
+        defaultMonthlyBudget = entry.value;
+      } else if (_budgetMonthKeyPattern.hasMatch(suffix)) {
+        monthlyBudgetByMonth[suffix] = entry.value;
+      }
+    }
+    final defaultCategoryBudgetByCategory = <String, double>{};
+    final categoryBudgetByMonthAndCategory = <String, double>{};
+    for (final entry in _categoryBudgets.entries) {
+      if (!entry.key.startsWith(prefix)) continue;
+      final suffix = entry.key.substring(prefix.length);
+      final separator = suffix.indexOf(':');
+      if (separator <= 0 || separator == suffix.length - 1) continue;
+      final monthOrDefault = suffix.substring(0, separator);
+      final categoryId = suffix.substring(separator + 1);
+      if (monthOrDefault == _budgetDefaultMonthSegment) {
+        defaultCategoryBudgetByCategory[categoryId] = entry.value;
+      } else if (_budgetMonthKeyPattern.hasMatch(monthOrDefault)) {
+        categoryBudgetByMonthAndCategory[suffix] = entry.value;
+      }
+    }
+    return AiLedgerSnapshot(
+      bookId: bookId,
+      bookName: book.name,
+      baseCurrencyCode: book.baseCurrencyCode,
+      capturedAt: now ?? DateTime.now(),
+      entries: entriesForBook(bookId),
+      accounts: accounts,
+      categories: categoriesForBook(bookId),
+      tags: tagsForBook(bookId),
+      exchangeRates: exchangeRatesForBook(bookId),
+      balanceByAccountId: <String, double>{
+        for (final account in accounts) account.id: accountBalance(account),
+      },
+      budget: AiBudgetSnapshot(
+        cycleStartDay: startDay,
+        monthlyBudgetByMonth: monthlyBudgetByMonth,
+        defaultMonthlyBudget: defaultMonthlyBudget,
+        categoryBudgetByMonthAndCategory: categoryBudgetByMonthAndCategory,
+        defaultCategoryBudgetByCategory: defaultCategoryBudgetByCategory,
+      ),
+    );
+  }
+
   List<AccountGroup> get accountGroups {
     return _accountGroupsView ??= List<AccountGroup>.unmodifiable(
       _accountGroups.where((group) => group.bookId == _activeBookId).toList()
@@ -270,16 +368,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     // 落库成功后再删文件，避免落库失败留下「有行无文件」的不可读附件。
     _persistAttachments(deleteFilesAfter: <String>[attachmentId]);
     notifyListeners();
-  }
-
-  /// 删除若干交易时一并清理它们的附件。返回是否有附件被移除。
-  bool _removeAttachmentsForEntries(Set<String> entryIds) {
-    if (entryIds.isEmpty) {
-      return false;
-    }
-    final before = _attachments.length;
-    _attachments.removeWhere((a) => entryIds.contains(a.entryId));
-    return _attachments.length != before;
   }
 
   // ---- 周期记账 ----
@@ -904,10 +992,28 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   DateWindow budgetWindow(DateTime keyMonth) =>
       budgetCycleOfKeyMonth(keyMonth, budgetCycleStartDay);
 
+  /// 某账本某键月的预算周期窗口（只读）。
+  DateWindow budgetWindowForBook(String bookId, DateTime keyMonth) =>
+      budgetCycleOfKeyMonth(
+        keyMonth,
+        clampBudgetCycleStartDay(
+          _budgetCycleStartDays[bookId] ?? naturalMonthStartDay,
+        ),
+      );
+
   /// 包含 [date] 的预算周期的键月（当前账本起始日）——面板/小组件用「现在」换算
   /// 出应读取哪一期的预算。
   DateTime budgetKeyMonthFor(DateTime date) =>
       budgetCycleKeyMonthFor(date, budgetCycleStartDay);
+
+  /// 某账本中 [date] 所属预算期的键月（只读）。
+  DateTime budgetKeyMonthForBook(String bookId, DateTime date) =>
+      budgetCycleKeyMonthFor(
+        date,
+        clampBudgetCycleStartDay(
+          _budgetCycleStartDays[bookId] ?? naturalMonthStartDay,
+        ),
+      );
 
   /// 当前账本的「默认月预算」：设一次每月自动沿用（0 = 未设默认）。存于预算表的
   /// 哨兵键 `bookId:default`，与逐月键 `bookId:yyyy-MM` 天然不冲突。
@@ -933,6 +1039,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   double monthlyBudget(DateTime month) =>
       _monthlyBudgets['$_activeBookId:${_monthKey(month)}'] ??
       defaultMonthlyBudget;
+
+  /// 某账本某键月的实际月预算（只读）。
+  double monthlyBudgetForBook(String bookId, DateTime month) =>
+      _monthlyBudgets['$bookId:${_monthKey(month)}'] ??
+      _monthlyBudgets[_defaultMonthlyBudgetKey(bookId)] ??
+      0;
 
   /// 该键月是否设了单独的覆盖值（用于区分「沿用默认」与「本月单独」）。
   bool monthlyBudgetIsOverride(DateTime month) =>
@@ -978,6 +1090,16 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   double categoryBudget(DateTime month, String categoryId) =>
       _categoryBudgets[_categoryBudgetKey(_activeBookId, month, categoryId)] ??
       defaultCategoryBudget(categoryId);
+
+  /// 某账本某键月某分类的实际预算（只读）。
+  double categoryBudgetForBook(
+    String bookId,
+    DateTime month,
+    String categoryId,
+  ) =>
+      _categoryBudgets[_categoryBudgetKey(bookId, month, categoryId)] ??
+      _categoryBudgets[_defaultCategoryBudgetKey(bookId, categoryId)] ??
+      0;
 
   /// 该键月的分类是否设置了单独覆盖值。只检查当前账本的单期键，不把默认预算
   /// 视为覆盖，供总览页区分「本期单独」与「沿用默认」。
@@ -1483,25 +1605,6 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     aiCapabilityListenable.value = profile;
   }
 
-  /// AI 对话查询的聊天记录（每条 `{role, content, displays?}`，助手消息可带序列化的
-  /// 结果卡片）。设备本地、不进 JSON 备份、初始化保留。
-  List<Map<String, Object?>> get aiChatHistory =>
-      List<Map<String, Object?>>.unmodifiable(_aiChatHistory);
-
-  /// 覆盖保存聊天记录。不 notifyListeners——历史无响应式依赖，只由聊天页读写，
-  /// 避免每条消息触发全应用重建。
-  void setAiChatHistory(List<Map<String, Object?>> history) {
-    _aiChatHistory = List<Map<String, Object?>>.from(history);
-    if (_aiChatHistory.isEmpty) {
-      _store.delete(_aiChatHistoryKey);
-    } else {
-      _store.write(_aiChatHistoryKey, jsonEncode(_aiChatHistory));
-    }
-  }
-
-  /// 清空聊天记录。
-  void clearAiChatHistory() => setAiChatHistory(<Map<String, Object?>>[]);
-
   /// 用户是否已同意隐私政策与用户协议（首启动前为 false）。
   bool get onboardingCompleted => _onboardingCompleted;
 
@@ -1943,6 +2046,21 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     onEntryAdded?.call();
   }
 
+  /// 统一的交易聚合保存校验失败出口：记录隐私友好的错误码后返回结果。
+  ///
+  /// 只记录错误码和底层 ledger code，不记录金额、备注、分类/账户/标签名称或 id。
+  EntrySaveValidationFailure _entrySaveValidationFailure(
+    EntryValidationCode code, {
+    LedgerDataValidationCode? ledgerCode,
+  }) {
+    _logger?.warning(
+      'Entry save validation failed: ${code.name}'
+      '${ledgerCode == null ? '' : ' (ledger: ${ledgerCode.name})'}',
+      source: 'entry_save',
+    );
+    return EntrySaveValidationFailure(code);
+  }
+
   /// Atomically persists an entry together with its refunds and attachments.
   ///
   /// [entry.refundedBaseAmount] is ignored and derived again from the settled
@@ -1959,18 +2077,16 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }) async {
     final currentIndex = _entries.indexWhere((item) => item.id == entry.id);
     if ((isNew && currentIndex != -1) || (!isNew && currentIndex == -1)) {
-      return const EntrySaveValidationFailure(EntryValidationCode.staleDraft);
+      return _entrySaveValidationFailure(EntryValidationCode.staleDraft);
     }
     if (!isNew && _entries[currentIndex].bookId != entry.bookId) {
-      return const EntrySaveValidationFailure(EntryValidationCode.staleDraft);
+      return _entrySaveValidationFailure(EntryValidationCode.staleDraft);
     }
     final book = ledgerBooks
         .where((item) => item.id == entry.bookId)
         .firstOrNull;
     if (book == null || !_validEntryCurrencyAmounts(entry, book)) {
-      return const EntrySaveValidationFailure(
-        EntryValidationCode.invalidAmounts,
-      );
+      return _entrySaveValidationFailure(EntryValidationCode.invalidAmounts);
     }
     // 分类按账本隔离：交易/退款只能引用自己账本的分类。跨账本引用会被展示层回退成
     // 「已删除分类」，还会污染另一个账本的分类笔数，所以在写入前拦下。
@@ -1980,7 +2096,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           (category) => category.id == categoryId && category.bookId == bookId,
         );
     if (!categoryInBook(entry.categoryId, entry.bookId)) {
-      return const EntrySaveValidationFailure(
+      return _entrySaveValidationFailure(
         EntryValidationCode.categoryOutOfScope,
       );
     }
@@ -1990,9 +2106,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     bool tagInBook(String tagId, String bookId) =>
         _tags.any((tag) => tag.id == tagId && tag.bookId == bookId);
     if (entry.tagIds.any((tagId) => !tagInBook(tagId, entry.bookId))) {
-      return const EntrySaveValidationFailure(
-        EntryValidationCode.tagOutOfScope,
-      );
+      return _entrySaveValidationFailure(EntryValidationCode.tagOutOfScope);
     }
     if (refunds.any(
       (refund) =>
@@ -2005,12 +2119,10 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           refund.tagIds.any((tagId) => !tagInBook(tagId, refund.bookId)) ||
           !_validEntryCurrencyAmounts(refund, book),
     )) {
-      return const EntrySaveValidationFailure(
-        EntryValidationCode.invalidRefund,
-      );
+      return _entrySaveValidationFailure(EntryValidationCode.invalidRefund);
     }
     if (attachments.any((attachment) => attachment.entryId != entry.id)) {
-      return const EntrySaveValidationFailure(
+      return _entrySaveValidationFailure(
         EntryValidationCode.invalidAttachments,
       );
     }
@@ -2021,7 +2133,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final refundTolerance = currencyAmountTolerance(entry.currencyCode);
     if (entry.type != EntryType.expense && refunds.isNotEmpty ||
         refundTotal > entry.amount + refundTolerance) {
-      return const EntrySaveValidationFailure(
+      return _entrySaveValidationFailure(
         EntryValidationCode.refundExceedsExpense,
       );
     }
@@ -2075,14 +2187,14 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       requireMinorUnitNormalization: true,
     );
     if (aggregateIssue != null) {
-      return EntrySaveValidationFailure(
-        aggregateIssue.code == LedgerDataValidationCode.invalidRefund ||
-                aggregateIssue.code ==
-                    LedgerDataValidationCode.refundExceedsExpense ||
-                aggregateIssue.code == LedgerDataValidationCode.staleRefundCache
-            ? EntryValidationCode.invalidRefund
-            : EntryValidationCode.invalidAmounts,
-      );
+      final code =
+          aggregateIssue.code == LedgerDataValidationCode.invalidRefund ||
+              aggregateIssue.code ==
+                  LedgerDataValidationCode.refundExceedsExpense ||
+              aggregateIssue.code == LedgerDataValidationCode.staleRefundCache
+          ? EntryValidationCode.invalidRefund
+          : EntryValidationCode.invalidAmounts;
+      return _entrySaveValidationFailure(code, ledgerCode: aggregateIssue.code);
     }
     nextEntries.sort(_compareEntriesLatestFirst);
 
@@ -2107,7 +2219,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       if (rememberRateCurrencyCode == null ||
           rememberRateToBase == null ||
           rememberRateEffectiveDate == null) {
-        return const EntrySaveValidationFailure(
+        return _entrySaveValidationFailure(
           EntryValidationCode.invalidRememberedRate,
         );
       }
@@ -2117,7 +2229,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
           !CurrencyCatalog.isSupported(code) ||
           code == baseCode ||
           !isValidExchangeRate(rememberRateToBase)) {
-        return const EntrySaveValidationFailure(
+        return _entrySaveValidationFailure(
           EntryValidationCode.invalidRememberedRate,
         );
       }
@@ -2261,7 +2373,7 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
 
   /// 解析 CSV 文本并把交易导入当前账本；匹配不到的账户/分类按名称新建。
   /// 返回导入计划（含成功笔数与逐行错误）供 UI 反馈。解析失败抛 [FormatException]。
-  ImportPlan importTransactionsFromCsv(String content) {
+  Future<ImportPlan> importTransactionsFromCsv(String content) async {
     final rows = parseCsv(content);
     final plan = buildImportPlan(
       rows: rows,
@@ -2274,34 +2386,18 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       existingTags: tags,
       seedEnglish: _seedEnglish,
     );
-    _applyImportPlan(plan);
+    if (plan.entries.isNotEmpty) {
+      final applied = await applyImportEntries(
+        entries: plan.entries,
+        candidateAccounts: plan.newAccounts,
+        candidateCategories: plan.newCategories,
+        candidateTags: plan.newTags,
+      );
+      if (!applied) {
+        throw const FormatException('CSV 数据无法导入');
+      }
+    }
     return plan;
-  }
-
-  void _applyImportPlan(ImportPlan plan) {
-    if (plan.entries.isEmpty) {
-      return;
-    }
-    _accounts.addAll(plan.newAccounts);
-    if (plan.newCategories.isNotEmpty) {
-      // 目标账本还没有分类时先播种默认集，再追加导入新建的分类。
-      _seedMissingBookCategories();
-      _categories.addAll(plan.newCategories);
-    }
-    if (plan.newTags.isNotEmpty) {
-      _tags.addAll(plan.newTags);
-    }
-    _entries.addAll(plan.entries);
-    _entries.sort(_compareEntriesLatestFirst);
-    _persistAccounts();
-    _persistCategories();
-    if (plan.newTags.isNotEmpty) {
-      _persistTags();
-    }
-    _persistEntries();
-    notifyListeners();
-    // 导入也新增了交易：触发自动备份与小组件刷新，与手动记账一致。
-    onEntryAdded?.call();
   }
 
   /// 仅解析所选平台账单为导入计划，**不落库**——供导入预览页展示、让用户
@@ -2329,14 +2425,14 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   /// [candidateAccounts]/[candidateCategories] 为解析计划里待新建的账户/分类，
   /// 这里只创建被保留交易**实际引用到**、且当前尚不存在的那些，避免建出用不上的
   /// 空账户/空分类。空交易列表直接返回、不写库。
-  bool applyImportEntries({
+  Future<bool> applyImportEntries({
     required List<LedgerEntry> entries,
     required List<Account> candidateAccounts,
     required List<Category> candidateCategories,
     List<Tag> candidateTags = const <Tag>[],
     Set<String> alwaysCreateAccountIds = const <String>{},
     List<ExchangeRate> candidateExchangeRates = const <ExchangeRate>[],
-  }) {
+  }) async {
     if (entries.isEmpty && alwaysCreateAccountIds.isEmpty) {
       return false;
     }
@@ -2435,38 +2531,79 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     }
 
     // 名称去首尾空格：候选账户经预览页改名后可能带空格，与 addAccount 同规则。
-    _accounts.addAll(
-      newAccounts.map(
-        (account) => _normalizeAccountCurrencyAmounts(
-          account.copyWith(name: account.name.trim()),
-        ),
-      ),
-    );
+    final normalizedAccounts = newAccounts
+        .map(
+          (account) => _normalizeAccountCurrencyAmounts(
+            account.copyWith(name: account.name.trim()),
+          ),
+        )
+        .toList(growable: false);
+    final nextAccounts = <Account>[..._accounts, ...normalizedAccounts];
+    var nextCategories = List<Category>.of(_categories);
     if (newCategories.isNotEmpty) {
       // 目标账本还没有分类时先播种默认集，再追加导入新建的分类。
-      _seedMissingBookCategories();
-      _categories.addAll(newCategories);
+      nextCategories = withSeededBookCategories(
+        nextCategories,
+        bookIds: <String>[for (final book in _ledgerBooks) book.id],
+        english: _seedEnglish,
+        nextId: () => _generateId('category'),
+      );
+      nextCategories.addAll(newCategories);
     }
-    if (newTags.isNotEmpty) {
-      _tags.addAll(newTags);
+    final nextTags = <Tag>[..._tags, ...newTags];
+    final nextRates = <ExchangeRate>[..._exchangeRates, ...newRates];
+    final nextEntries = <LedgerEntry>[..._entries, ...entries]
+      ..sort(_compareEntriesLatestFirst);
+    final oldAccounts = List<Account>.of(_accounts);
+    final oldCategories = List<Category>.of(_categories);
+    final oldTags = List<Tag>.of(_tags);
+    final oldRates = List<ExchangeRate>.of(_exchangeRates);
+    final oldEntries = List<LedgerEntry>.of(_entries);
+    var saved = false;
+    try {
+      _accounts
+        ..clear()
+        ..addAll(nextAccounts);
+      _categories
+        ..clear()
+        ..addAll(nextCategories);
+      _tags
+        ..clear()
+        ..addAll(nextTags);
+      _exchangeRates
+        ..clear()
+        ..addAll(nextRates);
+      _entries
+        ..clear()
+        ..addAll(nextEntries);
+      // 导入数据里的旧式单标量退款（如一木账单的「退款」列）迁成关联退款条目、
+      // 并重算净额缓存，使余额/统计当场即正确（不必等下次载入自愈）。
+      _syncRefundData();
+      saved = await _runTrackedWrite(
+        () => _repository.replaceAllLedgerData(_ledgerDataSnapshot()),
+      );
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
     }
-    if (newRates.isNotEmpty) {
-      _exchangeRates.addAll(newRates);
+    if (!saved) {
+      _accounts
+        ..clear()
+        ..addAll(oldAccounts);
+      _categories
+        ..clear()
+        ..addAll(oldCategories);
+      _tags
+        ..clear()
+        ..addAll(oldTags);
+      _exchangeRates
+        ..clear()
+        ..addAll(oldRates);
+      _entries
+        ..clear()
+        ..addAll(oldEntries);
+      await _collectAttachmentOrphans();
+      return false;
     }
-    _entries.addAll(entries);
-    _entries.sort(_compareEntriesLatestFirst);
-    // 导入数据里的旧式单标量退款（如一木账单的「退款」列）迁成关联退款条目、
-    // 并重算净额缓存，使余额/统计当场即正确（不必等下次载入自愈）。
-    _syncRefundData();
-    _persistAccounts();
-    _persistCategories();
-    if (newTags.isNotEmpty) {
-      _persistTags();
-    }
-    if (newRates.isNotEmpty) {
-      _persistExchangeRates();
-    }
-    _persistEntries();
     notifyListeners();
     // 导入也新增了交易：触发自动备份与小组件刷新，与手动记账一致。
     onEntryAdded?.call();
@@ -2549,14 +2686,12 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return sum;
   }
 
-  /// 某笔支出「剩余可退」额 = 原金额 − 已挂退款（含待到账），钳到 `[0, amount]`。
-  /// 决策 D：禁止超额，退款上限为原金额。
+  /// 某笔支出「剩余可退」额 = 原金额 − 已挂退款（含待到账），钳到 `[0, amount]`，
+  /// 并按原币 minor unit 归一化。决策 D：禁止超额，退款上限为原金额。
   double remainingRefundable(String expenseId) {
     final expense = _entryOrNull(expenseId);
     if (expense == null || expense.type != EntryType.expense) return 0;
-    return (expense.amount - refundedTotalFor(expenseId))
-        .clamp(0.0, expense.amount)
-        .toDouble();
+    return remainingRefundableAmount(expense, _entries);
   }
 
   /// 给某笔支出添加一笔退款。金额自动截到「剩余可退」（决策 D：禁止超额）。
@@ -2575,7 +2710,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
   }) {
     final expense = _entryOrNull(expenseId);
     if (expense == null || expense.type != EntryType.expense) return null;
-    final capped = amount.clamp(0.0, remainingRefundable(expenseId)).toDouble();
+    final capped = amount
+        .clamp(0.0, remainingRefundableAmount(expense, _entries))
+        .toDouble();
     if (capped <= 0) return null;
     final book = _ledgerBooks
         .where((book) => book.id == expense.bookId)
@@ -2670,19 +2807,18 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     if (index == -1) return;
     final expenseId = refund.refundOf ?? _entries[index].refundOf;
     final expense = expenseId == null ? null : _entryOrNull(expenseId);
-    var otherSum = 0.0;
-    for (final e in _entries) {
-      if (e.id != refund.id &&
-          e.type == EntryType.refund &&
-          e.refundOf == expenseId) {
-        otherSum += e.amount;
-      }
-    }
-    final cap = expense == null
+    final cap = expense == null || expense.type != EntryType.expense
         ? refund.amount
-        : (expense.amount - otherSum).clamp(0.0, expense.amount).toDouble();
+        : remainingRefundableAmount(
+            expense,
+            _entries,
+            excludeRefundId: refund.id,
+          );
     _entries[index] = refund.copyWith(
-      amount: refund.amount.clamp(0.0, cap).toDouble(),
+      amount: normalizeCurrencyAmount(
+        refund.amount.clamp(0.0, cap),
+        refund.currencyCode,
+      ),
     );
     _entries.sort(_compareEntriesLatestFirst);
     _syncRefundCache();
@@ -2938,45 +3074,152 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
-  bool deleteLedgerBook(String bookId) {
+  Future<bool> deleteLedgerBook(String bookId) async {
     final book = _ledgerBooks.where((item) => item.id == bookId).firstOrNull;
     if (book == null || book.isDefault) {
       return false;
     }
-    _ledgerBooks.removeWhere((item) => item.id == bookId);
     final removedEntryIds = _entries
         .where((entry) => entry.bookId == bookId)
         .map((entry) => entry.id)
         .toSet();
-    _entries.removeWhere((entry) => entry.bookId == bookId);
-    _accounts.removeWhere((account) => account.bookId == bookId);
-    _accountGroups.removeWhere((group) => group.bookId == bookId);
-    // 分类与标签属于账本，随账本一起删。
-    _categories.removeWhere((category) => category.bookId == bookId);
-    _tags.removeWhere((tag) => tag.bookId == bookId);
-    _recurringRules.removeWhere((rule) => rule.bookId == bookId);
-    _exchangeRates.removeWhere((rate) => rate.bookId == bookId);
-    _collapsedAssetSections.removeWhere((key) => key.startsWith('$bookId:'));
-    _assetAccountOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
-    _assetSectionOrders.removeWhere((key, _) => key.startsWith('$bookId:'));
-    _monthlyBudgets.removeWhere((key, _) => key.startsWith('$bookId:'));
-    _categoryBudgets.removeWhere((key, _) => key.startsWith('$bookId:'));
-    _dailyBudgets.remove(bookId);
-    _defaultAccountIds.remove(bookId);
+    final nextBooks = _ledgerBooks
+        .where((item) => item.id != bookId)
+        .toList(growable: false);
+    final nextAccounts = _accounts
+        .where((item) => item.bookId != bookId)
+        .toList(growable: false);
+    final nextGroups = _accountGroups
+        .where((item) => item.bookId != bookId)
+        .toList(growable: false);
+    final nextCategories = _categories
+        .where((item) => item.bookId != bookId)
+        .toList(growable: false);
+    final nextTags = _tags
+        .where((item) => item.bookId != bookId)
+        .toList(growable: false);
+    final nextEntries = _entries
+        .where((item) => item.bookId != bookId)
+        .toList(growable: false);
+    final nextRules = _recurringRules
+        .where((item) => item.bookId != bookId)
+        .toList(growable: false);
+    final nextRates = _exchangeRates
+        .where((item) => item.bookId != bookId)
+        .toList(growable: false);
+    final nextAttachments = _attachments
+        .where((item) => !removedEntryIds.contains(item.entryId))
+        .toList(growable: false);
+    final nextMonthlyBudgets = Map<String, double>.of(_monthlyBudgets)
+      ..removeWhere((key, _) => key.startsWith('$bookId:'));
+    final nextCategoryBudgets = Map<String, double>.of(_categoryBudgets)
+      ..removeWhere((key, _) => key.startsWith('$bookId:'));
+    final nextDailyBudgets = Map<String, double>.of(_dailyBudgets)
+      ..remove(bookId);
+    final nextDefaultAccountIds = Map<String, String>.of(_defaultAccountIds)
+      ..remove(bookId);
+    final nextBudgetCycleStartDays = Map<String, int>.of(_budgetCycleStartDays)
+      ..remove(bookId);
+    final nextCollapsed = _collapsedAssetSections.where(
+      (key) => !key.startsWith('$bookId:'),
+    );
+    final nextAccountOrders = <String, List<String>>{
+      for (final entry in _assetAccountOrders.entries)
+        if (!entry.key.startsWith('$bookId:'))
+          entry.key: List<String>.of(entry.value),
+    };
+    final nextSectionOrders = <String, List<String>>{
+      for (final entry in _assetSectionOrders.entries)
+        if (!entry.key.startsWith('$bookId:'))
+          entry.key: List<String>.of(entry.value),
+    };
+    final nextActiveBookId = _activeBookId == bookId
+        ? defaultLedgerBookId
+        : _activeBookId;
+    final saved = await _runTrackedWrite(
+      () => _repository.replaceAllLedgerData(
+        LedgerDataSnapshot(
+          books: nextBooks,
+          accounts: nextAccounts,
+          accountGroups: nextGroups,
+          categories: nextCategories,
+          tags: nextTags,
+          attachments: nextAttachments,
+          entries: nextEntries,
+          recurringRules: nextRules,
+          monthlyBudgets: nextMonthlyBudgets,
+          categoryBudgets: nextCategoryBudgets,
+          dailyBudgets: nextDailyBudgets,
+          exchangeRates: nextRates,
+        ),
+      ),
+    );
+    if (!saved) {
+      return false;
+    }
+
+    _ledgerBooks
+      ..clear()
+      ..addAll(nextBooks);
+    _accounts
+      ..clear()
+      ..addAll(nextAccounts);
+    _accountGroups
+      ..clear()
+      ..addAll(nextGroups);
+    _categories
+      ..clear()
+      ..addAll(nextCategories);
+    _tags
+      ..clear()
+      ..addAll(nextTags);
+    _entries
+      ..clear()
+      ..addAll(nextEntries);
+    _recurringRules
+      ..clear()
+      ..addAll(nextRules);
+    _exchangeRates
+      ..clear()
+      ..addAll(nextRates);
+    _attachments
+      ..clear()
+      ..addAll(nextAttachments);
+    _monthlyBudgets
+      ..clear()
+      ..addAll(nextMonthlyBudgets);
+    _categoryBudgets
+      ..clear()
+      ..addAll(nextCategoryBudgets);
+    _dailyBudgets
+      ..clear()
+      ..addAll(nextDailyBudgets);
+    _defaultAccountIds
+      ..clear()
+      ..addAll(nextDefaultAccountIds);
+    _budgetCycleStartDays
+      ..clear()
+      ..addAll(nextBudgetCycleStartDays);
+    _collapsedAssetSections
+      ..clear()
+      ..addAll(nextCollapsed);
+    _assetAccountOrders
+      ..clear()
+      ..addAll(nextAccountOrders);
+    _assetSectionOrders
+      ..clear()
+      ..addAll(nextSectionOrders);
+    _activeBookId = nextActiveBookId;
     _persistDefaultAccounts();
-    _budgetCycleStartDays.remove(bookId);
     _persistBudgetCycleStartDays();
-    if (_activeBookId == bookId) {
-      _activeBookId = defaultLedgerBookId;
+    if (_activeBookId != _store.read(_activeBookKey)) {
       _store.write(_activeBookKey, _activeBookId);
     }
-    // 内存里剥离该账本的附件，落库交给下方整体写入（附件已含在快照里）。
-    _removeAttachmentsForEntries(removedEntryIds);
-    _persistAllLedgerData();
-    // 以下为 KV 偏好类，不在账目事务内。
     _persistAssetSectionCollapsed();
     _persistAssetAccountOrders();
     _persistAssetSectionOrders();
+    await _collectAttachmentOrphans();
+    _markWidgetProjectionChanged();
     notifyListeners();
     return true;
   }
@@ -3588,21 +3831,44 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return true;
   }
 
-  void renameCategory(String categoryId, String label) {
+  Future<RenameResult> renameCategory(String categoryId, String label) async {
     final trimmedLabel = label.trim();
     if (trimmedLabel.isEmpty) {
-      return;
+      return RenameResult.invalid;
     }
     final index = _categories.indexWhere(
       (category) =>
           category.id == categoryId && category.bookId == _activeBookId,
     );
     if (index == -1) {
-      return;
+      return RenameResult.invalid;
     }
-    _categories[index] = _categories[index].copyWith(label: trimmedLabel);
-    _persistCategories();
+    final current = _categories[index];
+    final normalized = normalizedCategoryLabel(trimmedLabel);
+    final duplicate = _categories.any(
+      (category) =>
+          category.id != categoryId &&
+          category.bookId == current.bookId &&
+          category.type == current.type &&
+          category.parentId == current.parentId &&
+          normalizedCategoryLabel(category.label) == normalized,
+    );
+    if (duplicate) {
+      return RenameResult.duplicate;
+    }
+    final next = List<Category>.of(_categories)
+      ..[index] = current.copyWith(label: trimmedLabel);
+    try {
+      await _repository.saveCategories(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return RenameResult.persistenceFailure;
+    }
+    _categories
+      ..clear()
+      ..addAll(next);
     notifyListeners();
+    return RenameResult.success;
   }
 
   /// 显式保存关键词：写入全量分类，落库成功后才发布内存状态。
@@ -3670,7 +3936,9 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final positions = <int>[];
     for (var i = 0; i < _categories.length; i++) {
       final category = _categories[i];
-      if (category.type == type && category.parentId == parentId) {
+      if (category.bookId == _activeBookId &&
+          category.type == type &&
+          category.parentId == parentId) {
         positions.add(i);
       }
     }
@@ -3924,20 +4192,39 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     return tag.id;
   }
 
-  void renameTag(String tagId, String label) {
+  Future<RenameResult> renameTag(String tagId, String label) async {
     final trimmed = label.trim();
     if (trimmed.isEmpty) {
-      return;
+      return RenameResult.invalid;
     }
     final index = _tags.indexWhere(
       (tag) => tag.id == tagId && tag.bookId == _activeBookId,
     );
     if (index == -1) {
-      return;
+      return RenameResult.invalid;
     }
-    _tags[index] = _tags[index].copyWith(label: trimmed);
-    _persistTags();
+    final duplicate = _tags.any(
+      (tag) =>
+          tag.id != tagId &&
+          tag.bookId == _activeBookId &&
+          tag.label == trimmed,
+    );
+    if (duplicate) {
+      return RenameResult.duplicate;
+    }
+    final next = List<Tag>.of(_tags)
+      ..[index] = _tags[index].copyWith(label: trimmed);
+    try {
+      await _repository.saveTags(next);
+    } catch (error, stackTrace) {
+      _handlePersistError(error, stackTrace);
+      return RenameResult.persistenceFailure;
+    }
+    _tags
+      ..clear()
+      ..addAll(next);
     notifyListeners();
+    return RenameResult.success;
   }
 
   /// 在当前账本的标签之间重排。标签属于账本，[oldIndex]/[newIndex] 是**当前账本
@@ -4206,42 +4493,48 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     notifyListeners();
   }
 
-  void resetAllData() {
-    // 偏好类 KV 键清空；账目类数据在下方以默认状态写回 SQLite。
-    for (final key in <String>[
-      _themeKey,
-      _themeColorKey,
-      _navigationStyleKey,
-      _profileKey,
-      _activeBookKey,
-      _assetCoverKey,
-      _hapticsKey,
-      _assetViewModeKey,
-      _assetSectionCollapsedKey,
-      _assetAccountOrderKey,
-      _assetSectionOrderKey,
-      _homePanelsKey,
-      _reportDailyPanelsKey,
-      _reportMonthlyPanelsKey,
-      _reportYearlyPanelsKey,
-      _currencyFractionStyleKey,
-      _legacyAmountFormatKey,
-    ]) {
-      _store.delete(key);
+  /// 清空账目并恢复默认数据。只有 SQLite 原子整替成功后才更新内存和 KV；
+  /// 失败时保持当前数据和界面状态，调用方必须把 false 当作失败处理。
+  Future<bool> resetAllData() async {
+    final nextBooks = List<LedgerBook>.of(_seedLedgerBooks);
+    final nextAccounts = List<Account>.of(defaultAccounts);
+    final nextGroups = List<AccountGroup>.of(defaultAccountGroups);
+    final nextCategories = _seedCategoriesFor(defaultLedgerBookId);
+    final saved = await _runTrackedWrite(
+      () => _repository.replaceAllLedgerData(
+        LedgerDataSnapshot(
+          books: nextBooks,
+          accounts: nextAccounts,
+          accountGroups: nextGroups,
+          categories: nextCategories,
+          tags: const <Tag>[],
+          attachments: const <Attachment>[],
+          entries: const <LedgerEntry>[],
+          recurringRules: const <RecurringRule>[],
+          monthlyBudgets: const <String, double>{},
+          categoryBudgets: const <String, double>{},
+          dailyBudgets: const <String, double>{},
+          exchangeRates: const <ExchangeRate>[],
+        ),
+      ),
+    );
+    if (!saved) {
+      return false;
     }
+
     _entries.clear();
     _accounts
       ..clear()
-      ..addAll(defaultAccounts);
+      ..addAll(nextAccounts);
     _accountGroups
       ..clear()
-      ..addAll(defaultAccountGroups);
+      ..addAll(nextGroups);
     _ledgerBooks
       ..clear()
-      ..addAll(_seedLedgerBooks);
+      ..addAll(nextBooks);
     _categories
       ..clear()
-      ..addAll(_seedCategoriesFor(defaultLedgerBookId));
+      ..addAll(nextCategories);
     _tags.clear();
     _attachments.clear();
     _recurringRules.clear();
@@ -4260,21 +4553,49 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     _collapsedAssetSections.clear();
     _assetAccountOrders.clear();
     _assetSectionOrders.clear();
-    // 账户被清空，默认付款账户随之失效。
     _defaultAccountIds.clear();
-    _persistDefaultAccounts();
-    // 预算周期起始日随预算一起回到默认（自然月）。
     _budgetCycleStartDays.clear();
-    _persistBudgetCycleStartDays();
+    _currencyFractionStyle = CurrencyFractionStyle.compact;
+    amount_format.currencyFractionStyle = _currencyFractionStyle;
     for (final page in PanelPageKind.values) {
       _pagePanels[page] = _defaultPanelSettings(page.specs);
     }
-    // 把重置后的默认状态写回 SQLite（单事务原子替换全部表）。
-    _persistAllLedgerData();
+    await _collectAttachmentOrphans();
+
+    for (final key in <String>[
+      _themeKey,
+      _themeColorKey,
+      _navigationStyleKey,
+      _profileKey,
+      _activeBookKey,
+      _assetCoverKey,
+      _hapticsKey,
+      _assetViewModeKey,
+      _assetSectionCollapsedKey,
+      _assetAccountOrderKey,
+      _assetSectionOrderKey,
+      _homePanelsKey,
+      _reportDailyPanelsKey,
+      _reportMonthlyPanelsKey,
+      _reportYearlyPanelsKey,
+      _currencyFractionStyleKey,
+      _legacyAmountFormatKey,
+      _defaultAccountKey,
+      _budgetCycleKey,
+    ]) {
+      try {
+        await _store.deleteAndFlush(key);
+      } catch (error, stackTrace) {
+        // 账目已成功清空；偏好清空失败不改变权威数据。
+        _handlePersistError(error, stackTrace);
+      }
+    }
     themePreferenceListenable.value = _themePreference;
     themeColorPreferenceListenable.value = _themeColorPreference;
     navigationStylePreferenceListenable.value = _navigationStylePreference;
+    _markWidgetProjectionChanged();
     notifyListeners();
+    return true;
   }
 
   String exportDataJson() {
@@ -4345,18 +4666,62 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
       return attachments;
     }
     final result = <Attachment>[];
-    for (final attachment in attachments) {
-      final Uint8List bytes;
-      try {
-        bytes = await readStagedAttachment(attachment.id);
-      } catch (error) {
-        _logger?.error('备份附件读取失败', source: 'import', error: error);
-        throw const FormatException('备份附件缺失或损坏');
+    final written = <String>[];
+    final sourceIds = <String>{
+      for (final attachment in attachments) attachment.id,
+    };
+    try {
+      for (final attachment in attachments) {
+        final Uint8List bytes;
+        try {
+          bytes = await readStagedAttachment(attachment.id);
+        } catch (error) {
+          _logger?.error('备份附件读取失败', source: 'import', error: error);
+          throw const FormatException('备份附件缺失或损坏');
+        }
+        var targetId = attachment.id;
+        if (_attachmentStore.existsSync(targetId)) {
+          final sameBytes = await _hasSameBytes(targetId, bytes);
+          if (sameBytes) {
+            result.add(attachment.copyWith(byteSize: bytes.length));
+            continue;
+          }
+          // 外部备份可能与现有附件发生 id 碰撞。附件 id 不参与账目引用，
+          // 为导入数据分配新 id，避免覆盖当前文件后因落库失败无法回滚。
+          do {
+            targetId = _generateId('attachment');
+          } while (sourceIds.contains(targetId) ||
+              _attachmentStore.existsSync(targetId));
+        }
+        sourceIds.add(targetId);
+        await _attachmentStore.writeBytes(targetId, bytes);
+        written.add(targetId);
+        result.add(attachment.copyWith(id: targetId, byteSize: bytes.length));
       }
-      await _attachmentStore.writeBytes(attachment.id, bytes);
-      result.add(attachment.copyWith(byteSize: bytes.length));
+    } catch (error) {
+      await _attachmentStore.deleteMany(written);
+      await _collectAttachmentOrphans();
+      rethrow;
     }
     return result;
+  }
+
+  Future<bool> _hasSameBytes(String id, List<int> expected) async {
+    try {
+      final existing = await _attachmentStore.readBytes(id);
+      if (existing.length != expected.length) {
+        return false;
+      }
+      for (var index = 0; index < existing.length; index++) {
+        if (existing[index] != expected[index]) {
+          return false;
+        }
+      }
+      return true;
+    } catch (_) {
+      // 读不到旧文件时保守地走新 id，当前元数据引用的字节保持不动。
+      return false;
+    }
   }
 
   /// 从明文导出 JSON 导入。**字节层的格式判定（zip/加密信封/明文）不在 controller**
@@ -4446,10 +4811,24 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
     final importedTags = _decodeModelList<Tag>(data['tags'], Tag.fromJson);
     var nextCategories = importedCategories;
     var nextTags = importedTags;
-    final nextAttachments = await _materializeImportedAttachments(
-      _decodeModelList<Attachment>(data['attachments'], Attachment.fromJson),
-      readStagedAttachment,
+    final importedAttachments = _decodeModelList<Attachment>(
+      data['attachments'],
+      Attachment.fromJson,
     );
+    final importedEntryIds = <String>{
+      for (final entry in nextEntries) entry.id,
+    };
+    final importedAttachmentIds = <String>{};
+    for (final attachment in importedAttachments) {
+      if (!isValidAttachmentId(attachment.id) ||
+          !importedAttachmentIds.add(attachment.id) ||
+          attachment.entryId.isEmpty ||
+          !importedEntryIds.contains(attachment.entryId) ||
+          attachment.byteSize < 0) {
+        throw const FormatException('备份附件元数据不合法');
+      }
+    }
+    var nextAttachments = importedAttachments;
     var nextRecurringRules = _decodeModelList<RecurringRule>(
       data['recurringRules'],
       RecurringRule.fromJson,
@@ -4631,86 +5010,210 @@ mixin _ControllerOps on ChangeNotifier, _ControllerState {
         ledgerIssue.code != LedgerDataValidationCode.staleRefundCache) {
       throw FormatException('账目关联或金额不合法：${ledgerIssue.code.name}');
     }
+    nextAttachments = await _materializeImportedAttachments(
+      importedAttachments,
+      readStagedAttachment,
+    );
 
-    _ledgerBooks
-      ..clear()
-      ..addAll(nextLedgerBooks);
-    _activeBookId = nextActiveBookId;
-    _entries
-      ..clear()
-      ..addAll(nextEntries);
-    _accounts
-      ..clear()
-      ..addAll(nextAccounts);
-    _accountGroups
-      ..clear()
-      ..addAll(nextAccountGroups);
-    _normalizeGroupOrder();
-    _categories
-      ..clear()
-      ..addAll(nextCategories);
-    _tags
-      ..clear()
-      ..addAll(nextTags);
-    _attachments
-      ..clear()
-      ..addAll(nextAttachments);
-    _recurringRules
-      ..clear()
-      ..addAll(nextRecurringRules);
-    _exchangeRates
-      ..clear()
-      ..addAll(nextExchangeRates);
-    _monthlyBudgets
-      ..clear()
-      ..addAll(nextMonthlyBudgets);
-    _categoryBudgets
-      ..clear()
-      ..addAll(nextCategoryBudgets);
-    _dailyBudgets
-      ..clear()
-      ..addAll(nextDailyBudgets);
-    _budgetCycleStartDays
-      ..clear()
-      ..addAll(nextBudgetCycleStartDays);
-    _profile = nextProfile;
-    _themePreference = nextThemePreference;
-    _themeColorPreference = nextThemeColorPreference;
-    _assetCoverUrl = nextAssetCoverUrl;
-    _hapticsEnabled = nextHapticsEnabled;
-    _assetAccountViewMode = nextAssetAccountViewMode;
-    _collapsedAssetSections
-      ..clear()
-      ..addAll(nextCollapsedAssetSections);
-    _assetAccountOrders
-      ..clear()
-      ..addAll(nextAssetAccountOrders);
-    _assetSectionOrders
-      ..clear()
-      ..addAll(nextAssetSectionOrders);
-    _pagePanels[PanelPageKind.home] = nextHomePanels;
-    _pagePanels[PanelPageKind.reportsDaily] = nextReportDailyPanels;
-    _pagePanels[PanelPageKind.reportsMonthly] = nextReportMonthlyPanels;
-    _pagePanels[PanelPageKind.reportsYearly] = nextReportYearlyPanels;
-    _defaultAccountIds
-      ..clear()
-      ..addAll(nextDefaultAccountIds);
-    _fabActionMode = nextFabActionMode;
-    _currencyFractionStyle = nextCurrencyFractionStyle;
-    amount_format.currencyFractionStyle = nextCurrencyFractionStyle;
-    _moneyUnitStyle = nextMoneyUnitStyle;
-    _hideUnitInSingleCurrency = nextHideUnitInSingleCurrency;
-    _autoSuggestEnabled = nextAutoSuggestEnabled;
-    _showRunningBalance = nextShowRunningBalance;
-    _homeTrendConfig = nextHomeTrendConfig;
-    // 备份恢复零参照完整性校验，是「幽灵同名分类」与跨账本标签引用的唯一现实入口
-    // （内部不一致的外部/异构/手改备份）；覆盖后跑一遍自愈，堵住这个入口。
-    // 落库统一由下方 _persistAllLedgerData。
-    _healCategoryData();
-    // 退款自愈：把导入数据里的旧标量退款迁成关联退款条目并重算净额缓存。
-    _syncRefundData();
-    _healTagData();
-    _persistAllLedgerData();
+    final oldBooks = List<LedgerBook>.of(_ledgerBooks);
+    final oldAccounts = List<Account>.of(_accounts);
+    final oldGroups = List<AccountGroup>.of(_accountGroups);
+    final oldCategories = List<Category>.of(_categories);
+    final oldTags = List<Tag>.of(_tags);
+    final oldAttachments = List<Attachment>.of(_attachments);
+    final oldEntries = List<LedgerEntry>.of(_entries);
+    final oldRules = List<RecurringRule>.of(_recurringRules);
+    final oldRates = List<ExchangeRate>.of(_exchangeRates);
+    final oldMonthlyBudgets = Map<String, double>.of(_monthlyBudgets);
+    final oldCategoryBudgets = Map<String, double>.of(_categoryBudgets);
+    final oldDailyBudgets = Map<String, double>.of(_dailyBudgets);
+    final oldBudgetCycleStartDays = Map<String, int>.of(_budgetCycleStartDays);
+    final oldActiveBookId = _activeBookId;
+    final oldProfile = _profile;
+    final oldThemePreference = _themePreference;
+    final oldThemeColorPreference = _themeColorPreference;
+    final oldAssetCoverUrl = _assetCoverUrl;
+    final oldHapticsEnabled = _hapticsEnabled;
+    final oldAssetAccountViewMode = _assetAccountViewMode;
+    final oldCollapsedAssetSections = Set<String>.of(_collapsedAssetSections);
+    final oldAssetAccountOrders = <String, List<String>>{
+      for (final entry in _assetAccountOrders.entries)
+        entry.key: List<String>.of(entry.value),
+    };
+    final oldAssetSectionOrders = <String, List<String>>{
+      for (final entry in _assetSectionOrders.entries)
+        entry.key: List<String>.of(entry.value),
+    };
+    final oldPagePanels = <PanelPageKind, List<PagePanelSetting>>{
+      for (final entry in _pagePanels.entries)
+        entry.key: List<PagePanelSetting>.of(entry.value),
+    };
+    final oldDefaultAccountIds = Map<String, String>.of(_defaultAccountIds);
+    final oldFabActionMode = _fabActionMode;
+    final oldCurrencyFractionStyle = _currencyFractionStyle;
+    final oldMoneyUnitStyle = _moneyUnitStyle;
+    final oldHideUnitInSingleCurrency = _hideUnitInSingleCurrency;
+    final oldAutoSuggestEnabled = _autoSuggestEnabled;
+    final oldShowRunningBalance = _showRunningBalance;
+    final oldHomeTrendConfig = _homeTrendConfig;
+    try {
+      _ledgerBooks
+        ..clear()
+        ..addAll(nextLedgerBooks);
+      _activeBookId = nextActiveBookId;
+      _entries
+        ..clear()
+        ..addAll(nextEntries);
+      _accounts
+        ..clear()
+        ..addAll(nextAccounts);
+      _accountGroups
+        ..clear()
+        ..addAll(nextAccountGroups);
+      _normalizeGroupOrder();
+      _categories
+        ..clear()
+        ..addAll(nextCategories);
+      _tags
+        ..clear()
+        ..addAll(nextTags);
+      _attachments
+        ..clear()
+        ..addAll(nextAttachments);
+      _recurringRules
+        ..clear()
+        ..addAll(nextRecurringRules);
+      _exchangeRates
+        ..clear()
+        ..addAll(nextExchangeRates);
+      _monthlyBudgets
+        ..clear()
+        ..addAll(nextMonthlyBudgets);
+      _categoryBudgets
+        ..clear()
+        ..addAll(nextCategoryBudgets);
+      _dailyBudgets
+        ..clear()
+        ..addAll(nextDailyBudgets);
+      _budgetCycleStartDays
+        ..clear()
+        ..addAll(nextBudgetCycleStartDays);
+      _profile = nextProfile;
+      _themePreference = nextThemePreference;
+      _themeColorPreference = nextThemeColorPreference;
+      _assetCoverUrl = nextAssetCoverUrl;
+      _hapticsEnabled = nextHapticsEnabled;
+      _assetAccountViewMode = nextAssetAccountViewMode;
+      _collapsedAssetSections
+        ..clear()
+        ..addAll(nextCollapsedAssetSections);
+      _assetAccountOrders
+        ..clear()
+        ..addAll(nextAssetAccountOrders);
+      _assetSectionOrders
+        ..clear()
+        ..addAll(nextAssetSectionOrders);
+      _pagePanels[PanelPageKind.home] = nextHomePanels;
+      _pagePanels[PanelPageKind.reportsDaily] = nextReportDailyPanels;
+      _pagePanels[PanelPageKind.reportsMonthly] = nextReportMonthlyPanels;
+      _pagePanels[PanelPageKind.reportsYearly] = nextReportYearlyPanels;
+      _defaultAccountIds
+        ..clear()
+        ..addAll(nextDefaultAccountIds);
+      _fabActionMode = nextFabActionMode;
+      _currencyFractionStyle = nextCurrencyFractionStyle;
+      amount_format.currencyFractionStyle = nextCurrencyFractionStyle;
+      _moneyUnitStyle = nextMoneyUnitStyle;
+      _hideUnitInSingleCurrency = nextHideUnitInSingleCurrency;
+      _autoSuggestEnabled = nextAutoSuggestEnabled;
+      _showRunningBalance = nextShowRunningBalance;
+      _homeTrendConfig = nextHomeTrendConfig;
+      // 备份恢复零参照完整性校验，是「幽灵同名分类」与跨账本标签引用的唯一现实入口
+      // （内部不一致的外部/异构/手改备份）；覆盖后跑一遍自愈，堵住这个入口。
+      // 落库统一由下方 _persistAllLedgerData。
+      _healCategoryData();
+      // 退款自愈：把导入数据里的旧标量退款迁成关联退款条目并重算净额缓存。
+      _syncRefundData();
+      _healTagData();
+      final saved = await _runTrackedWrite(
+        () => _repository.replaceAllLedgerData(_ledgerDataSnapshot()),
+      );
+      if (!saved) {
+        throw StateError('备份保存失败');
+      }
+    } catch (error) {
+      _ledgerBooks
+        ..clear()
+        ..addAll(oldBooks);
+      _accounts
+        ..clear()
+        ..addAll(oldAccounts);
+      _accountGroups
+        ..clear()
+        ..addAll(oldGroups);
+      _categories
+        ..clear()
+        ..addAll(oldCategories);
+      _tags
+        ..clear()
+        ..addAll(oldTags);
+      _attachments
+        ..clear()
+        ..addAll(oldAttachments);
+      _entries
+        ..clear()
+        ..addAll(oldEntries);
+      _recurringRules
+        ..clear()
+        ..addAll(oldRules);
+      _exchangeRates
+        ..clear()
+        ..addAll(oldRates);
+      _monthlyBudgets
+        ..clear()
+        ..addAll(oldMonthlyBudgets);
+      _categoryBudgets
+        ..clear()
+        ..addAll(oldCategoryBudgets);
+      _dailyBudgets
+        ..clear()
+        ..addAll(oldDailyBudgets);
+      _budgetCycleStartDays
+        ..clear()
+        ..addAll(oldBudgetCycleStartDays);
+      _activeBookId = oldActiveBookId;
+      _profile = oldProfile;
+      _themePreference = oldThemePreference;
+      _themeColorPreference = oldThemeColorPreference;
+      _assetCoverUrl = oldAssetCoverUrl;
+      _hapticsEnabled = oldHapticsEnabled;
+      _assetAccountViewMode = oldAssetAccountViewMode;
+      _collapsedAssetSections
+        ..clear()
+        ..addAll(oldCollapsedAssetSections);
+      _assetAccountOrders
+        ..clear()
+        ..addAll(oldAssetAccountOrders);
+      _assetSectionOrders
+        ..clear()
+        ..addAll(oldAssetSectionOrders);
+      _pagePanels
+        ..clear()
+        ..addAll(oldPagePanels);
+      _defaultAccountIds
+        ..clear()
+        ..addAll(oldDefaultAccountIds);
+      _fabActionMode = oldFabActionMode;
+      _currencyFractionStyle = oldCurrencyFractionStyle;
+      amount_format.currencyFractionStyle = oldCurrencyFractionStyle;
+      _moneyUnitStyle = oldMoneyUnitStyle;
+      _hideUnitInSingleCurrency = oldHideUnitInSingleCurrency;
+      _autoSuggestEnabled = oldAutoSuggestEnabled;
+      _showRunningBalance = oldShowRunningBalance;
+      _homeTrendConfig = oldHomeTrendConfig;
+      await _collectAttachmentOrphans();
+      rethrow;
+    }
     _store.write(_activeBookKey, _activeBookId);
     _store.write(_profileKey, jsonEncode(_profile.toJson()));
     _store.write(_themeKey, _themePreference.name);

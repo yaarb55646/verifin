@@ -1,14 +1,15 @@
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:verifin/app/app_theme.dart';
-import 'package:verifin/app/common_widgets.dart';
 
 void main() {
   testWidgets('菜单关闭中途逐渐淡出而不是硬切', (tester) async {
     await tester.pumpWidget(
       _MenuTestApp(
         entries: const [
-          VeriMenuItem(id: 'close_probe', title: '动画检查', onPressed: _noop),
+          AnchoredMenuItem(id: 'close_probe', title: '动画检查', onPressed: _noop),
         ],
       ),
     );
@@ -31,15 +32,15 @@ void main() {
   ) async {
     await tester.pumpWidget(
       _MenuTestApp(
-        entries: <VeriMenuEntry>[
-          const VeriMenuItem(
+        entries: <AnchoredMenuEntry>[
+          const AnchoredMenuItem(
             id: 'view',
             icon: Icons.grid_view_rounded,
             title: '切换视图',
             subtitle: '卡片视图',
-            children: <VeriMenuEntry>[
-              VeriMenuItem(id: 'list', title: '列表视图', onPressed: _noop),
-              VeriMenuItem(
+            children: <AnchoredMenuEntry>[
+              AnchoredMenuItem(id: 'list', title: '列表视图', onPressed: _noop),
+              AnchoredMenuItem(
                 id: 'card',
                 title: '卡片视图',
                 selected: true,
@@ -47,8 +48,8 @@ void main() {
               ),
             ],
           ),
-          const VeriMenuDivider(),
-          const VeriMenuItem(
+          const AnchoredMenuDivider(),
+          const AnchoredMenuItem(
             id: 'settings',
             icon: Icons.settings_rounded,
             title: '设置',
@@ -125,12 +126,12 @@ void main() {
     var selected = false;
     await tester.pumpWidget(
       _MenuTestApp(
-        entries: <VeriMenuEntry>[
-          VeriMenuItem(
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(
             id: 'view',
             title: '视图',
-            children: <VeriMenuEntry>[
-              VeriMenuItem(
+            children: <AnchoredMenuEntry>[
+              AnchoredMenuItem(
                 id: 'card',
                 title: '卡片',
                 onPressed: () => selected = true,
@@ -152,6 +153,39 @@ void main() {
     expect(find.text('卡片'), findsNothing);
   });
 
+  testWidgets('触摸打开不预高亮首项，方向键导航后才显示高亮', (tester) async {
+    await tester.pumpWidget(
+      const _MenuTestApp(
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(id: 'first', title: '第一项', onPressed: _noop),
+          AnchoredMenuItem(id: 'second', title: '第二项', onPressed: _noop),
+        ],
+      ),
+    );
+
+    Color rowColor(String id) {
+      final material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byKey(ValueKey<String>('anchored_menu_item_$id')),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      return material.color!;
+    }
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    expect(rowColor('first'), Colors.transparent);
+    expect(rowColor('second'), Colors.transparent);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(rowColor('first'), Colors.transparent);
+    expect(rowColor('second'), isNot(Colors.transparent));
+  });
+
   testWidgets('choice adapter maps controlled option state and callbacks', (
     tester,
   ) async {
@@ -165,7 +199,7 @@ void main() {
               alignment: Alignment.topRight,
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: VeriAnchoredChoice<_Choice>(
+                child: AnchoredMenuChoice<_Choice>(
                   values: _Choice.values,
                   selected: selected,
                   idOf: (value) => 'choice_${value.name}',
@@ -232,7 +266,7 @@ void main() {
       _MenuTestApp(
         width: 168,
         entries: const [
-          VeriMenuItem(id: 'long', title: title, onPressed: _noop),
+          AnchoredMenuItem(id: 'long', title: title, onPressed: _noop),
         ],
       ),
     );
@@ -257,15 +291,15 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const _MenuTestApp(
-        entries: <VeriMenuEntry>[
-          VeriMenuItem(
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(
             id: 'sort',
             title: '排序方式',
-            children: <VeriMenuEntry>[
-              VeriMenuItem(id: 'updated', title: '更新时间', onPressed: _noop),
+            children: <AnchoredMenuEntry>[
+              AnchoredMenuItem(id: 'updated', title: '更新时间', onPressed: _noop),
             ],
           ),
-          VeriMenuItem(id: 'settings', title: '设置', onPressed: _noop),
+          AnchoredMenuItem(id: 'settings', title: '设置', onPressed: _noop),
         ],
       ),
     );
@@ -288,8 +322,8 @@ void main() {
   testWidgets('outside tap dismisses the menu', (tester) async {
     await tester.pumpWidget(
       const _MenuTestApp(
-        entries: <VeriMenuEntry>[
-          VeriMenuItem(id: 'settings', title: '设置', onPressed: _noop),
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(id: 'settings', title: '设置', onPressed: _noop),
         ],
       ),
     );
@@ -313,8 +347,8 @@ void main() {
     await tester.pumpWidget(
       const _MenuTestApp(
         width: 208,
-        entries: <VeriMenuEntry>[
-          VeriMenuItem(id: 'settings', title: '设置', onPressed: _noop),
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(id: 'settings', title: '设置', onPressed: _noop),
         ],
       ),
     );
@@ -331,15 +365,15 @@ void main() {
     await tester.pumpWidget(
       const _MenuTestApp(
         width: null,
-        entries: <VeriMenuEntry>[
-          VeriMenuItem(
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(
             id: 'standard',
             icon: Icons.calculate_outlined,
             title: '标准布局',
             selected: true,
             onPressed: _noop,
           ),
-          VeriMenuItem(
+          AnchoredMenuItem(
             id: 'phone',
             icon: Icons.dialpad_outlined,
             title: '电话布局',
@@ -366,17 +400,17 @@ void main() {
       const _MenuTestApp(
         width: 206,
         submenuWidth: 198,
-        entries: <VeriMenuEntry>[
-          VeriMenuItem(id: 'view', title: '视图', onPressed: _noop),
-          VeriMenuItem(id: 'sort', title: '排序', onPressed: _noop),
-          VeriMenuItem(
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(id: 'view', title: '视图', onPressed: _noop),
+          AnchoredMenuItem(id: 'sort', title: '排序', onPressed: _noop),
+          AnchoredMenuItem(
             id: 'filter',
             title: '筛选',
             subtitle: '全部',
             submenuWidth: 184,
-            children: <VeriMenuEntry>[
-              VeriMenuItem(id: 'all', title: '全部', onPressed: _noop),
-              VeriMenuItem(id: 'mine', title: '我的', onPressed: _noop),
+            children: <AnchoredMenuEntry>[
+              AnchoredMenuItem(id: 'all', title: '全部', onPressed: _noop),
+              AnchoredMenuItem(id: 'mine', title: '我的', onPressed: _noop),
             ],
           ),
         ],
@@ -413,13 +447,13 @@ void main() {
       const _MenuTestApp(
         width: null,
         submenuWidth: null,
-        entries: <VeriMenuEntry>[
-          VeriMenuItem(
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(
             id: 'layout',
             title: '布局',
-            children: <VeriMenuEntry>[
-              VeriMenuItem(id: 'standard', title: '标准布局', onPressed: _noop),
-              VeriMenuItem(id: 'phone', title: '电话布局', onPressed: _noop),
+            children: <AnchoredMenuEntry>[
+              AnchoredMenuItem(id: 'standard', title: '标准布局', onPressed: _noop),
+              AnchoredMenuItem(id: 'phone', title: '电话布局', onPressed: _noop),
             ],
           ),
         ],
@@ -446,21 +480,21 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const _MenuTestApp(
-        entries: <VeriMenuEntry>[
-          VeriMenuItem(
+        entries: <AnchoredMenuEntry>[
+          AnchoredMenuItem(
             id: 'level-1',
             title: '一级',
-            children: <VeriMenuEntry>[
-              VeriMenuItem(
+            children: <AnchoredMenuEntry>[
+              AnchoredMenuItem(
                 id: 'level-2',
                 icon: Icons.layers_outlined,
                 title: '二级',
-                children: <VeriMenuEntry>[
-                  VeriMenuItem(
+                children: <AnchoredMenuEntry>[
+                  AnchoredMenuItem(
                     id: 'level-3',
                     title: '三级',
-                    children: <VeriMenuEntry>[
-                      VeriMenuItem(
+                    children: <AnchoredMenuEntry>[
+                      AnchoredMenuItem(
                         id: 'level-4-leaf',
                         icon: Icons.flag_outlined,
                         title: '四级叶子',
@@ -499,13 +533,13 @@ void main() {
     expect(find.text('二级'), findsWidgets);
     expect(find.text('三级'), findsWidgets);
     final rootLayer = tester.widget<Transform>(
-      find.byKey(const ValueKey<String>('veri_menu_layer_0')),
+      find.byKey(const ValueKey<String>('anchored_menu_layer_0')),
     );
     final middleLayer = tester.widget<Transform>(
-      find.byKey(const ValueKey<String>('veri_menu_layer_1')),
+      find.byKey(const ValueKey<String>('anchored_menu_layer_1')),
     );
     final parentLayer = tester.widget<Transform>(
-      find.byKey(const ValueKey<String>('veri_menu_layer_2')),
+      find.byKey(const ValueKey<String>('anchored_menu_layer_2')),
     );
     expect(
       rootLayer.transform.storage[0],
@@ -539,7 +573,7 @@ class _MenuTestApp extends StatelessWidget {
     this.submenuWidth = 232,
   });
 
-  final List<VeriMenuEntry> entries;
+  final List<AnchoredMenuEntry> entries;
   final double? width;
   final double? submenuWidth;
 
@@ -552,7 +586,7 @@ class _MenuTestApp extends StatelessWidget {
           alignment: Alignment.topRight,
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: VeriAnchoredMenuButton(
+            child: AnchoredMenuButton(
               icon: Icons.more_vert,
               tooltip: '更多',
               entries: entries,

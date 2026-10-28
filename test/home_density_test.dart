@@ -29,7 +29,7 @@ void main() {
     tester.view.physicalSize = const Size(393, 852);
     addTearDown(tester.view.reset);
     final controller = await makeController();
-    controller.importTransactionsFromCsv(
+    await controller.importTransactionsFromCsv(
       File('docs/fixtures/preview-transactions.csv').readAsStringSync(),
     );
     controller.setMonthlyBudget(DateTime.now(), 5000);

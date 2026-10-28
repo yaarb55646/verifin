@@ -4,6 +4,10 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import '../l10n/app_localizations.dart';
 
+/// 应用锁配置在设备 KV 中的唯一键。独立入口（如桌面小组件配置页）也用它
+/// 判断是否必须先验证门禁，避免只靠主界面是否可见来判断。
+const String appLockStorageKey = 'verifin.app_lock.v1';
+
 /// 应用锁的锁类型。生物识别不是独立锁，只是 PIN/图案之上的快捷解锁，因此不在此枚举。
 enum AppLockKind {
   none,
@@ -115,6 +119,28 @@ class AppLockConfig {
       secretHash: (json['secretHash'] as String?) ?? '',
       salt: (json['salt'] as String?) ?? '',
       biometricEnabled: json['biometricEnabled'] as bool? ?? false,
+    );
+  }
+
+  /// 从设备 KV 的原始值解码。缺失表示未启用；损坏值按锁定处理，任何输入都不会
+  /// 通过验证，独立入口因此不会在配置损坏时误把真实数据放给未验证的用户。
+  factory AppLockConfig.fromStorage(String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return const AppLockConfig.none();
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return AppLockConfig.fromJson(Map<String, dynamic>.from(decoded));
+      }
+    } catch (_) {
+      // 损坏值由主控制器下次启动删除；独立入口不应因此暴露真实数据。
+    }
+    return const AppLockConfig(
+      kind: AppLockKind.pin,
+      secretHash: 'invalid',
+      salt: 'invalid',
+      biometricEnabled: false,
     );
   }
 }

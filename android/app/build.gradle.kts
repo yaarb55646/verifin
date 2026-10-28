@@ -53,7 +53,8 @@ android {
     // - play：Play 负责更新、禁止应用自下载 APK 更新（撞政策），故 src/play 清单用
     //   tools:node="remove" 去掉 REQUEST_INSTALL_PACKAGES；并由构建时
     //   --dart-define=SELF_UPDATE=false 在 Dart 层隐藏自更新入口。
-    // 定义 flavor 后所有构建都必须带 --flavor（本地 flutter run 用 --flavor github）。
+    // 定义 flavor 后所有构建都必须带 --flavor：日常调试用 diagnostic，
+    // 渠道/发布验收入口用 github 或 play。
     flavorDimensions += "distribution"
     productFlavors {
         create("github") {
@@ -62,8 +63,8 @@ android {
         create("play") {
             dimension = "distribution"
         }
-        // 仅用于 Android 图形问题的本地隔离复现。它使用独立 applicationId，
-        // 不能读取、覆盖或更新正式 Veri Fin 的本地数据。
+        // 本地调试和图形故障隔离入口。它使用独立 applicationId，不能读取、
+        // 覆盖或更新正式 Veri Fin 的本地数据。
         create("diagnostic") {
             dimension = "distribution"
             applicationIdSuffix = ".graphicsdiagnostic"

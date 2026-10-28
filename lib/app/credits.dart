@@ -54,7 +54,9 @@ class CreditsGroup {
 /// 当前名单。顺序即展示顺序。
 const List<CreditsSupporter> creditsSupporters = <CreditsSupporter>[
   CreditsSupporter('wh3286'),
-  CreditsSupporter('爱发电用户_Jd7R'),
+  CreditsSupporter('RunRunxka', avatarAsset: 'assets/credits/runrunxka.jpg'),
+  CreditsSupporter('Rise0223', avatarAsset: 'assets/credits/rise0223.png'),
+  CreditsSupporter('懒得不想玩', avatarAsset: 'assets/credits/landebuxiangwan.jpg'),
 ];
 
 /// 按分组标签首次出现的顺序分组。

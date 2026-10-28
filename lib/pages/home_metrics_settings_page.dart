@@ -1,3 +1,4 @@
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -258,7 +259,7 @@ class _HomeMetricsSettingsPageState extends State<HomeMetricsSettingsPage> {
                 SectionTitle(title: l10n.trendCustomizeChart),
                 const SizedBox(height: 8),
                 VeriCard(
-                  child: VeriAnchoredChoice<HomeTrendSeries>(
+                  child: AnchoredMenuChoice<HomeTrendSeries>(
                     key: const Key('home_trend_series_choice'),
                     values: HomeTrendSeries.values,
                     selected: config.series,

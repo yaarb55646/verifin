@@ -118,16 +118,29 @@ void main() {
       addTearDown(() => currencyFractionStyle = previous);
 
       final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
-      expect(balanceAxisLabels(const <double>[0, -3363], l10n), <String>[
-        '-3363',
-        '-1682',
-        '0',
-      ]);
-      expect(balanceAxisLabels(const <double>[0, 585], l10n), <String>[
-        '0',
-        '292.50',
-        '585.00',
-      ]);
+      expect(
+        balanceAxisLabels(const <double>[0, -3363], l10n, currencyCode: 'CNY'),
+        <String>['-3363', '-1682', '0'],
+      );
+      expect(
+        balanceAxisLabels(const <double>[0, 585], l10n, currencyCode: 'CNY'),
+        <String>['0', '292.50', '585.00'],
+      );
+    });
+
+    test('按账户币种判断零值和显示精度', () async {
+      final previous = currencyFractionStyle;
+      currencyFractionStyle = CurrencyFractionStyle.standard;
+      addTearDown(() => currencyFractionStyle = previous);
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      final labels = balanceAxisLabels(
+        const <double>[0, 0.002],
+        l10n,
+        currencyCode: 'KWD',
+      );
+
+      expect(labels, <String>['0', '0.001', '0.002']);
     });
   });
 }

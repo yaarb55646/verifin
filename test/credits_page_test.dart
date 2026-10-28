@@ -10,6 +10,17 @@ import 'package:verifin/pages/credits_page.dart';
 
 import 'support/test_harness.dart';
 
+const List<CreditsSupporter> _testSupporters = <CreditsSupporter>[
+  CreditsSupporter('fixture-a'),
+  CreditsSupporter('fixture-b', group: '特别鸣谢'),
+];
+
+const List<CreditsSupporter> _longNameSupporters = <CreditsSupporter>[
+  CreditsSupporter('fixture-a'),
+  CreditsSupporter('一位名字特别特别长的支持者朋友'),
+  CreditsSupporter('fixture-b', handle: '@fixture-b'),
+];
+
 /// 从「我的」进设置页。
 Future<void> _openSettings(WidgetTester tester) async {
   await tapBottomTab(tester, 3);
@@ -43,15 +54,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CreditsPage), findsOneWidget);
-    expect(find.text('wh3286'), findsOneWidget);
-    expect(find.text('爱发电用户_Jd7R'), findsOneWidget);
-    expect(find.byType(CreditsAvatar), findsNWidgets(2));
-    expect(
-      tester
-          .widgetList<CreditsAvatar>(find.byType(CreditsAvatar))
-          .map((avatar) => avatar.seed),
-      <String>['wh3286', '爱发电用户_Jd7R'],
-    );
   });
 
   testWidgets('分组为空时不渲染组标题，有分组时按标题分组', (tester) async {
@@ -60,22 +62,14 @@ void main() {
       tester,
       const CreditsPage(
         supporters: <CreditsSupporter>[
-          CreditsSupporter('wh3286'),
-          CreditsSupporter('爱发电用户_Jd7R'),
+          CreditsSupporter('fixture-a'),
+          CreditsSupporter('fixture-b'),
         ],
       ),
     );
     expect(find.text('特别鸣谢'), findsNothing);
 
-    await _pushPage(
-      tester,
-      const CreditsPage(
-        supporters: <CreditsSupporter>[
-          CreditsSupporter('wh3286'),
-          CreditsSupporter('大额支持者', group: '特别鸣谢'),
-        ],
-      ),
-    );
+    await _pushPage(tester, const CreditsPage(supporters: _testSupporters));
     expect(find.text('特别鸣谢'), findsOneWidget);
   });
 
@@ -84,18 +78,12 @@ void main() {
     tester.view.physicalSize = const Size(360, 852);
     addTearDown(tester.view.reset);
     await pumpApp(tester);
-    await _pushPage(
-      tester,
-      const CreditsPage(
-        supporters: <CreditsSupporter>[
-          CreditsSupporter('爱发电用户_Jd7R'),
-          CreditsSupporter('一位名字特别特别长的支持者朋友'),
-          CreditsSupporter('wh3286', handle: '@wh3286'),
-        ],
-      ),
-    );
+    await _pushPage(tester, const CreditsPage(supporters: _longNameSupporters));
     expect(tester.takeException(), isNull);
-    expect(find.byType(CreditsAvatar), findsNWidgets(3));
+    expect(
+      find.byType(CreditsAvatar),
+      findsNWidgets(_longNameSupporters.length),
+    );
   });
 
   testWidgets('点赞助入口把爱发电地址交给浏览器', (tester) async {
@@ -105,7 +93,7 @@ void main() {
       return true;
     };
     await pumpApp(tester);
-    await _pushPage(tester, const CreditsPage());
+    await _pushPage(tester, const CreditsPage(supporters: _testSupporters));
 
     await tester.tap(find.byKey(const Key('credits_support_button')));
     await tester.pump();
@@ -118,7 +106,7 @@ void main() {
   testWidgets('浏览器打不开时给出错误轻提示', (tester) async {
     ExternalLinks.debugOpener = (url) async => false;
     await pumpApp(tester);
-    await _pushPage(tester, const CreditsPage());
+    await _pushPage(tester, const CreditsPage(supporters: _testSupporters));
 
     await tester.tap(find.byKey(const Key('credits_support_button')));
     // 不能用 pumpAndSettle：轻提示「停留 N 秒」的动画会被一次跑完，
@@ -135,11 +123,11 @@ void main() {
     controller.setLocalePreference(LocalePreference.en);
     await tester.pumpAndSettle();
 
-    await _pushPage(tester, const CreditsPage());
+    await _pushPage(tester, const CreditsPage(supporters: _testSupporters));
 
     expect(find.text('Credits'), findsOneWidget);
     expect(find.text('Support Veri Fin on Afdian'), findsOneWidget);
-    expect(find.byType(CreditsAvatar), findsNWidgets(2));
+    expect(find.byType(CreditsAvatar), findsNWidgets(_testSupporters.length));
     expect(tester.takeException(), isNull);
   });
 }

@@ -1,4 +1,5 @@
 import '../../l10n/app_localizations.dart';
+import 'ai_agent_event.dart';
 import 'ai_agent_step.dart';
 import 'ai_query_tool.dart';
 
@@ -15,9 +16,9 @@ AiToolStepPresentation presentAiAgentStep(
   if (step.toolName == 'agentRetry') {
     return AiToolStepPresentation(
       title: l10n.aiAgentRetryTitle,
-      detail: switch (step.summary) {
-        'protocolFallback' => l10n.aiAgentRetryProtocol,
-        'upstreamResource' => l10n.aiAgentRetryResource,
+      detail: switch (step.retryReason) {
+        AiAgentRetryReason.protocolFallback => l10n.aiAgentRetryProtocol,
+        AiAgentRetryReason.upstreamResource => l10n.aiAgentRetryResource,
         _ => l10n.aiAgentRetryNetwork,
       },
     );

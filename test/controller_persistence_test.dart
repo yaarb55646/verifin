@@ -416,7 +416,7 @@ void main() {
     await controller.waitForPendingWrites();
     expect(await repo.loadEntries(), isNotEmpty);
 
-    controller.resetAllData();
+    await controller.resetAllData();
     await controller.waitForPendingWrites();
     expect(await repo.loadEntries(), isEmpty);
 

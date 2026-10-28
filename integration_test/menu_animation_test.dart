@@ -1,4 +1,5 @@
 import 'dart:ui' show FrameTiming;
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -22,11 +23,11 @@ void main() {
                 children: [
                   Align(
                     alignment: Alignment.topRight,
-                    child: VeriAnchoredMenuButton(
+                    child: AnchoredMenuButton(
                       tooltip: '菜单检查',
                       icon: Icons.more_vert,
                       entries: [
-                        VeriMenuItem(
+                        AnchoredMenuItem(
                           id: 'close',
                           title: '关闭菜单',
                           onPressed: () {},

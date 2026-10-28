@@ -9,6 +9,7 @@ import '../app/app_theme.dart';
 import '../app/biometric_auth.dart';
 import '../app/common_widgets.dart';
 import '../app/feedback.dart';
+import '../app/platform_bridge.dart';
 import '../app/veri_fin_controller.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -448,9 +449,12 @@ Widget buildAppLockInput({
 /// 全屏锁定界面（由 AppLockGate 覆盖在应用之上）。校验通过后回调 [onUnlocked]。
 /// 开启生物解锁时，出现锁屏即自动发起一次生物识别验证，并提供手动重试按钮。
 class AppLockScreen extends StatefulWidget {
-  const AppLockScreen({super.key, required this.onUnlocked});
+  const AppLockScreen({super.key, required this.onUnlocked, this.config});
 
   final VoidCallback onUnlocked;
+
+  /// 独立入口（如桌面小组件配置页）只需验证锁，不持有完整 Controller。
+  final AppLockConfig? config;
 
   @override
   State<AppLockScreen> createState() => _AppLockScreenState();
@@ -472,7 +476,8 @@ class _AppLockScreenState extends State<AppLockScreen> {
     if (!mounted) {
       return;
     }
-    if (!VeriFinScope.of(context).biometricUnlockEnabled) {
+    final config = widget.config;
+    if (config != null || !VeriFinScope.of(context).biometricUnlockEnabled) {
       return;
     }
     final available = await _biometric.isAvailable();
@@ -505,8 +510,11 @@ class _AppLockScreenState extends State<AppLockScreen> {
   }
 
   void _submit(String secret) {
-    final controller = VeriFinScope.of(context);
-    if (controller.verifyAppLock(secret)) {
+    final config = widget.config;
+    final verified = config == null
+        ? VeriFinScope.of(context).verifyAppLock(secret)
+        : config.verify(secret);
+    if (verified) {
       widget.onUnlocked();
       return;
     }
@@ -522,7 +530,12 @@ class _AppLockScreenState extends State<AppLockScreen> {
       return;
     }
     // 顺序不能反：先关锁会让本页在对话框还开着时就被移除。
-    controller.resetAllData();
+    if (!await controller.resetAllData()) {
+      if (mounted) {
+        setState(() => _error = l10n.saveFailed);
+      }
+      return;
+    }
     if (!await controller.disableAppLock()) {
       // 密钥没删掉就解锁，只会在下次回前台再次上锁，而用户仍然进不去。
       if (mounted) {
@@ -538,7 +551,11 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = VeriFinScope.of(context);
+    final config = widget.config;
+    final kind = config?.kind ?? VeriFinScope.of(context).appLockKind;
+    final hapticsEnabled = config == null
+        ? VeriFinScope.of(context).hapticsEnabled
+        : true;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -561,7 +578,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  controller.appLockKind == AppLockKind.pattern
+                  kind == AppLockKind.pattern
                       ? AppLocalizations.of(context).drawPatternUnlock
                       : AppLocalizations.of(context).enterPinUnlock,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -572,10 +589,10 @@ class _AppLockScreenState extends State<AppLockScreen> {
                 ),
                 const SizedBox(height: 28),
                 buildAppLockInput(
-                  kind: controller.appLockKind,
+                  kind: kind,
                   onCompleted: _submit,
                   errorText: _error,
-                  hapticsEnabled: controller.hapticsEnabled,
+                  hapticsEnabled: hapticsEnabled,
                 ),
                 if (_biometricAvailable) ...<Widget>[
                   const SizedBox(height: 16),
@@ -585,12 +602,22 @@ class _AppLockScreenState extends State<AppLockScreen> {
                     label: Text(AppLocalizations.of(context).bioUnlock),
                   ),
                 ],
-                const SizedBox(height: 8),
-                TextButton(
-                  key: const Key('app_lock_forgot'),
-                  onPressed: _forgotSecret,
-                  child: Text(AppLocalizations.of(context).appLockForgot),
-                ),
+                if (config != null) ...<Widget>[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    key: const Key('app_lock_open_app'),
+                    onPressed: () => unawaited(AppWidgetBridge.openApp()),
+                    child: Text(AppLocalizations.of(context).widgetOpenApp),
+                  ),
+                ],
+                if (config == null) ...<Widget>[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    key: const Key('app_lock_forgot'),
+                    onPressed: _forgotSecret,
+                    child: Text(AppLocalizations.of(context).appLockForgot),
+                  ),
+                ],
               ],
             ),
           ),

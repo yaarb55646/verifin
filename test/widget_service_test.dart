@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
@@ -73,6 +74,26 @@ void main() {
 
     expect(calls, <String>['app:widgetInstanceCounts']);
     expect(saved, isEmpty);
+  });
+
+  test('桌面上没有实例时，强制推送仍准备最新快照供之后新增组件读取', () async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    registerEntry(controller);
+    mockChannels(const <String, int>{});
+    resetWidgetProjectionCache();
+
+    await pushWidgetProjection(controller, force: true);
+
+    final snapshots =
+        jsonDecode(saved[widgetSnapshotsKey]!) as Map<String, dynamic>;
+    final book = snapshots[controller.activeBook.id] as Map<String, dynamic>;
+    expect((book['quick_entry'] as Map<String, dynamic>)['amount'], '20');
+    expect(
+      calls.any((call) => call.startsWith('update:')),
+      isFalse,
+      reason: '没有实例时只写共享快照，不向 Provider 发刷新广播',
+    );
   });
 
   test('有实例时写入快照与账本，并只为该模板刷新与排程', () async {
@@ -154,6 +175,71 @@ void main() {
     await pushWidgetProjection(controller);
 
     expect(calls, isEmpty);
+  });
+
+  test('推送期间的新数据不会被旧版本标记为已发布', () async {
+    final controller = await makeController();
+    addTearDown(controller.dispose);
+    registerEntry(controller);
+    controller.onWidgetDataChanged = markWidgetDataChanged;
+    resetWidgetProjectionCache();
+
+    final firstSaveStarted = Completer<void>();
+    final releaseFirstSave = Completer<void>();
+    var saveCalls = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(app, (call) async {
+          if (call.method == 'widgetInstanceCounts') {
+            return const <String, int>{'quick_entry': 1};
+          }
+          return null;
+        });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(homeWidget, (call) async {
+          switch (call.method) {
+            case 'saveWidgetData':
+              if (saveCalls++ == 0) {
+                firstSaveStarted.complete();
+                await releaseFirstSave.future;
+              }
+              final args = call.arguments as Map;
+              saved[args['id'] as String] = args['data'] as String;
+              return true;
+            case 'updateWidget':
+            case 'scheduleWidgetUpdates':
+              return null;
+          }
+          return null;
+        });
+
+    final firstPush = pushWidgetProjection(controller, force: true);
+    await firstSaveStarted.future;
+
+    controller.addEntry(
+      LedgerEntry(
+        id: 'entry-2',
+        bookId: controller.activeBook.id,
+        type: EntryType.expense,
+        amount: 30,
+        categoryId: 'dining',
+        accountId: '',
+        note: '',
+        occurredAt: DateTime.now(),
+      ),
+    );
+    final secondPush = pushWidgetProjection(controller);
+
+    releaseFirstSave.complete();
+    await Future.wait(<Future<void>>[firstPush, secondPush]);
+
+    final snapshots =
+        jsonDecode(saved[widgetSnapshotsKey]!) as Map<String, dynamic>;
+    final book = snapshots[controller.activeBook.id] as Map<String, dynamic>;
+    expect(
+      (book['quick_entry'] as Map<String, dynamic>)['amount'],
+      '50',
+      reason: '后一次推送必须发布包含新交易的快照',
+    );
   });
 }
 

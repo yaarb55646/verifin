@@ -3,6 +3,7 @@ package top.talyra42.verifin
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.os.Bundle
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -17,6 +18,9 @@ class WidgetConfigurationActivity : FlutterActivity() {
         val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(id)
         if (info == null || info.provider.packageName != packageName) { super.onCreate(savedInstanceState); finish(); return }
         super.onCreate(savedInstanceState)
+        if (AppLockPreferences.isEnabled(this)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
     }
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)

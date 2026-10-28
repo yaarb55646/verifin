@@ -91,6 +91,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('美元信用卡'));
     await tester.pumpAndSettle();
+    expect(find.textContaining('转入币种由 CNY 改为 USD'), findsOneWidget);
+    await tester.tap(find.textContaining('保留原金额数字'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('保存'));
     await tester.pumpAndSettle();
@@ -100,6 +103,40 @@ void main() {
     expect(saved.toAccountId, 'usd-card');
     expect(saved.accountId, '');
     expect(saved.toAccountAmount, 100);
+  });
+
+  testWidgets('无账户转账切换币种可选择按汇率换算', (tester) async {
+    final controller = await setup();
+    addTearDown(controller.dispose);
+    controller.addEntry(noAccountTransfer(controller));
+
+    await tester.pumpWidget(
+      VeriFinScope(
+        controller: controller,
+        child: zhMaterialApp(
+          home: TransactionDetailPage(entryId: 'transfer-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('转入账户'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('美元信用卡'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('转入币种由 CNY 改为 USD'), findsOneWidget);
+    await tester.tap(find.textContaining('按汇率换算为'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+
+    final saved = controller.entries.firstWhere((e) => e.id == 'transfer-1');
+    expect(saved.currencyCode, 'USD');
+    expect(saved.toAccountId, 'usd-card');
+    expect(saved.accountId, '');
+    expect(saved.amount, 14.29);
+    expect(saved.toAccountAmount, 14.29);
   });
 
   testWidgets('无账户转账不显示手续费字段', (tester) async {

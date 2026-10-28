@@ -16,6 +16,7 @@ class TransactionTile extends StatelessWidget {
     this.showDate = false,
     this.baseCurrencyCode,
     this.runningBalance,
+    this.moneyDisplay,
   });
 
   final LedgerEntry entry;
@@ -36,6 +37,7 @@ class TransactionTile extends StatelessWidget {
   /// 日期已在头部，保持关（默认）。
   final bool showDate;
   final String? baseCurrencyCode;
+  final MoneyCodeDisplay? moneyDisplay;
 
   /// 该账户在这笔交易之后的余额（调用方按偏好决定是否传入）；为 null 时不显示。
   final double? runningBalance;
@@ -66,16 +68,23 @@ class TransactionTile extends StatelessWidget {
     final category = categoryById(entry.categoryId, categories);
     final noneLabel = AppLocalizations.of(context).noAccountLabel;
     final amountColor = colorForType(context, entry.type);
+    final display = moneyDisplay ?? activeMoneyCodeDisplay;
     final amountText = switch (entry.type) {
-      EntryType.expense => formatSignedUserMoney(
+      EntryType.expense => formatSignedMoney(
         -entry.amount,
         entry.currencyCode,
+        display: display,
       ),
-      EntryType.income || EntryType.refund => formatSignedUserMoney(
+      EntryType.income || EntryType.refund => formatSignedMoney(
         entry.amount,
         entry.currencyCode,
+        display: display,
       ),
-      EntryType.transfer => formatUserMoney(entry.amount, entry.currencyCode),
+      EntryType.transfer => formatMoney(
+        entry.amount,
+        entry.currencyCode,
+        display: display,
+      ),
     };
     // 空 accountId / null toAccountId 表示「无账户」，不能用 accountById（会误回退首个账户）。
     final fromName = accountDisplayName(accounts, entry.accountId, noneLabel);
@@ -92,16 +101,16 @@ class TransactionTile extends StatelessWidget {
                     // 同币种转账两端单位相同，整条换算副行都是重复信息
                     // （与下面非转账分支的 currencyCode 守卫同一口径）。
                     from.currencyCode != to.currencyCode =>
-              '${formatUserMoney(entry.accountAmount!, from.currencyCode, forceUnit: true)} → ${formatUserMoney(entry.toAccountAmount!, to.currencyCode, forceUnit: true)}',
+              '${formatMoney(entry.accountAmount!, from.currencyCode, display: preferredMoneyCodeDisplay)} → ${formatMoney(entry.toAccountAmount!, to.currencyCode, display: preferredMoneyCodeDisplay)}',
             _ => null,
           }
         : fromAccount != null &&
               entry.accountAmount != null &&
               fromAccount.currencyCode != entry.currencyCode
-        ? formatUserMoney(
+        ? formatMoney(
             entry.accountAmount!,
             fromAccount.currencyCode,
-            forceUnit: true,
+            display: preferredMoneyCodeDisplay,
           )
         : null;
     final baseAmountText =
@@ -109,7 +118,11 @@ class TransactionTile extends StatelessWidget {
             baseCurrencyCode != null &&
             baseCurrencyCode != entry.currencyCode &&
             baseCurrencyCode != fromAccount?.currencyCode
-        ? formatUserMoney(entry.baseAmount, baseCurrencyCode!, forceUnit: true)
+        ? formatMoney(
+            entry.baseAmount,
+            baseCurrencyCode!,
+            display: preferredMoneyCodeDisplay,
+          )
         : null;
     final conversionText = <String>[
       ?accountAmountText,
@@ -129,7 +142,11 @@ class TransactionTile extends StatelessWidget {
     final runningBalanceText = runningBalance == null || fromAccount == null
         ? null
         : AppLocalizations.of(context).runningBalancePrefix(
-            formatUserMoney(runningBalance!, fromAccount.currencyCode),
+            formatMoney(
+              runningBalance!,
+              fromAccount.currencyCode,
+              display: display,
+            ),
           );
     final subStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
@@ -483,6 +500,7 @@ class TransactionListCard extends StatelessWidget {
     this.selectedIds = const <String>{},
     this.baseCurrencyCode,
     this.balanceAfterEntry,
+    this.moneyDisplay,
   });
 
   final List<LedgerEntry> entries;
@@ -499,6 +517,7 @@ class TransactionListCard extends StatelessWidget {
 
   /// 交易 id → 该账户在这笔之后的余额；为 null 时行内不显示逐笔结余。
   final Map<String, double>? balanceAfterEntry;
+  final MoneyCodeDisplay? moneyDisplay;
 
   @override
   Widget build(BuildContext context) {
@@ -515,6 +534,7 @@ class TransactionListCard extends StatelessWidget {
               selected: selectedIds.contains(item.$2.id),
               baseCurrencyCode: baseCurrencyCode,
               runningBalance: balanceAfterEntry?[item.$2.id],
+              moneyDisplay: moneyDisplay,
               onTap: onEntryTap == null ? null : () => onEntryTap!(item.$2),
               onLongPress: onEntryLongPress == null
                   ? null

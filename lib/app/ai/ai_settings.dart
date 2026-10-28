@@ -24,30 +24,37 @@ enum AiToolCallMode {
 /// 初始化时保留。API Key 明文存本机（与 WebDAV 密码/备份口令同等信任边界）。
 class AiSettings {
   const AiSettings({
+    this.providerId = 'custom',
     this.baseUrl = '',
     this.apiKey = '',
     this.model = '',
+    this.modelListUrl = '',
     this.toolCallMode = AiToolCallMode.auto,
   });
+
+  /// 当前渠道的稳定标识；旧配置缺失时按自定义渠道处理。
+  final String providerId;
 
   /// 请求基础地址，填到 `/v1` 为止，如 `https://api.openai.com/v1`。
   /// 也兼容用户直接填写完整的 `.../chat/completions` 地址。
   final String baseUrl;
 
-  /// 鉴权用的 API Key，作为 `Authorization: Bearer <key>` 发送。
+  /// 鉴权用的 API Key，非空时作为 `Authorization: Bearer <key>` 发送。
+  ///
+  /// 所有渠道都允许留空，方便本地服务或特殊鉴权端点自行处理；是否有效由远端决定。
   final String apiKey;
 
   /// 模型名，如 `gpt-4o-mini`、`deepseek-chat`、`qwen-plus`。
   final String model;
 
+  /// 自定义渠道的模型列表地址；为空时按 Base URL 推导。
+  final String modelListUrl;
+
   /// Agent 使用的工具调用协议。默认自动探测原生能力并在必要时兼容降级。
   final AiToolCallMode toolCallMode;
 
-  /// 三项齐全才算可用（可发起解析请求）。
-  bool get isConfigured =>
-      baseUrl.trim().isNotEmpty &&
-      apiKey.trim().isNotEmpty &&
-      model.trim().isNotEmpty;
+  /// Base URL 与模型齐全即可发起请求；API Key 允许留空。
+  bool get isConfigured => baseUrl.trim().isNotEmpty && model.trim().isNotEmpty;
 
   /// 聊天补全接口的完整 URL。用户若已填到 `/chat/completions` 则原样使用，
   /// 否则在基础地址后拼接；容错处理多余的结尾斜杠。
@@ -63,31 +70,39 @@ class AiSettings {
   }
 
   AiSettings copyWith({
+    String? providerId,
     String? baseUrl,
     String? apiKey,
     String? model,
+    String? modelListUrl,
     AiToolCallMode? toolCallMode,
   }) {
     return AiSettings(
+      providerId: providerId ?? this.providerId,
       baseUrl: baseUrl ?? this.baseUrl,
       apiKey: apiKey ?? this.apiKey,
       model: model ?? this.model,
+      modelListUrl: modelListUrl ?? this.modelListUrl,
       toolCallMode: toolCallMode ?? this.toolCallMode,
     );
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
+    'providerId': providerId,
     'baseUrl': baseUrl,
     'apiKey': apiKey,
     'model': model,
+    'modelListUrl': modelListUrl,
     'toolCallMode': toolCallMode.name,
   };
 
   static AiSettings fromJson(Map<String, Object?> json) {
     return AiSettings(
+      providerId: json['providerId'] as String? ?? 'custom',
       baseUrl: json['baseUrl'] as String? ?? '',
       apiKey: json['apiKey'] as String? ?? '',
       model: json['model'] as String? ?? '',
+      modelListUrl: json['modelListUrl'] as String? ?? '',
       toolCallMode: AiToolCallMode.fromJson(json['toolCallMode']),
     );
   }
@@ -112,11 +127,20 @@ class AiSettings {
   @override
   bool operator ==(Object other) =>
       other is AiSettings &&
+      other.providerId == providerId &&
       other.baseUrl == baseUrl &&
       other.apiKey == apiKey &&
       other.model == model &&
+      other.modelListUrl == modelListUrl &&
       other.toolCallMode == toolCallMode;
 
   @override
-  int get hashCode => Object.hash(baseUrl, apiKey, model, toolCallMode);
+  int get hashCode => Object.hash(
+    providerId,
+    baseUrl,
+    apiKey,
+    model,
+    modelListUrl,
+    toolCallMode,
+  );
 }

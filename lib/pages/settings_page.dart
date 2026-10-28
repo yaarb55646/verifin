@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anchored_menu/anchored_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -117,7 +118,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   key: const ValueKey('settingsSectionAppearance'),
                   child: Column(
                     children: <Widget>[
-                      VeriAnchoredChoice<ThemePreference>(
+                      AnchoredMenuChoice<ThemePreference>(
                         values: ThemePreference.values,
                         selected: _theme,
                         idOf: (value) => 'settings_theme_${value.name}',
@@ -141,7 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       const Divider(height: 1),
-                      VeriAnchoredChoice<ThemeColorMode>(
+                      AnchoredMenuChoice<ThemeColorMode>(
                         values: ThemeColorMode.values,
                         selected: _themeColor.mode,
                         idOf: (value) => 'settings_theme_color_${value.name}',
@@ -236,7 +237,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             setState(() => _twoDecimals = value),
                       ),
                       const Divider(height: 1),
-                      VeriAnchoredChoice<MoneyUnitStyle>(
+                      AnchoredMenuChoice<MoneyUnitStyle>(
                         values: MoneyUnitStyle.values,
                         selected: _moneyUnitStyle,
                         idOf: (value) => 'settings_money_unit_${value.name}',
@@ -310,7 +311,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   key: const ValueKey('settingsSectionGeneral'),
                   child: Column(
                     children: <Widget>[
-                      VeriAnchoredChoice<LocalePreference>(
+                      AnchoredMenuChoice<LocalePreference>(
                         values: LocalePreference.values,
                         selected: _locale,
                         idOf: (value) => 'settings_locale_${value.name}',
@@ -367,7 +368,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 VeriCard(
                   child: Column(
                     children: <Widget>[
-                      VeriAnchoredChoice<FabActionMode>(
+                      AnchoredMenuChoice<FabActionMode>(
                         values: FabActionMode.values,
                         selected: _fabAction,
                         idOf: (value) => 'settings_fab_${value.name}',
@@ -395,7 +396,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       const Divider(height: 1),
-                      VeriAnchoredChoice<NumberPadLayout>(
+                      AnchoredMenuChoice<NumberPadLayout>(
                         values: NumberPadLayout.values,
                         selected: _numberPadLayout,
                         idOf: (value) =>

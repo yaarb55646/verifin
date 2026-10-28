@@ -370,7 +370,7 @@ void main() {
     );
     expect(store.read('verifin.asset_section_collapsed.v1'), contains(bookId));
 
-    controller.deleteLedgerBook(bookId);
+    await controller.deleteLedgerBook(bookId);
 
     expect(
       store.read('verifin.asset_section_collapsed.v1'),

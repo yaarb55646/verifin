@@ -55,7 +55,7 @@ void main() {
     await tester.tap(
       find.byKey(
         const ValueKey<String>(
-          'veri_menu_item_settings_number_pad_layout_phone',
+          'anchored_menu_item_settings_number_pad_layout_phone',
         ),
       ),
     );

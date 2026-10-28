@@ -25,15 +25,19 @@ Future<void> webdavDelete(WebdavConfig config, String href) async {
 Future<void> webdavUploadFile(
   WebdavConfig config,
   String filename,
-  String cachePath,
-) async {
+  String cachePath, {
+  bool Function()? isCancelled,
+  Duration responseTimeout = const Duration(seconds: 60),
+}) async {
   throw const WebdavException('当前平台不支持 WebDAV');
 }
 
 Future<void> webdavDownloadToFile(
   WebdavConfig config,
   String href,
-  String cachePath,
-) async {
+  String cachePath, {
+  bool Function()? isCancelled,
+  Duration responseTimeout = const Duration(seconds: 60),
+}) async {
   throw const WebdavException('当前平台不支持 WebDAV');
 }

@@ -50,8 +50,9 @@ enum EntryType {
     );
   }
 
-  /// 用户可在记账 / 编辑 / 统计界面直接选择的类型（不含 [refund]——退款只能从
-  /// 「原支出 → 添加退款」创建，不作为普通可选类型）。
+  /// 用户可在记账 / 编辑界面直接选择的类型（不含 [refund]——退款只能从
+  /// 「原支出 → 添加退款」创建，不作为普通可选类型）。收支统计只提供
+  /// 支出/收入，不复用此列表。
   static const List<EntryType> userSelectable = <EntryType>[
     EntryType.expense,
     EntryType.income,

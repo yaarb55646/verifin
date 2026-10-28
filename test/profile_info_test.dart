@@ -65,7 +65,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.byKey(
-        const ValueKey<String>('veri_menu_item_profile_gender_female'),
+        const ValueKey<String>('anchored_menu_item_profile_gender_female'),
       ),
       findsOneWidget,
     );

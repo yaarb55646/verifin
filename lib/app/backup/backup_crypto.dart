@@ -191,7 +191,8 @@ Future<void> encryptFileToFile({
 
 /// 把新版加密容器 [encryptedPath] 流式解密写入 [outputPath]。
 ///
-/// 口令错误或文件损坏抛 [BackupCryptoException]；输出文件已写入的部分由调用方清理。
+/// 口令错误或文件损坏抛 [BackupCryptoException]。解密先写到同目录的 `.partial`
+/// 临时文件，GCM 认证成功后再原子改名；失败不会留下可被误当作有效备份的明文残片。
 Future<void> decryptFileToFile({
   required String encryptedPath,
   required String outputPath,
@@ -252,28 +253,50 @@ Future<void> decryptFileToFile({
   } finally {
     await macHandle.close();
   }
-  final sink = File(outputPath).openWrite();
+  final temp = File('$outputPath.partial');
   try {
-    await sink.addStream(
-      _aesGcm.decryptStream(
-        file.openRead(headerEnd, macStart),
-        secretKey: key,
-        nonce: nonce,
-        mac: Mac(macBytes),
-      ),
-    );
-    await sink.flush();
-  } on SecretBoxAuthenticationError {
-    throw const BackupCryptoException('密钥错误或备份文件已损坏');
-  } on BackupCryptoException {
-    rethrow;
-  } catch (_) {
-    throw const BackupCryptoException('解密失败，请检查密钥后重试');
-  } finally {
-    try {
-      await sink.close();
-    } catch (_) {
-      // 认证失败时 sink 可能已随流错误关闭；清理失败不覆盖上面的可读原因。
+    if (await temp.exists()) {
+      await temp.delete();
     }
+    final sink = temp.openWrite();
+    try {
+      try {
+        await sink.addStream(
+          _aesGcm.decryptStream(
+            file.openRead(headerEnd, macStart),
+            secretKey: key,
+            nonce: nonce,
+            mac: Mac(macBytes),
+          ),
+        );
+        await sink.flush();
+      } on SecretBoxAuthenticationError {
+        throw const BackupCryptoException('密钥错误或备份文件已损坏');
+      } on BackupCryptoException {
+        rethrow;
+      } catch (_) {
+        throw const BackupCryptoException('解密失败，请检查密钥后重试');
+      }
+    } finally {
+      try {
+        await sink.close();
+      } catch (_) {
+        // 认证失败时 sink 可能已随流错误关闭；清理失败不覆盖上面的可读原因。
+      }
+    }
+    final target = File(outputPath);
+    if (await target.exists()) {
+      await target.delete();
+    }
+    await temp.rename(outputPath);
+  } catch (_) {
+    try {
+      if (await temp.exists()) {
+        await temp.delete();
+      }
+    } catch (_) {
+      // 清理失败不覆盖原始解密错误；临时文件仍在缓存目录，后续统一清理。
+    }
+    rethrow;
   }
 }

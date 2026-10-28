@@ -110,7 +110,7 @@ void main() {
     final store = LocalKeyValueStore();
     final controller = await makeController(store);
     await controller.saveCategoryKeywords('dining', ['包子']);
-    controller.renameCategory('dining', '吃饭');
+    await controller.renameCategory('dining', '吃饭');
     await controller.waitForPendingWrites();
     final reloaded = await makeController(store);
     expect(reloaded.categoryById('dining').keywords, ['包子']);
@@ -171,7 +171,7 @@ void main() {
     await controller.saveCategoryKeywords(temp.id, ['临时词']);
     expect(await controller.deleteCategory(temp.id), isTrue);
     expect(await controller.saveCategoryKeywords('dining', ['临时词']), isTrue);
-    controller.resetAllData();
+    await controller.resetAllData();
     expect(
       controller.categories.every((category) => category.keywords.isEmpty),
       isTrue,

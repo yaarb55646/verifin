@@ -9,11 +9,12 @@
 | 个人仓库 / origin | `https://github.com/yaarb55646/verifin` |
 | 开发分支 | `mine` |
 | 上游 / upstream | `https://github.com/LumiDesk/verifin` |
-| 分叉基点 | 上游 `v1.20.1`，提交 `937b6b0`；2026-10-16 已 rebase 到上游 `v1.20.3`（`main` 提交 `7ed8962`） |
+| 分叉基点 | 上游 `v1.20.1`，提交 `937b6b0`；2026-10-16 已 rebase 到上游 `v1.20.3` 之后的 `7ed8962`（`git describe` 为 `v1.20.3-2-g7ed8962`） |
+| 与上游差距 | 截至 2026-10-25：落后 `upstream/main` **119 个提交**（上游已到 `v1.20.12`，版本 `1.20.12+182`，提交 `cdef08a`），领先 13 个个人提交 |
 | 本地目录 | `D:\CC Switch\Hello\verifin` |
 | Android applicationId | `top.talyra42.verifin` |
-| 应用版本 | `1.20.1+171`（个人功能未另行发版） |
-| 当前数据库 | SQLite schema v20 |
+| 应用版本 | `1.20.3+173`（随上游 rebase 带入，个人功能未另行发版） |
+| 当前数据库 | SQLite schema v20（个人关键词迁移；上游 `v1.20.12` 仍为 v19） |
 | 许可证 | GPL-3.0-or-later，保留上游版权与 LICENSE |
 
 普通开发提交推送到 `origin mine`，`main` 用作上游镜像。代码上传、个人验收构建与正式发版是独立操作；打标签和创建 Release 必须获得明确授权。
@@ -81,12 +82,15 @@
 
 | 工具 | 当前路径 / 版本 |
 | --- | --- |
-| Flutter | `E:\Dev\flutter`，3.47.2（与 CI 一致） |
+| Flutter | `E:\Dev\flutter`，3.47.2（stable，与 CI 固定版本一致） |
 | Dart | 随 Flutter，3.13.2 |
-| JDK | `E:\Dev\jdk\jdk-17`，Java 17 |
+| JDK | `E:\Dev\jdk\jdk-17`，Temurin 17.0.20.1+1 |
 | Android SDK | `E:\Dev\Android\Sdk` |
+| adb | `E:\Dev\Android\Sdk\platform-tools\adb.exe`，1.0.41 |
 | Gradle 缓存 | `E:\Dev\gradle-home` |
 | Android 用户目录 | `E:\Dev\android-home` |
+
+上述路径全部位于 **E 盘（Disk 0，WD Blue SA510 500GB SATA SSD）**，与仓库所在的 D 盘不同盘。该盘 2026-10-25 曾整盘间歇失联（`disk` 事件 51 大量刷屏，`E:\$Mft` 出现延迟写入失败），表现为目录可列举但文件读取报「指定不存在的设备」，`flutter` / `java` / `adb` 全部无法启动；重启后已恢复（开机后无新增 `disk` 51）。**工具链整体启动失败时先排查 E 盘可用性，再怀疑 PATH 或版本问题。**
 
 在当前终端设置环境，不把个人绝对路径写入已提交构建配置：
 
@@ -107,14 +111,16 @@ flutter build apk --release --target-platform android-arm64 --flavor github
 
 产物为 `build\app\outputs\flutter-apk\app-github-release.apk`，用于个人真机验收。使用项目既有 release 签名，不修改签名配置，不通过卸载或清数据解决安装问题。
 
-2026-10-13 的实际产物为 **61,713,765 字节（约 58.9 MiB）**，包含 `arm64-v8a`、`armeabi-v7a`、`x86_64` 三种 ABI；即使命令指定 arm64，也应以 APK 元数据为准，不能据命令保证包体架构。
+下述产物记录对应 2026-10-13 的提交 `a70c17d`，**不是当前 `mine` 的产物**（HEAD 已推进到 `ab0ada5`，且版本已随上游 rebase 升到 `1.20.3+173`），仅作历史参考，不能当成新构建的校验值：
 
-- 源码提交：`a70c17d`（包含此前两项功能提交）。
+- 实际包体 **61,713,765 字节（约 58.9 MiB）**，包含 `arm64-v8a`、`armeabi-v7a`、`x86_64` 三种 ABI；即使命令指定 arm64，也应以 APK 元数据为准，不能据命令保证包体架构。
 - 包名 / 版本：`top.talyra42.verifin` / `1.20.1`，versionCode `171`。
-- Android 最低版本：API 24；targetSdk 36。
 - `apksigner verify` 通过（APK Signature Scheme v2）。
 - SHA-256：`1B11639780B48F44049F807DBF06EBC2FB55CE3582060F7CD671BCC25257CEB2`。
-- 尚未完成真机安装验收；公共看板截图尚未包含新增卡片，见 [截图说明](docs/screenshots/README.md)。
+
+不随提交变化的构建参数：Android 最低版本 API 24，targetSdk 36。
+
+当前 HEAD（`ab0ada5`）尚未重新构建本地 APK，也尚未完成真机安装验收；公共看板截图尚未包含新增卡片，见 [截图说明](docs/screenshots/README.md)。
 
 Windows Kotlin 增量缓存异常使用本地 `E:\Dev\gradle-home\gradle.properties` 的 `kotlin.incremental=false` 绕过，不修改仓库 `android/gradle.properties`。工具检测与缺失时自动补齐见 [Android 开发说明](docs/dev/android-development.md)。
 
@@ -160,9 +166,9 @@ git -c http.sslBackend=openssl push origin mine
 
 新增文件也可能与未来上游同名文件冲突。合并时优先关注记账入口、详情页、分类模型/Controller、SQLite 迁移和看板目录。
 
-当前 v20 为个人关键词迁移；上游如果也使用 v20，不能直接覆盖双方迁移或视为同一结构。同步前核对两边 schema、已安装用户数据库与全部历史迁移，设计兼容升级后再验证，禁止回改已发布迁移或降级。
+当前 v20 为个人关键词迁移。截至 2026-10-25 核对，`upstream/main`（`v1.20.12`）的 `schemaVersion` 仍为 **19**，暂未与个人 v20 撞号；但上游下一次改表结构就会占用 v20。同步前重新执行 `git show upstream/main:lib/data/app_database.dart | Select-String "schemaVersion"` 核对两边版本：一旦上游也用 v20，不能直接覆盖双方迁移或视为同一结构，需把个人迁移重号到上游之后。无论是哪种情况，都要核对已安装用户数据库与全部历史迁移，设计兼容升级后再验证，禁止回改已发布迁移或降级。
 
-组件清单、README、产品/设计/技术文档和 CHANGELOG 必须随行为更新；减少冲突不能成为跳过必要文档同步的理由。版本字段由发版流程管理，未获授权时保持 `1.20.1+171`。
+组件清单、README、产品/设计/技术文档和 CHANGELOG 必须随行为更新；减少冲突不能成为跳过必要文档同步的理由。版本字段由发版流程管理，未获授权时保持 `1.20.3+173`（该值随上游 rebase 带入，不是个人发版）。
 
 ### 上游同步
 
@@ -182,6 +188,8 @@ git -c http.sslBackend=openssl push --force-with-lease origin mine
 
 上游镜像可另外在 `main` 上 `git merge --ff-only upstream/main` 后切回 `mine`。不把个人功能合入镜像分支。
 
+待同步量已经不小：截至 2026-10-25 落后 119 个提交、跳过了 `v1.20.4` 到 `v1.20.12` 九个版本。这次 rebase 预计冲突面较大，且集中在上表的个人功能文件上；尤其要先核对 SQLite schema（下条），不要直接开始解冲突。
+
 ## 6. 验证约定与当前状态
 
 代码改动完成后按顺序执行：
@@ -195,6 +203,6 @@ flutter test
 
 SQLite 变更同时验证迁移矩阵、模型往返、内存/SQLite 仓储契约、持久化及备份。仅文档修改可执行 diff、链接、路径校验；不把旧结果写成新一轮执行。
 
-截至 2026-10-16，同步上游 v1.20.3 后的 `mine` 已通过 `dart format .`、`flutter analyze --no-pub`（No issues found）、`flutter test --no-pub`（**1285 项全部通过**）。真机验收与本地 APK 构建由用户继续进行。
+截至 **2026-10-25**，HEAD `ab0ada5` 已实际执行并通过：`dart format --output=none --set-exit-if-changed .`（387 个文件，0 需改动）、`flutter analyze --no-pub`（No issues found）、`flutter test --no-pub`（**1285 项全部通过**）。真机验收与本地 APK 构建由用户继续进行。
 
 定位当前文档提交用 `git log -1 --oneline`；定位最新功能源码用 `git log -1 --oneline -- lib test android`，避免将会随文档提交变化的 HEAD 写死在手册中。

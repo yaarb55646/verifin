@@ -9,8 +9,8 @@
 | 个人仓库 / origin | `https://github.com/yaarb55646/verifin` |
 | 开发分支 | `mine` |
 | 上游 / upstream | `https://github.com/LumiDesk/verifin` |
-| 分叉基点 | 上游 `v1.20.1`，提交 `937b6b0`；2026-10-26 已合并 `upstream/main` 到 `v1.20.13`（`09b4f73`），个人提交保留为 `mine` 上的独立提交 |
-| 与上游差距 | 截至 2026-10-26：与 `upstream/main` 同步（合并后零落后），领先 14 个个人提交 |
+| 分叉基点 | 上游 `v1.20.1`，提交 `937b6b0`；2026-10-28 已合并 `upstream/main` 到 `v1.20.13`（`09b4f73`），个人提交保留为 `mine` 上的独立提交 |
+| 与上游差距 | 截至 2026-10-28：与 `upstream/main` 同步（合并后零落后），领先 16 个提交（15 个个人提交 + 1 个合并提交） |
 | 本地目录 | `D:\CC Switch\Hello\verifin` |
 | Android applicationId | `top.talyra42.verifin` |
 | 应用版本 | `1.20.13+183`（随上游合并带入，个人功能未另行发版） |
@@ -166,7 +166,7 @@ git -c http.sslBackend=openssl push origin mine
 
 新增文件也可能与未来上游同名文件冲突。合并时优先关注记账入口、详情页、分类模型/Controller、SQLite 迁移和看板目录。
 
-当前 v20 为个人关键词迁移。截至 2026-10-26 核对，`upstream/main`（`v1.20.13`）的 `schemaVersion` 仍为 **19**，暂未与个人 v20 撞号；但上游下一次改表结构就会占用 v20。同步前重新执行 `git show upstream/main:lib/data/app_database.dart | Select-String "schemaVersion"` 核对两边版本：一旦上游也用 v20，不能直接覆盖双方迁移或视为同一结构，需把个人迁移重号到上游之后。无论是哪种情况，都要核对已安装用户数据库与全部历史迁移，设计兼容升级后再验证，禁止回改已发布迁移或降级。
+当前 v20 为个人关键词迁移。截至 2026-10-28 核对，`upstream/main`（`v1.20.13`）的 `schemaVersion` 仍为 **19**，暂未与个人 v20 撞号；但上游下一次改表结构就会占用 v20。同步前重新执行 `git show upstream/main:lib/data/app_database.dart | Select-String "schemaVersion"` 核对两边版本：一旦上游也用 v20，不能直接覆盖双方迁移或视为同一结构，需把个人迁移重号到上游之后。无论是哪种情况，都要核对已安装用户数据库与全部历史迁移，设计兼容升级后再验证，禁止回改已发布迁移或降级。
 
 组件清单、README、产品/设计/技术文档和 CHANGELOG 必须随行为更新；减少冲突不能成为跳过必要文档同步的理由。版本字段由发版流程管理，未获授权时保持 `1.20.13+183`（该值随上游合并带入，不是个人发版）。
 
@@ -185,12 +185,13 @@ git checkout mine
 git merge upstream/main
 
 # 冲突解决后逐文件 git add，再 git commit；放弃使用 git merge --abort。
+# 提交前确认 pubspec.lock 没被 pub get 改动（见第 6 节）。
 git -c http.sslBackend=openssl push origin mine
 ```
 
 上游镜像可另外在 `main` 上 `git merge --ff-only upstream/main` 后切回 `mine`。不把个人功能合入镜像分支。
 
-已完成的同步记录：2026-10-26 从 `v1.20.3` 一带合并到 `v1.20.13`（跳过 `v1.20.4`～`v1.20.13` 十个版本）。实际冲突 12 个文件（10 个文档 + 2 个 Dart），解析要点：
+已完成的同步记录：2026-10-28 从 `v1.20.3` 一带合并到 `v1.20.13`（上游于 2026-10-26 发布，跳过 `v1.20.4`～`v1.20.13` 十个版本）。实际冲突 12 个文件（10 个文档 + 2 个 Dart），解析要点：
 
 - 锚点菜单改名（`VeriMenu*` → `AnchoredMenu*`）已随上游自动完成，全仓库无残留符号；个人新增的「记账关键词」菜单项在 `category_management_page.dart` 中按新类型重写。
 - `renameCategory` 改为返回 `Future<RenameResult>`，个人测试中的调用补 `await`。
@@ -210,6 +211,10 @@ flutter test
 
 SQLite 变更同时验证迁移矩阵、模型往返、内存/SQLite 仓储契约、持久化及备份。仅文档修改可执行 diff、链接、路径校验；不把旧结果写成新一轮执行。
 
-截至 **2026-10-26**（合并 `upstream/main` 到 `v1.20.13` 后）已实际执行并通过：`dart format .`（567 个文件，0 需改动）、`flutter analyze --no-pub`（No issues found）、`flutter test --no-pub`（**1433 项全部通过**）。真机验收与本地 APK 构建由用户继续进行。
+**`flutter pub get` 会重新解析依赖，必须核对 `pubspec.lock`。** 本 fork 与上游没有依赖差异，lock 应始终与 `upstream/main` 一致：执行 `flutter pub get` 后跑 `git diff upstream/main --stat -- pubspec.lock`，出现差异就 `git checkout upstream/main -- pubspec.lock` 再重新 `pub get`，并复检确认为空。
+
+典型偏差是把 `image` 从上游锁定的 4.10.1 升到 4.11.0 并多带进若干包。这类升级能骗过测试：4.11.0 调用的 `ZLibDecoder.decodeLazy` 在 Flutter 3.47.2 引擎的 `dart:io` 里不存在，`flutter test`（走 Dart VM）全绿，只有 `flutter build apk` 编译 kernel 时才失败；若带着错配的依赖构建，还会产出启动即卡在 `stage: preferences` 的坏包（Dart 侧与 Gradle 缓存的插件原生库版本对不上，`shared_preferences` 的 Pigeon 通道连不上）。真机出现该症状时先核对 lock，不要先怀疑功能代码。
+
+截至 **2026-10-28**（合并 `upstream/main` 到 `v1.20.13` 后）已实际执行并通过：`dart format .`（567 个文件，0 需改动）、`flutter analyze --no-pub`（No issues found）、`flutter test --no-pub`（**1433 项全部通过**）。真机验收与本地 APK 构建由用户继续进行。
 
 定位当前文档提交用 `git log -1 --oneline`；定位最新功能源码用 `git log -1 --oneline -- lib test android`，避免将会随文档提交变化的 HEAD 写死在手册中。

@@ -3,7 +3,7 @@ name: Build APK (mine)
 # 个人分支的按需构建：只在 GitHub Actions 页面手动点击时运行，push 不触发。
 #
 # 为什么单独一份而不复用上游的 flutter.yml：
-#   上游那份由 `v*.*.*` tag 触发，且发布说明要从 CHANGELOG.md 里抽取对应版本段落，
+#   上游那份由 `v*.*.*` tag 触发，且发布说明必须来自 docs/release-notes/<tag>.md，
 #   缺失就直接失败退出——个人构建不需要这套发版仪式。
 #
 # 签名：android/app/build.gradle.kts 的 signingConfigs 指向仓库内的 verifin-release.jks，

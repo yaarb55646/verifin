@@ -86,6 +86,8 @@ flutter test
 
 本地诊断使用 `--flavor diagnostic` 隔离用户数据。正式交付由 CI 构建；同步源码不等于已有可验收 APK。界面截图说明见 [截图目录](docs/screenshots/README.md)。
 
+当前仍有待修复的导入缺陷：[L16 · 不完整随手记 xlsx 可能静默漏导入](docs/dev/known-limitations.md#l16--不完整的随手记-xlsx-可能漏导入整张工作表且不报错)。原有测试通过不代表覆盖此异常输入；复现方法和修复要求以该条目为准。
+
 ## 个人 APK 与更新边界
 
 1. 打开 [Build APK (mine)](https://github.com/yaarb55646/verifin/actions/workflows/mine-build.yml)。
@@ -93,6 +95,8 @@ flutter test
 3. 从本次运行的 Artifacts 下载 APK，产物保留 30 天。
 
 该工作流仅由 `workflow_dispatch` 触发，不因 `mine` push 自动运行，不创建 Release、不独立修改版本号。实际 ABI 和包体大小以构建产物为准。使用既有签名，不重生成、不替换；安装前备份，直接覆盖个人版，不卸载或清数据。
+
+本地 `github` flavor 的验收 APK 位于 `build/app/outputs/flutter-apk/app-github-release.apk`。`dart run scripts/clean.dart` 会删除整个 `build/`；需要保留安装包时，先将它复制到仓库外。
 
 **应用内检查更新仍只查询上游正式 Release，并跳转浏览器，不下载或安装 APK，也不会发现个人 Artifacts。** 个人数据库已为 v20、当前上游包仍为 v19，不应把上游 APK 当作个人版安全升级包。更新个人功能必须使用个人构建；未来上游占用 v20 时还需重新设计兼容升级。
 

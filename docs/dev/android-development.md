@@ -58,7 +58,7 @@ Windows 安装顺序：
 Gradle 构建为准。不要把本机 SDK/JDK 路径写进仓库文档或提交的配置；
 `android/local.properties` 由 Flutter 维护且不提交。
 
-个人 fork 的实际工具路径、环境变量与终端设置集中记录在 [MY_FORK.md](../../MY_FORK.md)，本节只保留与上游通用的检测与安装约定。
+个人 fork 的工具链要求和验收方式见 [MY_FORK.md](../../MY_FORK.md)。实际安装路径通过本机工具检测，不写入仓库文档。
 
 复核（新终端）：
 
@@ -142,8 +142,8 @@ debug 支持 hot reload；最终图形/OCR/插件行为必须另外用 release/R
 - GitHub 自分发 APK 由 CI 校验：原生库只能包含 `arm64-v8a`，且 `versionCode` 必须与 `pubspec.yaml` 的 build number 一致；ABI 拆分不得恢复默认的 versionCode 偏移，否则 GitHub / Play 渠道间无法正常覆盖升级。
 - 个人 fork 可手动运行 `.github/workflows/mine-build.yml`，从 Artifacts 下载验收 APK；`mine` push 不自动构建或发版。应用内检查更新仍查询上游 Release，个人 Artifacts 通过手动安装更新。
 - CI 成功后下载同签名、更高 versionCode APK 覆盖安装，保留账目；用户验收后才提升 Latest。
-- 应用内检查预发布需开启“包含预发布版本（Beta）”；发布后核对 releases 列表中的版本与 APK 元数据。
-  用户要求自行通过应用更新时，不代替用户安装或触发下载。
+- 应用内「检查更新」只识别正式版；预发布版本请在 Releases 页面手动下载。发布后核对 releases 列表中的版本与 APK 元数据。
+  用户要求自行通过应用内检查更新升级时，只把用户带到对应的 Release 页面，不代替用户下载或安装。
 - 清理测试应用前先列出并核对 package。只卸载确认为本任务测试用途的
   `top.talyra42.verifin.graphicsdiagnostic`；**不得卸载 `top.talyra42.verifin` 或清数据**。
   如果测试应用里已有用户新录入的数据，先明确处理方式再删除。

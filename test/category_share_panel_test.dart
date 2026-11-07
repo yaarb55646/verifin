@@ -145,7 +145,9 @@ void main() {
       PanelPageKind.reportsYearly,
     ]) {
       for (final spec in kind.specs) {
-        if (spec.id != 'category_share' && spec.id != 'ranking') {
+        if (spec.id != 'category_share' &&
+            spec.id != 'category_stats' &&
+            spec.id != 'ranking') {
           controller.setPanelEnabled(kind, spec.id, false);
         }
       }
@@ -170,7 +172,17 @@ void main() {
         entriesInWindow(controller.entries, monthWindowFor(today))
             .where((e) => e.type == EntryType.expense)
             .fold<double>(0, (s, e) => s + e.netBaseAmount);
-    expect(chartTotal(), monthTotal);
+    expect(find.byKey(const Key('category_share_chart')), findsNothing);
+    final monthlyChart = tester.widget<VeriDonutChart>(
+      find.descendant(
+        of: find.byKey(const Key('category_stats_card')),
+        matching: find.byType(VeriDonutChart),
+      ),
+    );
+    expect(
+      monthlyChart.segments.fold<double>(0, (sum, s) => sum + s.value),
+      monthTotal,
+    );
     await tester.tap(find.text('年统计').first);
     await tester.pumpAndSettle();
     final yearTotal = controller.entries
@@ -179,6 +191,7 @@ void main() {
         )
         .fold<double>(0, (s, e) => s + e.netBaseAmount);
     expect(chartTotal(), yearTotal);
+    expect(find.byKey(const Key('category_stats_card')), findsNothing);
   });
 
   for (final brightness in Brightness.values) {

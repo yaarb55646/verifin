@@ -38,6 +38,12 @@ const Color veriLine = Color(0xFFE1E8F1);
 const Color veriExpense = Color(0xFFE84D6A);
 const Color veriIncome = Color(0xFF12B8A6);
 const Color veriWarning = Color(0xFFFFB33E);
+// 构成图（分类 / 账户占比）的分类色。前 5 色沿用资产汇总原配色，后 4 色用于
+// 展开更多分类；它们只表达「彼此不同的类别」，不承载收入 / 支出等语义。
+const Color veriChartOrange = Color(0xFFE8894A);
+const Color veriChartPink = Color(0xFFE36A9A);
+const Color veriChartViolet = Color(0xFF9B7BE8);
+const Color veriChartSlate = Color(0xFF8C99A8);
 // 浅色底语义色变体。上面的亮色在白底上对比度不足（veriIncome 2.49:1、veriWarning 1.78:1、
 // veriBlue 3.15:1、veriExpense 3.68:1，均低于正文级 AA 要求的 4.5:1）。以下变体保持原色相、
 // 只压暗明度，在 #FFFFFF 与 #F3F5F8 上均 ≥ 4.5:1。深色主题继续用亮色。
@@ -64,6 +70,53 @@ Color veriSemanticFor(Brightness brightness, Color semanticColor) {
     _ => semanticColor,
   };
 }
+
+const List<Color> _veriChartPaletteTail = <Color>[
+  veriBlue,
+  veriCyan,
+  veriMint,
+  veriWarning,
+  veriChartOrange,
+  veriChartPink,
+  veriChartViolet,
+  veriIndigo,
+  veriChartSlate,
+];
+
+/// 把分类色统一压到深色档（相对亮度约 0.22）。
+///
+/// 分类盘里的青、薄荷、黄等原色亮度差异很大；只按 HSL 明度压暗仍会让黄绿比
+/// 蓝紫亮一大截，导致环内文字一会儿黑一会儿白。这里按实际相对亮度做二分，
+/// 让 10 个颜色落在同一档，统一使用白字，浅色 / 深色主题下都不再翻转。
+Color _veriChartTone(Color color) {
+  final hsl = HSLColor.fromColor(color);
+  var low = 0.0;
+  var high = 1.0;
+  for (var i = 0; i < 24; i++) {
+    final mid = (low + high) / 2;
+    final luminance = hsl.withLightness(mid).toColor().computeLuminance();
+    if (luminance < 0.22) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return hsl.withLightness((low + high) / 2).toColor();
+}
+
+/// 构成图（分类 / 账户占比）的 10 色分类调色盘。
+///
+/// 首色取用户主题主色的同色相并压到统一深色档，其余固定；前 5 色保留资产汇总
+/// 原有的视觉顺序，后 5 色只在展开更多类别时出现。「其他」不占用分类色，始终
+/// 由调用方使用中性色。
+List<Color> veriChartPaletteFor(Color primary) => <Color>[
+  _veriChartTone(primary),
+  for (final color in _veriChartPaletteTail) _veriChartTone(color),
+];
+
+/// [veriChartPaletteFor] 的主题入口；分类图与资产汇总共用同一套顺序。
+List<Color> veriChartPalette(BuildContext context) =>
+    veriChartPaletteFor(Theme.of(context).colorScheme.primary);
 
 const Color veriSurfaceLight = Color(0xFFFFFFFF);
 const Color veriSurfaceDark = Color(0xFF0E1117);

@@ -251,7 +251,7 @@ void main() {
           .panelSettings(PanelPageKind.reportsMonthly)
           .map((panel) => panel.id)
           .take(3),
-      <String>['budget_execution', 'category_share', 'summary'],
+      <String>['budget_execution', 'category_stats', 'summary'],
     );
 
     await reloaded.resetAllData();
@@ -315,10 +315,17 @@ void main() {
         <String>[
           'summary',
           'budget_execution',
-          'category_share',
+          'category_stats',
           'ranking',
           'daily_trend',
         ],
+      );
+      expect(
+        controller
+            .panelSettings(PanelPageKind.reportsMonthly)
+            .firstWhere((panel) => panel.id == 'category_stats')
+            .enabled,
+        isTrue,
       );
       controller.dispose();
     },
@@ -360,10 +367,13 @@ void main() {
       false,
     );
     controller.reorderPanels(PanelPageKind.reportsDaily, 3, 0);
-    controller.setPanelEnabled(
-      PanelPageKind.reportsMonthly,
-      'category_share',
-      false,
+    expect(
+      controller.setPanelEnabled(
+        PanelPageKind.reportsMonthly,
+        'category_stats',
+        false,
+      ),
+      isTrue,
     );
     final exported = controller.exportDataJson();
     final reloaded = await makeController(store);
@@ -383,7 +393,7 @@ void main() {
     ]);
     expect(
       restored.enabledPanelIds(PanelPageKind.reportsMonthly),
-      isNot(contains('category_share')),
+      isNot(contains('category_stats')),
     );
     expect(
       restored.enabledPanelIds(PanelPageKind.reportsYearly),

@@ -64,9 +64,9 @@ Veri Fin 是一款仅面向 Android 的个人记账应用。没有账号、没�
 
 本仓库是 [yaarb55646/verifin](https://github.com/yaarb55646/verifin) 的个人分支，跟随上游 [LumiDesk/verifin](https://github.com/LumiDesk/verifin) 同步，日常开发分支为 `mine`。保留上游版权与 GPL-3.0-or-later 许可证。
 
-在上游能力之上，本 fork 额外提供：一句话记账（文字输入拆出金额与备注，可切换到数字键盘）、按分类名称自动匹配自定义与多级子分类、记账页子分类常驻面板、看板分类占比与分类·标签排行，以及分类级自定义记账关键词（SQLite schema v20）。功能入口、数据兼容约定、工具链与上游同步方法见 [个人分支维护手册](MY_FORK.md)。
+在上游能力之上，本 fork 额外提供：一句话记账（文字输入拆出金额与备注，可切换到数字键盘）、按分类名称自动匹配自定义与多级子分类、记账页子分类常驻面板、日常/年度分类占比与日常分类·标签排行（月度采用上游分类统计），以及分类级自定义记账关键词（SQLite schema v20）。功能入口、数据兼容约定、工具链与上游同步方法见 [个人分支维护手册](MY_FORK.md)。
 
-个人 APK 在 [Build APK (mine)](https://github.com/yaarb55646/verifin/actions/workflows/mine-build.yml) 手动构建，运行结束后从 Artifacts 下载；推送 `mine` 仅同步源码，不会自动生成 APK 或发布版本。应用内「检查更新」目前仍查询上游 Release，个人包通过手动安装更新。
+个人 APK 在 [Build APK (mine)](https://github.com/yaarb55646/verifin/actions/workflows/mine-build.yml) 手动构建，运行结束后从 Artifacts 下载；推送 `mine` 仅同步源码，不会自动生成 APK 或发布版本。应用内「检查更新」只查询上游正式 Release 并跳转浏览器，不提供个人包。个人数据库为 v20、上游仍为 v19，不应直接安装上游 APK 覆盖个人版；请备份后安装个人构建更新。
 
 ## 技术栈
 
@@ -95,7 +95,7 @@ flutter run -d <android-device-id> --flavor diagnostic
 flutter analyze && flutter test
 ```
 
-开发环境使用 Flutter 3.47.2、JDK 17+（CI 固定 17）和 Android SDK（含 NDK 与 CMake）。日常调试必须使用独立数据目录的 `diagnostic` flavor；环境自检、真机验收和 release 检查见 [Android 开发](docs/dev/android-development.md)。个人 fork 的 Windows 工具链路径与个人构建命令见 [MY_FORK.md](MY_FORK.md)。
+开发环境使用 Flutter 3.47.2、JDK 17+（CI 固定 17）和 Android SDK（含 NDK 与 CMake）。日常调试必须使用独立数据目录的 `diagnostic` flavor；环境自检、真机验收和 release 检查见 [Android 开发](docs/dev/android-development.md)。个人 fork 的工具链要求与个人构建命令见 [MY_FORK.md](MY_FORK.md)。
 
 正式 APK/AAB 由 CI 构建，本地 APK 不作为交付物。渠道差异、R8 和签名约束以 [技术决策](docs/dev/tech-decisions.md) 与工作流为准。
 
@@ -115,13 +115,13 @@ flutter analyze && flutter test
 
 ## Star History
 
-<div align="center">
-
-<a href="https://star-history.com/#LumiDesk/verifin&Date">
-  <img src="https://api.star-history.com/svg?repos=LumiDesk/verifin&type=Date" alt="Veri Fin Star History" width="720" />
+<a href="https://www.star-history.com/?type=date&repos=LumiDesk%2Fverifin">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=LumiDesk/verifin&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=LumiDesk/verifin&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=LumiDesk/verifin&type=date&legend=top-left" />
+ </picture>
 </a>
-
-</div>
 
 ## 支持项目
 

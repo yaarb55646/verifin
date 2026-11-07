@@ -1002,7 +1002,10 @@ class VeriDonutChart extends StatelessWidget {
                   showTitle:
                       showPercentTitles &&
                       totalValue > 0 &&
-                      segments[i].value / totalValue >= 0.05,
+                      segments[i].value / totalValue >= 0.05 &&
+                      // 选中时其余分段被淡化，保留白字会失去对比度；只留下
+                      // 当前分段的占比，取消选中后恢复全部占比文字。
+                      (selectedIndex == null || selectedIndex == i),
                   title: totalValue > 0
                       ? '${(segments[i].value / totalValue * 100).round()}%'
                       : '',

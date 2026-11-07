@@ -11,13 +11,13 @@ import '../app/report_analysis.dart';
 import '../app/veri_fin_scope.dart';
 import '../l10n/app_localizations.dart';
 
-/// 日常/月/年共用的分类占比卡。范围由外层明确提供，卡内切换只影响当前视图。
+/// 日常/年共用的分类占比卡；月统计使用上游分类统计。卡内切换只影响当前视图。
 class CategorySharePanel extends StatefulWidget {
   const CategorySharePanel({super.key, required this.window, this.rangeLabel});
 
   final DateWindow window;
 
-  /// 取数范围标签；为 null 时不显示（月/年 Tab 由期间栏标注期间）。
+  /// 取数范围标签；为 null 时不显示（年 Tab 由期间栏标注期间）。
   final String? rangeLabel;
 
   @override

@@ -1268,6 +1268,36 @@ abstract class AppLocalizations {
   /// **'按账户占比查看正资产或负资产'**
   String get panelAssetSummaryDesc;
 
+  /// 看板月统计面板:支出分类占比环形图
+  ///
+  /// In zh, this message translates to:
+  /// **'分类统计'**
+  String get panelCategoryStatsLabel;
+
+  /// 看板月统计面板:分类统计卡片描述
+  ///
+  /// In zh, this message translates to:
+  /// **'按顶级分类查看支出占比，可切换前5或全部'**
+  String get panelCategoryStatsDesc;
+
+  /// 分类统计:右上角前5/全部切换的无障碍标签
+  ///
+  /// In zh, this message translates to:
+  /// **'分类显示范围'**
+  String get categoryStatsModeLabel;
+
+  /// 分类统计:前5个分类加其他
+  ///
+  /// In zh, this message translates to:
+  /// **'前5'**
+  String get categoryStatsModeTop5;
+
+  /// 分类统计:展示全部分类，不合并其他
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get categoryStatsModeAll;
+
   /// 看板月统计面板:排行卡(原统计分析页排行能力迁入)
   ///
   /// In zh, this message translates to:
@@ -4730,6 +4760,12 @@ abstract class AppLocalizations {
   /// **'关于'**
   String get settingsSectionAbout;
 
+  /// No description provided for @settingsSectionMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'更多'**
+  String get settingsSectionMore;
+
   /// No description provided for @creditsTitle.
   ///
   /// In zh, this message translates to:
@@ -4760,11 +4796,11 @@ abstract class AppLocalizations {
   /// **'在爱发电支持 Veri Fin'**
   String get creditsSupportAction;
 
-  /// No description provided for @creditsOpenFailed.
+  /// No description provided for @openLinkFailed.
   ///
   /// In zh, this message translates to:
   /// **'没能打开浏览器，请稍后再试。'**
-  String get creditsOpenFailed;
+  String get openLinkFailed;
 
   /// No description provided for @themeMode.
   ///
@@ -4958,6 +4994,12 @@ abstract class AppLocalizations {
   /// **'检查更新'**
   String get checkUpdate;
 
+  /// No description provided for @githubRepositoryLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'GitHub 仓库'**
+  String get githubRepositoryLabel;
+
   /// No description provided for @viewLabel.
   ///
   /// In zh, this message translates to:
@@ -5132,6 +5174,18 @@ abstract class AppLocalizations {
   /// **'明细导出 CSV'**
   String get platformQianjiHint;
 
+  /// No description provided for @platformSuishouji.
+  ///
+  /// In zh, this message translates to:
+  /// **'随手记'**
+  String get platformSuishouji;
+
+  /// No description provided for @platformSuishoujiHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'账单导出（.xlsx）'**
+  String get platformSuishoujiHint;
+
   /// No description provided for @platformTally.
   ///
   /// In zh, this message translates to:
@@ -5209,6 +5263,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'钱迹 App →「我的」→「设置」→「备份与导出」→「导出账单」→ 选择「CSV」格式（明细）、时间范围为「全部」，得到 QianJi 开头的 .csv 文件，保存到本机后在此选择。\n\n支出、收入、转账、信用卡还款、退款、报销都会导入：退款按「关联账单」自动冲抵原支出（净额=原额−退款），分类按二级分类还原层级、标签一并导入。钱迹的「债务 / 借贷」记录（借出、收款、利息等）不会导入——本应用没有债务功能、无法忠实表达；这类多是「垫钱再收回」的一进一出，跳过不影响你的真实收支。菜单以实际 App 版本为准。'**
   String get qianjiImportGuide;
+
+  /// No description provided for @suishoujiImportGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'随手记 App →「我的」→「数据导出」/「导出账单」→ 选择 Excel（.xlsx）导出，保存到本机后在此选择。\n\n同一个文件里的支出、收入、转账和退款会导入：一级/二级分类还原层级，账户保留来源币种；退款因导出没有原支出编号会按收入导入（账户余额正确，但原支出净额不冲减）；「余额变更」按正负差额记入「余额调整」。「收债 / 借出 / 还债 / 借入」等债务记录和「负债变更」不会导入——本应用没有债务功能，负债变更的方向也无法从导出确定。成员、项目、记账人不导入，商家会并入备注。账户统一建为现金账户，导入后可在资产页调整类型。菜单以实际 App 版本为准。'**
+  String get suishoujiImportGuide;
 
   /// No description provided for @tallyImportGuide.
   ///
@@ -7034,29 +7094,11 @@ abstract class AppLocalizations {
   /// **'确认初始化'**
   String get resetConfirmAction;
 
-  /// No description provided for @currentVersion.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前版本'**
-  String get currentVersion;
-
-  /// No description provided for @latestVersion.
-  ///
-  /// In zh, this message translates to:
-  /// **'最新版本'**
-  String get latestVersion;
-
   /// No description provided for @checkingLabel.
   ///
   /// In zh, this message translates to:
   /// **'检查中...'**
   String get checkingLabel;
-
-  /// No description provided for @queryingGithub.
-  ///
-  /// In zh, this message translates to:
-  /// **'正在查询 GitHub Release...'**
-  String get queryingGithub;
 
   /// No description provided for @updateCheckFailed.
   ///
@@ -7064,89 +7106,35 @@ abstract class AppLocalizations {
   /// **'检查更新失败，请稍后再试。'**
   String get updateCheckFailed;
 
-  /// No description provided for @downloadingPercent.
+  /// No description provided for @updateAvailableTitle.
   ///
   /// In zh, this message translates to:
-  /// **'下载中 {percent}%'**
-  String downloadingPercent(int percent);
+  /// **'发现新版本'**
+  String get updateAvailableTitle;
 
-  /// No description provided for @downloadingLabel.
+  /// No description provided for @updateAvailableMessage.
   ///
   /// In zh, this message translates to:
-  /// **'正在下载...'**
-  String get downloadingLabel;
+  /// **'当前版本：v{current}\n最新版本：v{latest}'**
+  String updateAvailableMessage(String current, String latest);
+
+  /// No description provided for @updateUpToDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'已是最新版本'**
+  String get updateUpToDate;
+
+  /// No description provided for @updateOpenRelease.
+  ///
+  /// In zh, this message translates to:
+  /// **'前往'**
+  String get updateOpenRelease;
 
   /// No description provided for @closeLabel.
   ///
   /// In zh, this message translates to:
   /// **'关闭'**
   String get closeLabel;
-
-  /// No description provided for @retryLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'重试'**
-  String get retryLabel;
-
-  /// No description provided for @downloadingShort.
-  ///
-  /// In zh, this message translates to:
-  /// **'下载中'**
-  String get downloadingShort;
-
-  /// No description provided for @continueDownload.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续下载'**
-  String get continueDownload;
-
-  /// No description provided for @downloadPausedPercent.
-  ///
-  /// In zh, this message translates to:
-  /// **'已保留 {percent}% · 等待继续'**
-  String downloadPausedPercent(int percent);
-
-  /// No description provided for @downloadNewVersion.
-  ///
-  /// In zh, this message translates to:
-  /// **'下载新版本'**
-  String get downloadNewVersion;
-
-  /// No description provided for @installNow.
-  ///
-  /// In zh, this message translates to:
-  /// **'立即安装'**
-  String get installNow;
-
-  /// No description provided for @includePrereleaseLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'包含预发布版本（Beta）'**
-  String get includePrereleaseLabel;
-
-  /// No description provided for @prereleaseNoticeInline.
-  ///
-  /// In zh, this message translates to:
-  /// **'这是预发布（测试）版本，可能存在不稳定或缺陷。'**
-  String get prereleaseNoticeInline;
-
-  /// No description provided for @prereleaseWarningTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'下载预发布版本？'**
-  String get prereleaseWarningTitle;
-
-  /// No description provided for @prereleaseWarningMessage.
-  ///
-  /// In zh, this message translates to:
-  /// **'预发布版本可能存在不稳定、功能缺陷或数据异常等问题，建议仅在了解风险时使用。确定继续下载并安装吗？'**
-  String get prereleaseWarningMessage;
-
-  /// No description provided for @prereleaseDownloadAnyway.
-  ///
-  /// In zh, this message translates to:
-  /// **'仍要下载'**
-  String get prereleaseDownloadAnyway;
 
   /// No description provided for @backupFreqManual.
   ///

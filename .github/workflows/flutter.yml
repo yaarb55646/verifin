@@ -14,10 +14,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+
+      # 发布说明是 Release 正文的唯一来源；缺文件在构建前就失败，不浪费一次 APK/AAB 构建。
+      - name: Verify release notes
+        run: |
+          set -euo pipefail
+          NOTES="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ ! -s "$NOTES" ]; then
+            echo "::error::缺少发布说明 $NOTES（模板见 docs/release-notes/_template.md）"
+            exit 1
+          fi
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
@@ -48,13 +58,15 @@ jobs:
     needs: checks
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -71,7 +83,7 @@ jobs:
         run: flutter test test/design_consistency_test.dart test/page_smoke_test.dart test/home_density_test.dart test/anchored_menu_test.dart test/material_stability_test.dart test/navigation_settings_test.dart
 
       - name: Build release APK (github flavor)
-        # GitHub 自分发包：github flavor，保留应用内一键自更新（REQUEST_INSTALL_PACKAGES）。
+        # GitHub 自分发包：github flavor，保留应用内「检查更新」入口（只跳转 Release 页面）。
         # --target-platform 只控制 Flutter 自身的 ABI；--split-per-abi 才会同时剔除
         # 第三方 AAR（如 ML Kit）带入的 x86_64 / armeabi-v7a 原生库。
         # ABI split 默认会改写 versionCode；这里关闭该偏移，保持与 Play AAB 一致，
@@ -106,10 +118,10 @@ jobs:
           fi
 
       - name: Build release App Bundle (play flavor)
-        # Google Play 上架用 AAB：play flavor 移除 REQUEST_INSTALL_PACKAGES（Play 政策禁止
-        # 应用自更新），并 --dart-define=SELF_UPDATE=false 隐藏应用内自更新入口。
+        # Google Play 上架用 AAB：play flavor 隐藏应用内检查更新入口（Play 负责更新，
+        # 也不允许引导用户到站外下载）。
         # 与 APK 同用 verifinRelease 签名；AAB 含全部 ABI，由 Play 按设备分发。
-        run: flutter build appbundle --release --flavor play --dart-define=SELF_UPDATE=false
+        run: flutter build appbundle --release --flavor play --dart-define=UPDATE_CHECK=false
 
       - name: Prepare release artifacts
         shell: bash
@@ -121,7 +133,7 @@ jobs:
           cp build/app/outputs/bundle/playRelease/app-play-release.aab "release-artifacts/verifin-${version_name}-${short_sha}.aab"
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: verifin-android-release
           path: release-artifacts/*
@@ -138,35 +150,16 @@ jobs:
       # 未跟踪的文件。放在下载之后会把刚下下来的 APK/AAB 一起清掉，发布出一个
       # 没有附件的空版本（v1.16.16 就是这样发的）。
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: verifin-android-release
           path: release-artifacts
 
-      # 发布说明从 CHANGELOG.md 对应版本段落生成，避免像此前那样把某一版的
-      # 说明硬编码进工作流、之后每次发版都重复旧文案。
-      - name: Compose release notes
-        run: |
-          set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          section="$(awk -v v="$version" 'index($0, "## [" v "]") == 1 { c = 1; next } c && index($0, "## [") == 1 { exit } c { print }' CHANGELOG.md)"
-          if [ -z "$(printf '%s' "$section" | tr -d '[:space:]')" ]; then
-            echo "::error::CHANGELOG.md 中找不到版本 $version 的条目"
-            exit 1
-          fi
-          {
-            echo "⚠️ 预发布（待验证）：此版本由 CI 自动构建，尚未经真机验收。"
-            echo
-            printf '%s\n' "$section"
-            echo
-            echo "请下载 APK 直接覆盖安装，**不要卸载旧版本或清除应用数据**。换机或重装前请先在「数据管理」导出备份。"
-            echo
-            echo "应用内更新请开启「包含预发布版本（Beta）」以检测此版本；本次仍为预发布，不标记 Latest。"
-          } > release-notes.md
-
+      # 发布说明直接取自 docs/release-notes/vX.Y.Z.md，与其它项目保持一致：
+      # 文件即正文，预发布提示与安装说明写在模板里，不再由工作流拼接。
       - name: Create pre-release
         uses: softprops/action-gh-release@v2
         with:
@@ -178,4 +171,4 @@ jobs:
           # 默认发预发布：不标记为 Latest，待真机测试通过后在 GitHub 手动改为正式版。
           prerelease: true
           make_latest: 'false'
-          body_path: release-notes.md
+          body_path: docs/release-notes/${{ github.ref_name }}.md

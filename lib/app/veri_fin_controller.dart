@@ -424,9 +424,23 @@ List<PagePanelSetting> _normalizePanelSettings(
   final specIndexById = <String, int>{
     for (var i = 0; i < specs.length; i++) specs[i].id: i,
   };
+  // 个人版月度占比由上游分类统计替代。仅目标目录包含新卡且不含旧卡时
+  // 映射，保留旧项位置和开关；已有新项时以新项为准。冷启动与恢复共用此入口。
+  final replacesCategoryShare =
+      specIndexById.containsKey('category_stats') &&
+      !specIndexById.containsKey('category_share');
+  final hasCategoryStats = stored.any((item) => item.id == 'category_stats');
+  final compatible = <PagePanelSetting>[
+    for (final item in stored)
+      if (replacesCategoryShare && item.id == 'category_share') ...[
+        if (!hasCategoryStats)
+          PagePanelSetting(id: 'category_stats', enabled: item.enabled),
+      ] else
+        item,
+  ];
   final seen = <String>{};
   final result = <PagePanelSetting>[
-    for (final item in stored)
+    for (final item in compatible)
       if (specIndexById.containsKey(item.id) && seen.add(item.id)) item,
   ];
   for (var i = 0; i < specs.length; i++) {

@@ -625,6 +625,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Positive or negative assets by account share';
 
   @override
+  String get panelCategoryStatsLabel => 'Category breakdown';
+
+  @override
+  String get panelCategoryStatsDesc =>
+      'Spending share by top-level category, with top 5 or all';
+
+  @override
+  String get categoryStatsModeLabel => 'Category display range';
+
+  @override
+  String get categoryStatsModeTop5 => 'Top 5';
+
+  @override
+  String get categoryStatsModeAll => 'All';
+
+  @override
   String get panelRankingLabel => 'Categories & tags';
 
   @override
@@ -2645,6 +2661,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionAbout => 'About';
 
   @override
+  String get settingsSectionMore => 'More';
+
+  @override
   String get creditsTitle => 'Credits';
 
   @override
@@ -2664,8 +2683,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creditsSupportAction => 'Support Veri Fin on Afdian';
 
   @override
-  String get creditsOpenFailed =>
-      'Could not open the browser. Please try again.';
+  String get openLinkFailed => 'Could not open the browser. Please try again.';
 
   @override
   String get themeMode => 'Theme';
@@ -2772,6 +2790,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkUpdate => 'Check for updates';
 
   @override
+  String get githubRepositoryLabel => 'GitHub repository';
+
+  @override
   String get viewLabel => 'View';
 
   @override
@@ -2861,6 +2882,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get platformQianjiHint => 'Detail export CSV';
 
   @override
+  String get platformSuishouji => 'Suishouji';
+
+  @override
+  String get platformSuishoujiHint => 'Bill export (.xlsx)';
+
+  @override
   String get platformTally => 'Tally';
 
   @override
@@ -2906,6 +2933,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get qianjiImportGuide =>
       'In Qianji (钱迹): Me → Settings → Backup & export → Export bills → choose the \"CSV\" (detail) format with the \"All\" time range. You get a .csv file starting with \"QianJi\"; save it to your phone, then choose it here.\n\nExpense, income, transfer, credit-card repayment, refund and reimbursement are all imported: refunds offset the original expense via their linked bill (net = original − refund); categories restore the two-level hierarchy and tags are imported too. Qianji\'s debt/loan records (lend, collect, interest, etc.) are NOT imported — this app has no debt feature and can\'t represent them faithfully; they are mostly \"pay then get repaid\" round-trips, so skipping them doesn\'t affect your real income/expense. Menu paths may vary by app version.';
+
+  @override
+  String get suishoujiImportGuide =>
+      'In Suishouji (随手记): Me → Data export / Export bills → choose Excel (.xlsx), save it to your phone, then choose it here.\n\nThe single workbook contains expense, income, transfer and refund sheets: first- and second-level categories keep their hierarchy, and accounts keep their source currency. Refunds have no original-expense link in the export, so they are imported as income (account balances stay correct, but the original expense is not offset); \"balance change\" rows become \"balance adjustment\" entries based on their sign. Debt sheets (collect debt, lend, repay debt, borrow) and \"liability change\" are NOT imported — this app has no debt feature, and the direction of a liability change can\'t be determined from the export. Member, project and bookkeeper fields are ignored; merchant is merged into the note. Accounts are created as cash accounts; adjust their type in Assets after import. Menu paths may vary by app version.';
 
   @override
   String get tallyImportGuide =>
@@ -3951,67 +3982,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resetConfirmAction => 'Confirm reset';
 
   @override
-  String get currentVersion => 'Current version';
-
-  @override
-  String get latestVersion => 'Latest version';
-
-  @override
   String get checkingLabel => 'Checking…';
-
-  @override
-  String get queryingGithub => 'Querying GitHub Releases…';
 
   @override
   String get updateCheckFailed => 'Update check failed; try again later.';
 
   @override
-  String downloadingPercent(int percent) {
-    return 'Downloading $percent%';
+  String get updateAvailableTitle => 'Update available';
+
+  @override
+  String updateAvailableMessage(String current, String latest) {
+    return 'Current version: v$current\nLatest version: v$latest';
   }
 
   @override
-  String get downloadingLabel => 'Downloading…';
+  String get updateUpToDate => 'You\'re on the latest version';
+
+  @override
+  String get updateOpenRelease => 'Open';
 
   @override
   String get closeLabel => 'Close';
-
-  @override
-  String get retryLabel => 'Retry';
-
-  @override
-  String get downloadingShort => 'Downloading';
-
-  @override
-  String get continueDownload => 'Continue download';
-
-  @override
-  String downloadPausedPercent(int percent) {
-    return 'Saved $percent% · ready to resume';
-  }
-
-  @override
-  String get downloadNewVersion => 'Download update';
-
-  @override
-  String get installNow => 'Install now';
-
-  @override
-  String get includePrereleaseLabel => 'Include pre-release (Beta)';
-
-  @override
-  String get prereleaseNoticeInline =>
-      'This is a pre-release (beta) build and may be unstable or buggy.';
-
-  @override
-  String get prereleaseWarningTitle => 'Download pre-release?';
-
-  @override
-  String get prereleaseWarningMessage =>
-      'Pre-release builds may be unstable, buggy, or cause data issues. Only proceed if you understand the risks. Download and install anyway?';
-
-  @override
-  String get prereleaseDownloadAnyway => 'Download anyway';
 
   @override
   String get backupFreqManual => 'Manual only';

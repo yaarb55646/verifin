@@ -6,7 +6,7 @@
 - UI 组件库：Flutter Material 3 + `fl_chart`、`anchored_menu`、`home_widget`；本地 vendor `third_party/liquid_glass_widgets` 只用于可选的液态玻璃底栏。
 - 工具链：Flutter 3.47.2（与 CI 固定版本一致）、Java 17+、Android SDK（含 NDK 与 CMake）；正式 APK/AAB 只由 CI 构建。
 
-本仓库不启用 GitHub Pull Requests，不接受外部 PR。外部反馈只通过 Issue；代码改动由维护者在 Issue 确认范围后直接实施。
+上游仅接受维护者 PR，外部反馈只通过 Issue。个人 fork 的 `mine` 分支按下方个人约定维护，不将同步源码视为授权向上游提交 PR 或发版。
 
 ## 个人 fork 约定
 
@@ -20,7 +20,7 @@
 
 - **一句话记账**：手动记账入口先走文字输入，数字键盘保留为切换入口（`QuickTextEntryResult` / `quickTextEntryUseNumberPad`）。
 - **子分类常驻面板**：分类选择器下方的内联子分类区，含内联新建与图标选择。
-- **看板分类占比**：三个统计 Tab 按分类口径展示占比环形卡。
+- **看板分类占比**：日常和年度保留个人占比卡及日常排行；月度采用上游分类统计（前 5 / 全部），旧月度面板开关和排序兼容迁移。
 - **自定义记账关键词**：分类级关键词参与一句话记账的真实子分类匹配，分类表新增 `keywords` 列（schema v20）。
 
 ## 产品原则
@@ -41,6 +41,7 @@ lib/
 │   ├── ai/                   # AI 会话、协议轮次与只读查询工具
 │   ├── logging/              # AppLogger
 │   ├── startup/              # 启动壳、阶段协调、单阶段看门狗与启动早期错误缓冲
+│   ├── update/               # 应用内检查更新：只读 GitHub Release 版本并跳转浏览器
 │   └── widgets/              # 桌面小组件词表、投影、实例配置与刷新管线
 ├── pages/                    # 页面层；共享弹窗入口在 pages/sheets.dart
 ├── data/                     # AppDatabase、LedgerRepository、SqliteLedgerRepository
@@ -53,7 +54,9 @@ assets/                       # 品牌、账户图标、AI 渠道 Logo 等包内
 test/                         # 单元/widget/ffi SQLite/迁移/契约测试；共享脚手架 test/support/
 integration_test/             # 设备侧冒烟与帧耗时采样（不进 CI）
 scripts/                      # Dart 任务脚本（doctor/publish/prune/clean/widget_previews）
-docs/                         # 产品、设计、开发文档与测试样例
+docs/                         # 当前事实：产品、设计、开发文档与测试样例
+.agents/notes/                # 设计与决策记录（为什么这么定、否掉了什么）
+.agents/skills/               # 固化流程（release：合并→发版→等 CI→汇报）
 third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_glass_widgets）
 ```
 
@@ -84,12 +87,20 @@ third_party/                  # 本地 vendor 源码（jdenticon_dart、liquid_g
 - `docs/design/components.md`：组件、弹窗、格式化与纯函数注册表；写任何 Widget、弹窗、对话框、格式化或计算前先查。
 - `docs/design/ui-guidelines.md`：页面骨架、交互、图表和视觉规范；新增根导航样式前先读「根导航」小节及其契约测试清单。
 - `docs/dev/tech-decisions.md`：数据口径、备份范围和关键技术取舍；判断当前实现仍以源码、测试与工作流为准。
+- `.agents/notes/`：设计稿、技术选型与被否决方案的**来龙去脉**；不是当前事实，规则见 `.agents/notes/README.md`。
+- `.agents/skills/release/SKILL.md`：**发版的可执行步骤**（合并、清理分支、发版、等 CI、处置失败、汇报）。
+- `.agents/skills/merge-pr/SKILL.md`：合并 PR 的可执行流程（状态判定、合并、回滚）。
+- `.agents/CONVENTIONS.md`：跨项目共用的体系约定（分支合并、依赖更新、文档分层、授权边界）。
 - `docs/dev/known-limitations.md`：已接受的限制、技术债及触发整改的阈值。
 - `docs/dev/android-development.md`：工具链检测与安装、真机调试、日志、隔离验收及测试应用清理。
 - 领域文档：`docs/dev/attachment-storage-and-backup.md`、`docs/dev/refund.md`、`docs/dev/multi-currency.md`、`docs/dev/entry-save-validation.md`、`docs/dev/category-budget-override.md`、`docs/dev/ai-tools.md`、`docs/dev/ai-provider-presets.md`、`docs/dev/auto-capture.md`、`docs/dev/i18n-verification.md`、`docs/dev/feedback-system.md`、`docs/dev/home-widgets.md`、`docs/dev/anchored-menu.md`、`docs/dev/account-icon-assets.md`。
-- 产品与样例：`docs/product/product.md`、`docs/product/acceptance-checklist.md`、`docs/product/automation.md`、`docs/fixtures/`、`docs/screenshots/`；仓库级说明见 `README.md`、`CONTRIBUTING.md`、`CHANGELOG.md`。维护约定与已确认的 Code Review 取舍见 `CONTRIBUTING.md`。
+- 产品与样例：`docs/product/product.md`、`docs/product/acceptance-checklist.md`、`docs/product/automation.md`、`docs/fixtures/`、`docs/screenshots/`；发布说明在 `docs/release-notes/`（模板 `_template.md`）；仓库级说明见 `README.md`、`CONTRIBUTING.md`、`CHANGELOG.md`。维护约定与已确认的 Code Review 取舍见 `CONTRIBUTING.md`。
 
-**不保留过程记录。** `docs/` 只陈述**当前状态**：规范、口径、契约、验收清单、样例数据。方案草稿、实施计划、评审记录、决策过程、迁移中间态一律不进仓库——完成时把仍然有效的结论并入对应规范（界面交互进 `docs/design/`，技术取舍进 `docs/dev/tech-decisions.md`，领域口径进 `docs/dev/`），其余删除。`docs/dev/tech-decisions.md` 的「UI 组件库选型」等行就是被否决库的唯一记录，不要另建选型或规划文档。
+**不保留过程记录。** `docs/` 只陈述**当前状态**：规范、口径、契约、验收清单、样例数据。方案草稿、实施计划、评审记录、决策过程、迁移中间态一律不进 `docs/`——完成时把仍然有效的结论并入对应规范（界面交互进 `docs/design/`，技术取舍进 `docs/dev/tech-decisions.md`，领域口径进 `docs/dev/`）。
+
+需要保留「为什么这么定、当时否掉了什么」的来龙去脉时，写进 `.agents/notes/`（`proposed/` → `implemented/` → `rejected/`），规则见 `.agents/notes/README.md`；那里**不是权威事实**，判断当前实现仍以源码、测试与工作流为准。
+
+发布说明固定为 `docs/release-notes/vX.Y.Z.md`（Release 正文的唯一来源，模板 `_template.md`）；发版的可执行步骤在 `.agents/skills/release/SKILL.md`。
 
 - 与用户沟通、说明方案和汇报结果时使用中文；代码符号、命令和提交类型保留英文。
 - 改动聚焦用户请求，不顺手重构无关代码，不覆盖用户已有修改；开始任务前先确认工作树状态。
@@ -198,7 +209,7 @@ dart run scripts/widget_previews.dart
 ### 日常开发
 
 - 日常调试使用独立 `diagnostic` flavor 运行正式入口做 hot reload，避免覆盖用户账目；`diagnostic` 使用独立 applicationId 与正式数据隔离，可以运行 `lib/main.dart` 或最小绘制入口，但**不是交付物**。
-- 验证 GitHub 渠道、自更新或正式包外观时使用 `--flavor github`；验证 Play 渠道时使用 `--flavor play --dart-define=SELF_UPDATE=false`。所有构建都显式带 flavor。桌面 widget 测试不能替代 Android 原生能力、生命周期和性能验收。
+- 验证 GitHub 渠道、检查更新或正式包外观时使用 `--flavor github`；验证 Play 渠道时使用 `--flavor play --dart-define=UPDATE_CHECK=false`。所有构建都显式带 flavor。桌面 widget 测试不能替代 Android 原生能力、生命周期和性能验收。
 - 不再维护 Web 预览、WASM 或浏览器测试；不要创建独立演示 UI。布局测试保留 393×852 与窄屏尺寸；视觉迭代保留首页预算圆环、支出/剩余日均、概览指标方块和“我的”四列宫格。
 - 手机开发前先按 `docs/dev/android-development.md` 检测 Flutter（与 CI 固定版本一致）、Java、Android SDK、adb 与 `local.properties`。缺工具时优先复用已安装版本；**需要安装或升级会改动现有 SDK/JDK/PATH 的，先说明影响并取得用户同意**，安装后复检。权限、下载或手机授权实际受阻时才请求用户处理。
 - **Android 构建的 NDK/CMake 前置**：Flutter 3.47 的 Gradle 插件会强制使用 NDK `28.2.13676358`；AGP 9 默认使用 CMake `3.22.1`。构建前确认 `<android-sdk>/ndk/28.2.13676358/source.properties` 与 `<android-sdk>/cmake/3.22.1/bin/cmake.exe` 存在。`cmdline-tools` 23 已弃用 `sdkmanager`，不要依赖 Flutter 的自动 NDK 安装；用 Android Studio SDK Manager 或 `android sdk install` 安装。
@@ -207,30 +218,30 @@ dart run scripts/widget_previews.dart
 
 ### CI 与发版
 
-- `.github/workflows/ci.yml` 在每次 push 到 `main` 时执行格式检查、analyze、全量测试和 `github` flavor Android debug APK 编译门禁；该 APK 只用于提前发现 Kotlin/Manifest/原生桥编译错误，不作为交付物。
+- `.github/workflows/ci.yml` 在 PR 上执行格式检查、analyze 和测试，push 到 `main` 时另执行 `github` flavor debug APK 编译门禁；该 APK 不是交付物。个人 `mine` push 不触发此工作流，验收使用手动 `mine-build.yml`。
 - `.github/workflows/flutter.yml` 只在推送 `vX.Y.Z` 标签时触发发布构建：
   - GitHub 自分发：arm64-v8a APK，`--flavor github --split-per-abi`；必须保持 `force-version-code-ignoring-abi=true`，否则 ABI 版本号偏移会破坏 GitHub / Play 渠道间的覆盖升级。
-  - Google Play：AAB，`--flavor play --dart-define=SELF_UPDATE=false`。
+  - Google Play：AAB，`--flavor play --dart-define=UPDATE_CHECK=false`。
 - 两种 release 都开启 R8 代码压缩与资源裁剪。新增依赖若使用反射，必须同步检查 `android/app/proguard-rules.pro`；OCR、通知等问题可能只在 release/R8 下暴露。
-- `play` flavor 移除 `REQUEST_INSTALL_PACKAGES` 和 `USE_EXACT_ALARM`，保留可申请的 `SCHEDULE_EXACT_ALARM` 并在无授权时回退；自更新入口通过 `kSelfUpdateEnabled` 隐藏。渠道差异放在 flavor Manifest 或构建开关中表达。
+- `play` flavor 移除 `USE_EXACT_ALARM`，保留可申请的 `SCHEDULE_EXACT_ALARM` 并在无授权时回退；检查更新入口通过 `kUpdateCheckEnabled` 隐藏（GitHub flavor 保留：只查询版本并跳转 Release 页面，应用内不下载、不安装 APK，不申请安装未知应用权限）。渠道差异放在 flavor Manifest 或构建开关中表达。
 - CI 创建 GitHub **预发布**且不标记 Latest；真机验收通过后再由维护者手动提升为正式版。Release 使用项目内稳定 keystore；不要替换、重生成或泄露签名材料。
 
 **发版必须得到用户明确授权。** 打标签会推送远端并触发 CI，不能自行执行。实际顺序如下：
 
 1. 先跑 `dart run scripts/doctor.dart` 确认环境（Flutter 版本必须等于 CI 固定版本、Android SDK/JDK 可用、工作树干净）。
 2. 确定版本号与日期，把 `CHANGELOG.md` 顶部 `## [Unreleased]` 提升为本次版本，并在其上新建空的 `## [Unreleased]`。`CHANGELOG.md` 只保留未发布改动与最近一个次版本线；更早版本的**源码归档以 git 标签为准**，不再回填。
-3. 提交 CHANGELOG 变更，确认当前分支是 `main` 且工作树完全干净。
+3. 准备 `docs/release-notes/vX.Y.Z.md`（Release 正文），提交文档变更，确认当前分支是 `main` 且工作树干净。此流程适用于维护者正式发版，不用于个人 `mine` 源码同步。
 4. 运行发布脚本，参数可取 `patch`、`minor`、`major` 或显式版本号（如 `1.2.3`）：`dart run scripts/publish.dart patch`。脚本会再次校验「本机 Flutter 版本 == CI 固定版本」，不一致直接失败（analyzer 的 lint 集合随版本变化，本地绿不代表 CI 绿）；`--dry-run` 只打印将要执行的步骤。
-5. 脚本更新 `pubspec.yaml` 与 `lib/app/app_version.dart`，执行格式化、依赖安装、analyze、test，创建 `chore: release vX.Y.Z` 提交、标签并推送；推送标签触发 CI 构建 APK/AAB 并创建 GitHub **预发布**（不标记 Latest）。
-6. 下载 CI 生成的预发布 APK 真机验收；通过后在 GitHub 上把该 Release **提升为正式版并标记 Latest**（`prerelease` 去掉）。
+5. 脚本创建 `release/vX.Y.Z` 分支，更新版本并执行格式化、依赖安装、analyze、test；提交后通过 GitHub CLI 创建 PR、等待检查并合并，再推送标签触发 APK/AAB 预发布。该脚本需要已安装并认证的 `gh`；缺失时不执行、不自行安装。
+6. 下载 CI 生成的预发布 APK 真机验收；通过后在 GitHub 上把该 Release **提升为正式版并标记 Latest**（`prerelease` 去掉），同时用 `--notes-file` 重写说明：删掉开头的「⚠️ 预发布（待验证）」与结尾「仍为预发布」两段，保留版本内容与覆盖安装提示。
 7. 清理没被提升的预发布（见下）。
 
 **Release 标题与说明（规范）：**
 
 - **标题固定等于标签名**：`vX.Y.Z`，不加中文摘要等后缀。CI 建预发布时使用标签名，提升为正式版时不再改标题。
-- **说明正文由 `CHANGELOG.md` 的对应版本段落自动生成**，模板在 `.github/workflows/flutter.yml` 的 `Compose release notes` 步骤里，只补固定文案：预发布时期的验收提示、「直接覆盖安装 + 更新前先备份」提示。
+- **说明正文唯一来源是 `docs/release-notes/vX.Y.Z.md`**，模板为该目录的 `_template.md`；工作流直接读取，不再从 CHANGELOG 拼接。CHANGELOG 仍维护用户可见变化。
 - **不写安装包自身的说明**：架构 / ABI / 体积 / 机型限制属于构建与分发口径，只记在 `README.md` 与 `docs/dev/tech-decisions.md`，不进 Release 说明。
-- 提升为正式版：`gh release edit vX.Y.Z --prerelease=false --latest`（不动 git 标签与附件），完成后回读 `gh release view` / `gh release list` 确认 `isPrerelease=false` 且 Latest 已指向它。
+- 提升为正式版：`gh release edit vX.Y.Z --prerelease=false --latest`（不动 git 标签与附件），再用 `--notes-file` 去掉说明里仅适用于预发布的两段（开头的验收提示与结尾的「仍为预发布」说明）；完成后回读 `gh release view` / `gh release list` 确认 `isPrerelease=false`、Latest 已指向它，且说明里不再出现「预发布」。
 
 ### 版本归档与预发布清理
 
@@ -254,6 +265,15 @@ dart run scripts/widget_previews.dart
 - 退款是关联原支出的独立条目；只有已到账退款影响余额和净额，原支出的 `refundedBaseAmount` 是已到账退款 `baseAmount` 之和的派生缓存。修改退款逻辑前必须阅读 `docs/dev/refund.md` 和 `docs/dev/multi-currency.md` 并以当前代码/测试为准。
 - 自定义预算周期只改变预算体系口径，统计报表仍按自然月。默认预算使用哨兵键，单月覆盖优先于默认值。
 - 「不计入预算」标记（借款、垫付等）只脱离**预算**口径。预算取数一律走 `ledger_math.dart` 的 `budgetExpenseTotal` / `countsTowardBudget`（预算总览、首页与看板预算卡、按日预算、预算趋势、桌面小组件预算、AI `budgetStatus`）；收支统计、账户余额、报表与分类统计仍走 `sumByType` / `signedAmount`，**不读该标记**。新增预算取数不要在调用点手写过滤条件。
+
+## 合并与依赖更新
+
+- 上游 `main` 的维护者流程要求 PR 和必需检查，并使用 **merge commit**。个人 fork 的 `main` 仅作镜像，个人开发在 `mine`；同步上游使用 merge 保留个人历史，提交、推送和发布分别取得授权。
+- 合并前确认 `mergeStateStatus=CLEAN` 且 `mergeable`，不要凭"看起来绿了"判断。
+- 依赖 PR（dependabot）只应改 `.github/workflows/*`、`pubspec.yaml`、`pubspec.lock`；动了别的就停下问。
+- 大版本跳跃合并后必须确认 `main` 的 CI：PR 上不构建安装包，只有 `main` 会真正打包。
+- 合坏了用 `git revert -m 1 <merge-sha>` 开 PR 回滚；不 force push、不 reset 远端。
+- 步骤见 `.agents/skills/merge-pr/SKILL.md`；授权边界见 `.agents/CONVENTIONS.md`。
 
 ## Never 规则
 

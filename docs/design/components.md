@@ -64,6 +64,8 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `SaveHeaderAction` | Widget | `common_widgets.dart` | 全屏编辑页统一保存动作；固定软碟语义的 `Icons.save_outlined` 和本地化 tooltip，支持禁用态 |
 | `SortModeHeaderActions` | Widget | `common_widgets.dart` | 管理页显式排序模式的统一 Header 动作；普通态进入排序，排序态提供取消与软碟保存，未改动时禁用保存 |
 | `CreditsPage` | 页面 Widget | `credits_page.dart` | 鸣谢名单页（设置 → 关于 → 鸣谢）：头像墙（`CreditsAvatar` + 常显称呼，分组标题只在有分组时渲染）+ 底部赞助入口。名单是包内常量（`credits.dart`），页面不读账目状态，只在打开浏览器失败时记日志并给轻提示；赞助链接统一经 `external_links.dart`（`ExternalLinks.donationUrl`）打开系统浏览器，不要在页面里直接调插件或硬写 URL |
+| `ExternalLinks` | 工具类 | `external_links.dart` | **打开外部链接的唯一出口**：只接受本文件定义常量与 `https`，一律交系统默认浏览器；`openDonation()` 打开赞助页，`openVerifinRepository()` 打开 GitHub 仓库主页，`openVerifinRelease(tag)` 打开指定版本的 GitHub Release 页面（tag 严格校验，非法回落 Releases 列表，不让远端数据拼任意地址）。`debugOpener` 供测试注入。页面不得直接调 `url_launcher` |
+| `UpdateCheckResult` / `UpdateAvailable` / `UpdateUpToDate` / `UpdateCheckFailed` / `UpdateRelease` / `checkForUpdate` / `compareVersions` / `currentAppVersionNumber` / `purgeLegacyUpdateDownloads` | 密封类 / 值类 / 纯函数 / 异步入口 | `app/update/update_check.dart` | **应用内检查更新**：用户手点「检查更新」时只读 GitHub Release 最新正式版版本号（不自动检查、不下载安装 APK），与当前版本比较后返回「有更新 / 已最新 / 失败」；`compareVersions` 是纯函数（忽略 `+build` 与预发布后缀），`parseLatestRelease` 与 `debugUpdateCheckOverride` 供测试。失败原因只写日志，界面用本地化文案 |
 
 ## 族 2 — 图标渲染（统一入口，勿绕过）
 
@@ -184,9 +186,9 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | `InteractiveTrendChart` | Widget | `chart_painters.dart` | 可交互折线图；`values, missingIndexes, xLabels, yLabels, glow, tooltipOf`。平滑曲线 + 渐隐填充；默认不画节点圆点，存在缺率断点或有效点不超过 2 个时显示小圆点，缺率插槽画成断点且不可点选。点击固定显示气泡、再点同一点收起、点左右滑动连续查看，手势自带，不切根页面也不锁页面滚动；自带 `Semantics` 摘要；位于可跳转卡片内时拦截点击 |
 | `InteractiveBarChart` | Widget | `chart_painters.dart` | 可交互柱状图；单序列传 `values`（颜色默认取主题主色，语义色传 `color`，如支出红 / 收入青），多序列传 `series`（`List<VeriBarSeries>`，同插槽并排成组，如预算/支出双柱）。命中按插槽取最近一根柱子，整片绘图区可点击或拖动，零值柱也能查看；选中在抬手后保持。**柱子圆角按柱高收窄**（不超过柱高的一半，也不超过 4）：fl_chart 会把正柱的像素高度垫到至少「上下圆角半径之和」，半径写死会让矮柱变成固定高度的短杠，归零的柱子会卡一下再消失 |
 | `VeriBarSeries` | 值类 | `chart_painters.dart` | 柱状图的一条序列（`values, color`）；配合 `InteractiveBarChart.series` 使用 |
-| `VeriDonutChart` | Widget | `chart_painters.dart` | 环形分段图；`segments, center, ringWidth, selectedIndex, onSelected, semanticsLabel, showPercentTitles, onCenterTap`。点击分段回传索引；中心空区回传 `null`，`onCenterTap` 非空时中心改成可点热区（看板资产汇总用它切换「金额 / 占比」）。`showPercentTitles` 打开环内占比文字，低于 5% 的分段不画 |
+| `VeriDonutChart` | Widget | `chart_painters.dart` | 环形分段图；`segments, center, ringWidth, selectedIndex, onSelected, semanticsLabel, showPercentTitles, onCenterTap`。点击分段回传索引；中心空区回传 `null`，`onCenterTap` 非空时中心改成可点热区（资产汇总切换「金额 / 占比」，分类统计清空分段选中）。`showPercentTitles` 打开环内占比文字，低于 5% 的分段不画；选中某段时只保留该段的占比文字，取消后恢复。环内百分比固定白字。分类分段颜色统一取 `veriChartPalette`（10 色，见族 10），调色盘全部压到深色档，浅色 / 深色主题下都不再翻转。 |
 | `VeriBudgetRing` | Widget | `chart_painters.dart` | 预算/额度进度环；`value, trackColor, progressColor, center, strokeWidth`。中心内容忽略指针事件 |
-| `CategorySharePanel` | Widget | `pages/category_share_panel.dart` | 日常/月/年共用分类占比卡，外层传 `window` / `rangeLabel`；复用 `VeriDonutChart` 和 `VeriEntryTypeToggle`，支持二级分类拆分、金额显示与分段/图例选中，卡内切换只影响当前视图 |
+| `CategorySharePanel` | Widget | `pages/category_share_panel.dart` | 日常/年度共用个人分类占比卡（月度使用上游 `_CategoryStatsPanel`），外层传 `window` / `rangeLabel`；复用 `VeriDonutChart` 和 `VeriEntryTypeToggle`，支持二级分类拆分、金额显示与分段/图例选中，卡内切换只影响当前视图 |
 | `ChartTooltip` / `ChartTooltipLine` | 值类 | `chart_painters.dart` | 气泡数据模型；所有图表的气泡内容都由它生成 |
 
 适配层硬性规则：页面与卡片不得直接 `import 'package:fl_chart/...'`；不得新增自绘数据图表。
@@ -215,7 +217,7 @@ Veri Fin 已有的**可复用 widget / 弹窗 helper / 对话框 / 纯函数**�
 | AI 对话查询工具 | `ai/ledger_query.dart`、`ai/ai_query_tool.dart`、`ai/ai_tool_schema.dart`、`ai/ai_ledger_snapshot.dart` | 通用交易筛选 `queryLedgerEntries`（`LedgerQuery`，有界查询使用 Top-K）；只读工具协议 `AiQueryTool` + 只含不可变 `AiLedgerSnapshot` 的 `AiToolContext`（另带 `currencyDisplay`，**工具层不读 `amount_format` 全局闸门**）+ `AiToolResult` + `AiResultDisplay`（sealed）+ typed Schema + 注册表 `buildAiQueryTools`。`AiToolSchema` 同时生成原生 Schema 与兼容提示词约束，`validateArguments` 统一归一化并回喂字段错误；交易展示 DTO 自带生成时交易/账户/分类/标签快照（**新增分析工具在此登记，并更新 `ai-tools.md`**） |
 | AI Agent 引擎 | `ai/ai_agent_engine.dart`、`ai/ai_native_tool_protocol.dart`、`ai/ai_prompt_tool_protocol.dart` | 双协议只读 Agent 状态机（结构化 `AiAgentMessage` / `AiAgentEvent`）；原生 Tool Calls 与兼容标记协议共用工具执行、轮次、重试和资源边界；原生正文逐事件下发，支持 cancellation token、断流保留和有界响应；`AiAgentCompleted` 携带真实工具调用统计，重试原因使用 typed enum；结构化传输入口为 `aiAgentStream` / `aiAgentComplete` |
 | AI 聊天会话控制器 | `ai/ai_chat_session_controller.dart`、`ai/ai_streaming_text_buffer.dart` | 页面生命周期内不可变消息列表、账本选择、发送/停止/清空、50ms 流式正文合并、工具步骤、回答来源和能力更新；不访问 `BuildContext`，不持久化聊天 |
-| 设计令牌 | `app_theme.dart` | Material 主交互色从 `Theme.of(context).colorScheme.primary` 读取（默认 Veri Royal、系统动态色或用户自定义色）；`veriRoyal` 仅作为默认回退和无主题上下文的绘制 API 默认值；语义色 `veriBlue` `veriIncome` `veriExpense` `veriWarning` 保持独立；圆角 `veriRadiusSm/Md/Lg/Xl` 与 `veriCardRadius`（卡片圆角，`VeriCard` 与卡内自行裁角的场景共用同一取值，不要在调用点另写数字）；`veriHeaderHeight` `veriPageMaxWidth` |
+| 设计令牌 | `app_theme.dart` | Material 主交互色从 `Theme.of(context).colorScheme.primary` 读取（默认 Veri Royal、系统动态色或用户自定义色）；`veriRoyal` 仅作为默认回退和无主题上下文的绘制 API 默认值；语义色 `veriBlue` `veriIncome` `veriExpense` `veriWarning` 保持独立；`veriChartPaletteFor(primary)` / `veriChartPalette(context)` 是资产汇总与分类统计共用的 10 色分类盘（首色取主题主色同色相，所有颜色按相对亮度统一压到深色档以固定白字，后 5 色只用于展开），「其他」由调用方使用中性色，不要在页面另写分类色数组；圆角 `veriRadiusSm/Md/Lg/Xl` 与 `veriCardRadius`（卡片圆角，`VeriCard` 与卡内自行裁角的场景共用同一取值，不要在调用点另写数字）；`veriHeaderHeight` `veriPageMaxWidth` |
 
 ## 族 11 — AI 对话查询 UI
 

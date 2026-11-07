@@ -63,7 +63,8 @@ jobs:
         run: flutter test
 
       - name: Build release APK (github flavor, arm64)
-        # 与上游 GitHub 自分发包完全相同的构建参数，保证行为一致（含应用内自更新）。
+        # 个人验收使用 github flavor（检查更新仅跳转上游 Release）。
+        # 未启用 split-per-abi，实际 ABI 以产物为准，不等同于上游分 ABI 发布参数。
         run: flutter build apk --release --target-platform android-arm64 --flavor github
 
       - name: Prepare artifact

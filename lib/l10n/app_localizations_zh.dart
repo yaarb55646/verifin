@@ -608,6 +608,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get panelAssetSummaryDesc => '按账户占比查看正资产或负资产';
 
   @override
+  String get panelCategoryStatsLabel => '分类统计';
+
+  @override
+  String get panelCategoryStatsDesc => '按顶级分类查看支出占比，可切换前5或全部';
+
+  @override
+  String get categoryStatsModeLabel => '分类显示范围';
+
+  @override
+  String get categoryStatsModeTop5 => '前5';
+
+  @override
+  String get categoryStatsModeAll => '全部';
+
+  @override
   String get panelRankingLabel => '分类 · 标签排行';
 
   @override
@@ -2590,6 +2605,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSectionAbout => '关于';
 
   @override
+  String get settingsSectionMore => '更多';
+
+  @override
   String get creditsTitle => '鸣谢';
 
   @override
@@ -2607,7 +2625,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creditsSupportAction => '在爱发电支持 Veri Fin';
 
   @override
-  String get creditsOpenFailed => '没能打开浏览器，请稍后再试。';
+  String get openLinkFailed => '没能打开浏览器，请稍后再试。';
 
   @override
   String get themeMode => '主题模式';
@@ -2712,6 +2730,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get checkUpdate => '检查更新';
 
   @override
+  String get githubRepositoryLabel => 'GitHub 仓库';
+
+  @override
   String get viewLabel => '查看';
 
   @override
@@ -2800,6 +2821,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get platformQianjiHint => '明细导出 CSV';
 
   @override
+  String get platformSuishouji => '随手记';
+
+  @override
+  String get platformSuishoujiHint => '账单导出（.xlsx）';
+
+  @override
   String get platformTally => 'Tally 记账';
 
   @override
@@ -2845,6 +2872,10 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get qianjiImportGuide =>
       '钱迹 App →「我的」→「设置」→「备份与导出」→「导出账单」→ 选择「CSV」格式（明细）、时间范围为「全部」，得到 QianJi 开头的 .csv 文件，保存到本机后在此选择。\n\n支出、收入、转账、信用卡还款、退款、报销都会导入：退款按「关联账单」自动冲抵原支出（净额=原额−退款），分类按二级分类还原层级、标签一并导入。钱迹的「债务 / 借贷」记录（借出、收款、利息等）不会导入——本应用没有债务功能、无法忠实表达；这类多是「垫钱再收回」的一进一出，跳过不影响你的真实收支。菜单以实际 App 版本为准。';
+
+  @override
+  String get suishoujiImportGuide =>
+      '随手记 App →「我的」→「数据导出」/「导出账单」→ 选择 Excel（.xlsx）导出，保存到本机后在此选择。\n\n同一个文件里的支出、收入、转账和退款会导入：一级/二级分类还原层级，账户保留来源币种；退款因导出没有原支出编号会按收入导入（账户余额正确，但原支出净额不冲减）；「余额变更」按正负差额记入「余额调整」。「收债 / 借出 / 还债 / 借入」等债务记录和「负债变更」不会导入——本应用没有债务功能，负债变更的方向也无法从导出确定。成员、项目、记账人不导入，商家会并入备注。账户统一建为现金账户，导入后可在资产页调整类型。菜单以实际 App 版本为准。';
 
   @override
   String get tallyImportGuide =>
@@ -3843,66 +3874,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resetConfirmAction => '确认初始化';
 
   @override
-  String get currentVersion => '当前版本';
-
-  @override
-  String get latestVersion => '最新版本';
-
-  @override
   String get checkingLabel => '检查中...';
-
-  @override
-  String get queryingGithub => '正在查询 GitHub Release...';
 
   @override
   String get updateCheckFailed => '检查更新失败，请稍后再试。';
 
   @override
-  String downloadingPercent(int percent) {
-    return '下载中 $percent%';
+  String get updateAvailableTitle => '发现新版本';
+
+  @override
+  String updateAvailableMessage(String current, String latest) {
+    return '当前版本：v$current\n最新版本：v$latest';
   }
 
   @override
-  String get downloadingLabel => '正在下载...';
+  String get updateUpToDate => '已是最新版本';
+
+  @override
+  String get updateOpenRelease => '前往';
 
   @override
   String get closeLabel => '关闭';
-
-  @override
-  String get retryLabel => '重试';
-
-  @override
-  String get downloadingShort => '下载中';
-
-  @override
-  String get continueDownload => '继续下载';
-
-  @override
-  String downloadPausedPercent(int percent) {
-    return '已保留 $percent% · 等待继续';
-  }
-
-  @override
-  String get downloadNewVersion => '下载新版本';
-
-  @override
-  String get installNow => '立即安装';
-
-  @override
-  String get includePrereleaseLabel => '包含预发布版本（Beta）';
-
-  @override
-  String get prereleaseNoticeInline => '这是预发布（测试）版本，可能存在不稳定或缺陷。';
-
-  @override
-  String get prereleaseWarningTitle => '下载预发布版本？';
-
-  @override
-  String get prereleaseWarningMessage =>
-      '预发布版本可能存在不稳定、功能缺陷或数据异常等问题，建议仅在了解风险时使用。确定继续下载并安装吗？';
-
-  @override
-  String get prereleaseDownloadAnyway => '仍要下载';
 
   @override
   String get backupFreqManual => '仅手动';
